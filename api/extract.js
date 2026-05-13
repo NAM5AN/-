@@ -44,9 +44,11 @@ export default async function handler(req, res) {
     auth: { persistSession: false }
   });
 
-  const { data: userData, error: userError } = await supabase.auth.getUser();
+  // 토큰을 명시적으로 getUser에 전달 (서버에는 세션 저장소가 없으므로)
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
   if (userError || !userData?.user) {
-    return res.status(401).json({ error: 'INVALID_TOKEN' });
+    console.error('Token verification failed:', userError?.message);
+    return res.status(401).json({ error: 'INVALID_TOKEN', detail: userError?.message });
   }
   const userId = userData.user.id;
 
@@ -61,7 +63,7 @@ export default async function handler(req, res) {
 
   if (usageError) {
     console.error('Usage query failed:', usageError);
-    return res.status(500).json({ error: 'USAGE_QUERY_FAILED' });
+    return res.status(500).json({ error: 'USAGE_QUERY_FAILED', detail: usageError.message });
   }
 
   const currentCount = usage?.count || 0;
@@ -125,40 +127,4 @@ export default async function handler(req, res) {
   let parsed;
   try {
     parsed = JSON.parse(text);
-  } catch (e) {
-    const cleaned = text.replace(/```json|```/g, '').trim();
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch (e2) {
-      console.error('JSON parse failed:', text);
-      return res.status(502).json({ error: 'JSON_PARSE_FAILED' });
-    }
-  }
-
-  // 5. 사용량 +1
-  const newCount = currentCount + 1;
-  const { error: upsertError } = await supabase
-    .from('daily_usage')
-    .upsert({
-      user_id: userId,
-      date: today,
-      count: newCount,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,date' });
-
-  if (upsertError) {
-    console.error('Usage upsert failed:', upsertError);
-    // 사용량 기록 실패해도 결과는 반환 (사용자에게 손해 X)
-  }
-
-  // 6. 결과 반환
-  return res.status(200).json({
-    success: true,
-    data: parsed,
-    usage: {
-      used: newCount,
-      limit: DAILY_LIMIT,
-      remaining: DAILY_LIMIT - newCount
-    }
-  });
-}
+  } cat
