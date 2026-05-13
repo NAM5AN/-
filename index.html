@@ -1079,11 +1079,11 @@
         <textarea class="field-textarea" id="mContent" placeholder="제공받는 서비스/제품" style="min-height: 60px;"></textarea>
       </div>
       <div class="field">
-        <span class="field-label">⏰ 마감일</span>
+        <span class="field-label">⏰ 리뷰 마감일</span>
         <input type="date" class="field-input" id="mDeadline" />
       </div>
       <div class="field">
-        <span class="field-label">📆 방문 일자</span>
+        <span class="field-label">📆 방문 예정일</span>
         <input type="date" class="field-input" id="mVisitDate" />
       </div>
       <div class="field">
@@ -1519,10 +1519,21 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
   "storeName": "상호명 또는 업체명",
   "region": "지역 (시/도 + 구/군, 예: 서울 강남구)",
   "content": "체험단에게 제공되는 내용/서비스/제품",
-  "deadline": "신청 마감일 (YYYY-MM-DD 형식, 추출 불가하면 빈 문자열)"
+  "deadline": "리뷰 마감일 (YYYY-MM-DD 형식, 추출 불가하면 빈 문자열)"
 }
 
-찾지 못한 항목은 빈 문자열로 두세요. 마감일은 반드시 YYYY-MM-DD 형식으로 변환하세요.`;
+[deadline 추출 규칙 - 매우 중요]
+체험단 공고에는 보통 두 가지 날짜가 있습니다. 헷갈리지 마세요:
+  ① "모집 마감일" / "선정 마감일" / "신청 마감일" / "모집 및 선정 기간" → 이건 절대 추출하면 안 됨
+  ② "리뷰 마감일" / "리뷰 마감" / "포스팅 마감" / "콘텐츠 등록 마감" → 이것을 추출해야 함
+
+deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
+공고에 "리뷰 마감"이 명시적으로 적혀있으면 그 날짜를, 없으면 가장 늦은 날짜를 추출하세요.
+모집 마감일이나 신청 마감일만 있고 리뷰 마감일이 없다면 빈 문자열로 두세요.
+
+[형식]
+- 모든 날짜는 YYYY-MM-DD 형식으로 변환 (예: "26.06.09" → "2026-06-09")
+- 찾지 못한 항목은 빈 문자열로 두세요.`;
   }
 
   // Google Gemini API (브라우저에서 직접 호출 가능, 무료 티어 있음)
@@ -1763,7 +1774,7 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
     const urgent = !e.completed && isUrgent(e.deadline);
     const cls = (e.completed ? 'completed' : '') + (urgent ? ' urgent' : '');
     const visitRow = e.visitDate
-      ? `<div class="meta-row"><span class="meta-ico">📆</span><span class="meta-text" style="color: var(--sage); font-weight: 600;">방문 ${fmtKDate(e.visitDate)}</span></div>`
+      ? `<div class="meta-row"><span class="meta-ico">📆</span><span class="meta-text" style="color: var(--sage); font-weight: 600;">방문 예정 ${fmtKDate(e.visitDate)}</span></div>`
       : '';
     return `
       <div class="card ${cls}" data-id="${e.id}">
@@ -1771,7 +1782,7 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
         <div class="meta">
           <div class="meta-row"><span class="meta-ico">📍</span><span class="meta-text">${escapeHtml(e.region || '-')}</span></div>
           <div class="meta-row"><span class="meta-ico">🎁</span><span class="meta-text">${escapeHtml(e.content || '-')}</span></div>
-          <div class="meta-row"><span class="meta-ico">⏰</span><span class="meta-text">${fmtKDate(e.deadline) || '-'} ${deadlineTag(e.deadline)}</span></div>
+          <div class="meta-row"><span class="meta-ico">⏰</span><span class="meta-text">${e.deadline ? `${fmtKDate(e.deadline)}까지` : '-'} ${deadlineTag(e.deadline)}</span></div>
           ${visitRow}
         </div>
         <div class="memo-preview ${e.memo ? '' : 'empty'}">${escapeHtml(e.memo || '메모를 추가해보세요')}</div>
@@ -1898,8 +1909,8 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
       <div class="popup-title">${escapeHtml(e.storeName || '(이름 없음)')}</div>
       <div class="popup-meta">📍 ${escapeHtml(e.actualAddress || e.region || '')}</div>
       <div class="popup-meta">🎁 ${escapeHtml((e.content || '').slice(0, 30))}${(e.content || '').length > 30 ? '...' : ''}</div>
-      <div class="popup-meta">⏰ ${fmtKDate(e.deadline) || '-'}</div>
-      ${e.visitDate ? `<div class="popup-meta" style="color: var(--sage); font-weight: 600;">📆 방문 ${fmtKDate(e.visitDate)}</div>` : ''}
+      <div class="popup-meta">⏰ ${e.deadline ? `${fmtKDate(e.deadline)}까지` : '-'}</div>
+      ${e.visitDate ? `<div class="popup-meta" style="color: var(--sage); font-weight: 600;">📆 방문 예정 ${fmtKDate(e.visitDate)}</div>` : ''}
       <button class="popup-btn">상세보기</button>
     `;
     wrap.querySelector('.close').addEventListener('click', (ev) => {
