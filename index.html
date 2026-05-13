@@ -859,12 +859,10 @@
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 20px;
-    cursor: pointer;
     transition: all 0.2s;
     font-size: 12px;
     color: var(--ink);
   }
-  .user-info:hover { background: var(--paper); }
   .user-avatar {
     width: 26px;
     height: 26px;
@@ -935,10 +933,11 @@
       <h1>체험단 <span class="mark">스케쥴</span></h1>
       <div class="header-actions">
         <span class="sub" id="todayDate"></span>
-        <div class="user-info" id="userInfo" title="로그아웃하려면 클릭">
+        <div class="user-info" id="userInfo" title="사용자">
           <div class="user-avatar" id="userAvatar">?</div>
           <span class="user-name" id="userName">사용자</span>
         </div>
+        <button class="icon-btn" id="btnLogout" aria-label="로그아웃" title="로그아웃">🚪</button>
         <button class="icon-btn" id="btnSettings" aria-label="설정" title="설정">⚙️</button>
       </div>
     </div>
@@ -2367,8 +2366,8 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
     }
 
     // 로그아웃 버튼
-    const userInfoEl = document.getElementById('userInfo');
-    if (userInfoEl) userInfoEl.addEventListener('click', signOut);
+    const btnLogoutEl = document.getElementById('btnLogout');
+    if (btnLogoutEl) btnLogoutEl.addEventListener('click', signOut);
   })();
 })();
 </script>
