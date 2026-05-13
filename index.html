@@ -302,6 +302,71 @@
     .pc-only { display: none; }
   }
 
+  /* ---- Sort Controls ---- */
+  .sort-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .sort-bar .sort-label {
+    color: var(--ink-faint);
+    font-size: 12px;
+    margin-right: 2px;
+  }
+  .sort-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 28px 6px 12px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%236B5D54' d='M6 8.5L2 4.5h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+  }
+  .sort-select:hover {
+    border-color: var(--terra-soft);
+  }
+  .sort-select:focus {
+    outline: none;
+    border-color: var(--terra);
+  }
+  .sort-dir-btn {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .sort-dir-btn:hover {
+    border-color: var(--terra);
+    color: var(--terra);
+  }
+  .sort-dir-btn:active {
+    transform: scale(0.92);
+  }
+
   /* ---- Cards ---- */
   .card-grid {
     display: grid;
@@ -1067,6 +1132,17 @@
     <div style="text-align:center; margin-bottom: 24px; margin-top: -12px;">
       <button class="btn btn-ghost" id="btnManualAdd" style="font-size: 12px;">✏️ 직접 입력하기</button>
     </div>
+
+    <div class="sort-bar" id="sortBarActive">
+      <span class="sort-label">정렬</span>
+      <select class="sort-select" id="sortFieldActive">
+        <option value="createdAt">최근 추가순</option>
+        <option value="deadline">리뷰 마감일</option>
+        <option value="visitDate">방문 예정일</option>
+      </select>
+      <button class="sort-dir-btn" id="sortDirActive" title="정렬 방향 전환" aria-label="정렬 방향 전환">↓</button>
+    </div>
+
     <div id="activeList"></div>
   </section>
 
@@ -1083,6 +1159,16 @@
 
   <!-- 완료 뷰 -->
   <section id="viewCompleted" style="display:none;">
+    <div class="sort-bar" id="sortBarCompleted">
+      <span class="sort-label">정렬</span>
+      <select class="sort-select" id="sortFieldCompleted">
+        <option value="completedAt">최근 완료순</option>
+        <option value="createdAt">최근 추가순</option>
+        <option value="deadline">리뷰 마감일</option>
+        <option value="visitDate">방문 예정일</option>
+      </select>
+      <button class="sort-dir-btn" id="sortDirCompleted" title="정렬 방향 전환" aria-label="정렬 방향 전환">↓</button>
+    </div>
     <div id="completedList"></div>
   </section>
 </div>
@@ -1762,11 +1848,91 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
   }
 
   // ============== Rendering ==============
+  // ============== Sort ==============
+  // 정렬 상태 (탭별)
+  const sortState = {
+    active: { field: 'createdAt', dir: 'desc' },     // 진행중: 기본 최근 추가순(내림차순)
+    completed: { field: 'completedAt', dir: 'desc' } // 완료: 기본 최근 완료순(내림차순)
+  };
+
+  // 값이 빈 항목은 정렬 시 항상 뒤로 보냄 (방향과 무관)
+  function sortEntries(list, field, dir) {
+    const isAsc = dir === 'asc';
+    const sorted = [...list].sort((a, b) => {
+      const va = a[field] || '';
+      const vb = b[field] || '';
+      // 둘 다 비어있으면 동순위
+      if (!va && !vb) return 0;
+      // 한쪽이 비어있으면 그쪽이 뒤로
+      if (!va) return 1;
+      if (!vb) return -1;
+      // 둘 다 값 있으면 사전순 비교 (YYYY-MM-DD나 ISO 모두 사전순 = 시간순)
+      if (va < vb) return isAsc ? -1 : 1;
+      if (va > vb) return isAsc ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }
+
+  // 정렬 컨트롤 UI 상태 동기화
+  function syncSortUI(tab) {
+    const state = sortState[tab];
+    const fieldEl = document.getElementById(tab === 'active' ? 'sortFieldActive' : 'sortFieldCompleted');
+    const dirBtn = document.getElementById(tab === 'active' ? 'sortDirActive' : 'sortDirCompleted');
+    if (fieldEl) fieldEl.value = state.field;
+    if (dirBtn) {
+      dirBtn.textContent = state.dir === 'asc' ? '↑' : '↓';
+      dirBtn.title = state.dir === 'asc' ? '오름차순 (오래된→최근, 빠른→늦은)' : '내림차순 (최근→오래된, 늦은→빠른)';
+    }
+  }
+
+  function setupSortControls() {
+    // 진행중 탭
+    const fieldActive = document.getElementById('sortFieldActive');
+    const dirActive = document.getElementById('sortDirActive');
+    if (fieldActive) {
+      fieldActive.addEventListener('change', (e) => {
+        sortState.active.field = e.target.value;
+        renderActiveList();
+      });
+    }
+    if (dirActive) {
+      dirActive.addEventListener('click', () => {
+        sortState.active.dir = sortState.active.dir === 'asc' ? 'desc' : 'asc';
+        syncSortUI('active');
+        renderActiveList();
+      });
+    }
+
+    // 완료 탭
+    const fieldCompleted = document.getElementById('sortFieldCompleted');
+    const dirCompleted = document.getElementById('sortDirCompleted');
+    if (fieldCompleted) {
+      fieldCompleted.addEventListener('change', (e) => {
+        sortState.completed.field = e.target.value;
+        renderCompletedList();
+      });
+    }
+    if (dirCompleted) {
+      dirCompleted.addEventListener('click', () => {
+        sortState.completed.dir = sortState.completed.dir === 'asc' ? 'desc' : 'asc';
+        syncSortUI('completed');
+        renderCompletedList();
+      });
+    }
+
+    // 초기 UI 동기화
+    syncSortUI('active');
+    syncSortUI('completed');
+  }
+
   function renderActiveList() {
     const container = document.getElementById('activeList');
-    const list = entries.filter(e => !e.completed);
+    const sortBar = document.getElementById('sortBarActive');
+    let list = entries.filter(e => !e.completed);
 
     if (list.length === 0) {
+      if (sortBar) sortBar.style.display = 'none';
       container.innerHTML = `
         <div class="empty-state">
           <div class="em">아직 등록된 체험단이 없어요</div>
@@ -1774,6 +1940,9 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
         </div>`;
       return;
     }
+
+    if (sortBar) sortBar.style.display = '';
+    list = sortEntries(list, sortState.active.field, sortState.active.dir);
 
     container.innerHTML = `<div class="card-grid">${list.map(cardHtml).join('')}</div>`;
     container.querySelectorAll('.card').forEach(c => {
@@ -1783,9 +1952,11 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
 
   function renderCompletedList() {
     const container = document.getElementById('completedList');
-    const list = entries.filter(e => e.completed);
+    const sortBar = document.getElementById('sortBarCompleted');
+    let list = entries.filter(e => e.completed);
 
     if (list.length === 0) {
+      if (sortBar) sortBar.style.display = 'none';
       container.innerHTML = `
         <div class="empty-state">
           <div class="em">아직 완료된 체험단이 없어요</div>
@@ -1793,6 +1964,9 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
         </div>`;
       return;
     }
+
+    if (sortBar) sortBar.style.display = '';
+    list = sortEntries(list, sortState.completed.field, sortState.completed.dir);
 
     container.innerHTML = `<div class="card-grid">${list.map(cardHtml).join('')}</div>`;
     container.querySelectorAll('.card').forEach(c => {
@@ -1803,9 +1977,10 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
   function cardHtml(e) {
     const urgent = !e.completed && isUrgent(e.deadline);
     const cls = (e.completed ? 'completed' : '') + (urgent ? ' urgent' : '');
+    // 방문 예정일이 있으면 sage 색으로 강조, 없으면 회색 + "미정"
     const visitRow = e.visitDate
       ? `<div class="meta-row"><span class="meta-ico">📆</span><span class="meta-text" style="color: var(--sage); font-weight: 600;">방문 예정 ${fmtKDate(e.visitDate)}</span></div>`
-      : '';
+      : `<div class="meta-row"><span class="meta-ico">📆</span><span class="meta-text" style="color: var(--ink-faint);">방문 예정 미정</span></div>`;
     return `
       <div class="card ${cls}" data-id="${e.id}">
         <div class="card-store">${escapeHtml(e.storeName || '(이름 없음)')}</div>
@@ -1940,7 +2115,9 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
       <div class="popup-meta">📍 ${escapeHtml(e.actualAddress || e.region || '')}</div>
       <div class="popup-meta">🎁 ${escapeHtml((e.content || '').slice(0, 30))}${(e.content || '').length > 30 ? '...' : ''}</div>
       <div class="popup-meta">⏰ ${e.deadline ? `${fmtKDate(e.deadline)}까지` : '-'}</div>
-      ${e.visitDate ? `<div class="popup-meta" style="color: var(--sage); font-weight: 600;">📆 방문 예정 ${fmtKDate(e.visitDate)}</div>` : ''}
+      ${e.visitDate
+        ? `<div class="popup-meta" style="color: var(--sage); font-weight: 600;">📆 방문 예정 ${fmtKDate(e.visitDate)}</div>`
+        : `<div class="popup-meta" style="color: var(--ink-faint);">📆 방문 예정 미정</div>`}
       <button class="popup-btn">상세보기</button>
     `;
     wrap.querySelector('.close').addEventListener('click', (ev) => {
@@ -2100,6 +2277,9 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
     document.querySelectorAll('.tab').forEach(t => {
       t.addEventListener('click', () => switchView(t.dataset.view));
     });
+
+    // Sort controls
+    setupSortControls();
 
     // Upload
     const zone = document.getElementById('uploadZone');
