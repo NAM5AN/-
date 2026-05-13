@@ -78,8 +78,8 @@
   .icon-btn {
     background: none;
     border: 1px solid var(--line);
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     cursor: pointer;
     font-size: 14px;
@@ -88,11 +88,28 @@
     justify-content: center;
     color: var(--ink-soft);
     transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .icon-btn svg {
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+    display: block;
   }
   .icon-btn:hover {
     background: var(--card);
     color: var(--terra);
     border-color: var(--terra-soft);
+  }
+  .icon-btn:active {
+    transform: scale(0.94);
+    background: var(--terra-soft);
   }
 
   .settings-hint {
@@ -937,7 +954,7 @@
           <div class="user-avatar" id="userAvatar">?</div>
           <span class="user-name" id="userName">사용자</span>
         </div>
-        <button class="icon-btn" id="btnSettings" aria-label="설정" title="설정">⚙️</button>
+        <button class="icon-btn" id="btnSettings" aria-label="설정" title="설정"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
       </div>
     </div>
     <div class="stat-row" id="statRow">진행중 <strong>0</strong> · 완료 <strong>0</strong></div>
@@ -2369,10 +2386,18 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
       updateUserUI(currentUser);
       showApp();
       if (!appInitialized) {
-        init();
-        appInitialized = true;
+        try {
+          init();
+          appInitialized = true;
+        } catch (e) {
+          console.error('[init() failed]:', e);
+        }
       }
-      await loadAll();
+      try {
+        await loadAll();
+      } catch (e) {
+        console.error('[loadAll() failed]:', e);
+      }
       renderActiveList();
       renderStats();
     }
