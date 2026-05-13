@@ -2432,15 +2432,24 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
     }
 
     // 인증 상태 변화 감지 (등록 시 INITIAL_SESSION 이벤트도 한 번 자동 발생)
-    sb.auth.onAuthStateChange(async (event, session) => {
+    // IMPORTANT: Supabase의 알려진 이슈로, 이 콜백 안에서 직접 await sb.from(...)을 호출하면
+    // 인증 토큰 갱신과 쿼리 검증이 서로 대기하다 deadlock이 발생함.
+    // queueMicrotask로 별도 마이크로태스크로 분리해야 안전함.
+    sb.auth.onAuthStateChange((event, session) => {
       console.log('[BOOT] authStateChange:', event, '| has user:', !!session?.user);
-      if (session?.user) {
-        await bootApp(session.user);
-      } else {
-        currentUser = null;
-        appInitialized = false; // 로그아웃 시 다시 init할 수 있도록 리셋
-        showLogin();
-      }
+      queueMicrotask(async () => {
+        try {
+          if (session?.user) {
+            await bootApp(session.user);
+          } else {
+            currentUser = null;
+            appInitialized = false;
+            showLogin();
+          }
+        } catch (e) {
+          console.error('[BOOT] authStateChange handler failed:', e);
+        }
+      });
     });
   })();
 })();
