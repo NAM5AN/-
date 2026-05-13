@@ -1,8 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb'
+    }
+  }
+};
+
 const SUPABASE_URL = 'https://wvwoqqfizgbhvdzlqscc.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_iLtSrF52sRfzalwcR4Nt-w_dJiU2q16';
 const DAILY_LIMIT = 3;
+const GEMINI_MODEL = 'gemini-2.0-flash';
 
 const EXTRACTION_PROMPT = `이 이미지는 블로그 체험단 모집 공고 캡쳐입니다. 다음 항목을 추출해주세요.
 
@@ -28,103 +37,61 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
 - 찾지 못한 항목은 빈 문자열로 두세요.`;
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' });
-  }
+  try {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' });
+    }
 
-  // 1. 사용자 JWT 검증
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'NOT_AUTHENTICATED' });
-  }
-  const token = authHeader.slice(7);
+    // 1. 사용자 JWT 검증
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'NOT_AUTHENTICATED' });
+    }
+    const token = authHeader.slice(7);
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false }
-  });
-
-  // 토큰을 명시적으로 getUser에 전달 (서버에는 세션 저장소가 없으므로)
-  const { data: userData, error: userError } = await supabase.auth.getUser(token);
-  if (userError || !userData?.user) {
-    console.error('Token verification failed:', userError?.message);
-    return res.status(401).json({ error: 'INVALID_TOKEN', detail: userError?.message });
-  }
-  const userId = userData.user.id;
-
-  // 2. 오늘 사용량 체크
-  const today = new Date().toISOString().slice(0, 10);
-  const { data: usage, error: usageError } = await supabase
-    .from('daily_usage')
-    .select('count')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .maybeSingle();
-
-  if (usageError) {
-    console.error('Usage query failed:', usageError);
-    return res.status(500).json({ error: 'USAGE_QUERY_FAILED', detail: usageError.message });
-  }
-
-  const currentCount = usage?.count || 0;
-  if (currentCount >= DAILY_LIMIT) {
-    return res.status(429).json({
-      error: 'DAILY_LIMIT_EXCEEDED',
-      limit: DAILY_LIMIT,
-      used: currentCount,
-      remaining: 0
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false }
     });
-  }
 
-  // 3. 요청 본문에서 이미지 데이터 받기
-  const { imageBase64, mimeType } = req.body || {};
-  if (!imageBase64 || !mimeType) {
-    return res.status(400).json({ error: 'MISSING_IMAGE' });
-  }
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return res.status(401).json({
+        error: 'INVALID_TOKEN',
+        detail: userError?.message || 'No user data'
+      });
+    }
+    const userId = userData.user.id;
 
-  // 4. Gemini API 호출
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.error('GEMINI_API_KEY env var not set');
-    return res.status(500).json({ error: 'SERVER_MISCONFIGURED' });
-  }
+    // 2. 오늘 사용량 체크
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: usage, error: usageError } = await supabase
+      .from('daily_usage')
+      .select('count')
+      .eq('user_id', userId)
+      .eq('date', today)
+      .maybeSingle();
 
-  let geminiResponse;
-  try {
-    geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inline_data: { mime_type: mimeType, data: imageBase64 } },
-              { text: EXTRACTION_PROMPT }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: 'application/json'
-          }
-        })
-      }
-    );
-  } catch (e) {
-    console.error('Gemini fetch failed:', e);
-    return res.status(502).json({ error: 'GEMINI_FETCH_FAILED' });
-  }
+    if (usageError) {
+      return res.status(500).json({
+        error: 'USAGE_QUERY_FAILED',
+        detail: usageError.message
+      });
+    }
 
-  if (!geminiResponse.ok) {
-    const errorBody = await geminiResponse.text().catch(() => '');
-    console.error('Gemini error:', geminiResponse.status, errorBody);
-    return res.status(502).json({ error: 'GEMINI_API_ERROR', status: geminiResponse.status });
-  }
+    const currentCount = usage?.count || 0;
+    if (currentCount >= DAILY_LIMIT) {
+      return res.status(429).json({
+        error: 'DAILY_LIMIT_EXCEEDED',
+        limit: DAILY_LIMIT,
+        used: currentCount,
+        remaining: 0
+      });
+    }
 
-  const result = await geminiResponse.json();
-  const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } cat
+    // 3. 요청 본문에서 이미지 데이터 받기
+    const { imageBase64, mimeType } = req.body || {};
+    if (!imageBase64 || !mimeType) {
+      return res.status(400).json({
+        error: 'MISSING_IMAGE',
+        detail: `imageBase64: ${!!imageBase64
