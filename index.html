@@ -1257,13 +1257,18 @@
 
   // ============== Storage ==============
   async function loadAll() {
-    if (!currentUser) { entries = []; return; }
+    console.log('[loadAll] start, currentUser:', currentUser?.id, currentUser?.email);
+    if (!currentUser) { entries = []; console.warn('[loadAll] no currentUser'); return; }
     try {
-      const { data, error } = await sb.from('entries').select('*').order('created_at', { ascending: false });
+      const { data, error } = await sb.from('entries')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
       if (error) throw error;
       entries = (data || []).map(dbToEntry);
+      console.log('[loadAll] success, loaded', entries.length, 'entries');
     } catch (e) {
-      console.error('Storage load failed:', e);
+      console.error('[loadAll] failed:', e);
       entries = [];
     }
   }
@@ -2378,47 +2383,65 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
 
   // ============== Boot ==============
   (async function() {
+    console.log('[BOOT] start');
     initLogin();
+    console.log('[BOOT] initLogin done');
 
     let appInitialized = false;
+    let bootInProgress = false;
+
     async function bootApp(user) {
-      currentUser = user;
-      updateUserUI(currentUser);
-      showApp();
-      if (!appInitialized) {
-        try {
-          init();
-          appInitialized = true;
-        } catch (e) {
-          console.error('[init() failed]:', e);
-        }
+      // 동시 호출 방지
+      if (bootInProgress) {
+        console.warn('[BOOT] bootApp already in progress, skipping');
+        return;
       }
+      bootInProgress = true;
+      console.log('[BOOT] bootApp start', user?.id, user?.email);
       try {
-        await loadAll();
-      } catch (e) {
-        console.error('[loadAll() failed]:', e);
+        currentUser = user;
+        updateUserUI(currentUser);
+        showApp();
+
+        if (!appInitialized) {
+          console.log('[BOOT] calling init()');
+          try {
+            init();
+            appInitialized = true;
+            console.log('[BOOT] init() OK');
+          } catch (e) {
+            console.error('[BOOT] init() FAILED:', e);
+            alert('초기화 실패: ' + (e?.message || e));
+          }
+        } else {
+          console.log('[BOOT] init() already done, skipping');
+        }
+
+        try {
+          await loadAll();
+          console.log('[BOOT] loadAll done');
+        } catch (e) {
+          console.error('[BOOT] loadAll FAILED:', e);
+        }
+        renderActiveList();
+        renderStats();
+        console.log('[BOOT] bootApp complete');
+      } finally {
+        bootInProgress = false;
       }
-      renderActiveList();
-      renderStats();
     }
 
-    // 인증 상태 변화 감지
+    // 인증 상태 변화 감지 (등록 시 INITIAL_SESSION 이벤트도 한 번 자동 발생)
     sb.auth.onAuthStateChange(async (event, session) => {
+      console.log('[BOOT] authStateChange:', event, '| has user:', !!session?.user);
       if (session?.user) {
         await bootApp(session.user);
       } else {
         currentUser = null;
+        appInitialized = false; // 로그아웃 시 다시 init할 수 있도록 리셋
         showLogin();
       }
     });
-
-    // 초기 세션 확인
-    const { data: { session } } = await sb.auth.getSession();
-    if (session?.user) {
-      await bootApp(session.user);
-    } else {
-      showLogin();
-    }
   })();
 })();
 </script>
