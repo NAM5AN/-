@@ -528,6 +528,26 @@
   }
   .field-value.empty { color: var(--ink-faint); font-style: italic; }
 
+  .field-hint {
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: rgba(90, 124, 92, 0.08);
+    border-left: 3px solid var(--sage);
+    border-radius: 4px 8px 8px 4px;
+    font-size: 12px;
+    color: var(--sage);
+    font-weight: 500;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+  .field-hint-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+    margin-right: 4px;
+  }
+
   .modal-actions {
     display: flex;
     gap: 8px;
@@ -695,6 +715,7 @@
       <div class="field">
         <span class="field-label">📍 지역</span>
         <input type="text" class="field-input" id="mRegion" placeholder="예) 서울 강남구" />
+        <div class="field-hint" id="mActualAddress" style="display:none;"></div>
       </div>
       <div class="field">
         <span class="field-label">🎁 제공 내용</span>
@@ -1219,6 +1240,15 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
     document.getElementById('mVisitDate').value = e.visitDate || '';
     document.getElementById('mMemo').value = e.memo || '';
 
+    // 카카오에서 찾은 실제 주소 표시
+    const actualEl = document.getElementById('mActualAddress');
+    if (e.actualAddress) {
+      actualEl.innerHTML = `<span class="field-hint-label">실제 위치</span>📌 ${escapeHtml(e.actualAddress)}`;
+      actualEl.style.display = '';
+    } else {
+      actualEl.style.display = 'none';
+    }
+
     document.getElementById('btnComplete').style.display = e.completed ? 'none' : '';
     document.getElementById('btnRestore').style.display = e.completed ? '' : 'none';
     document.getElementById('btnDelete').style.display = '';
@@ -1242,6 +1272,9 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
     document.getElementById('mDeadline').value = p.deadline || '';
     document.getElementById('mVisitDate').value = '';
     document.getElementById('mMemo').value = '';
+
+    // 신규 등록 시 실제 주소 숨기기 (아직 검색 안 됨)
+    document.getElementById('mActualAddress').style.display = 'none';
 
     document.getElementById('btnComplete').style.display = 'none';
     document.getElementById('btnRestore').style.display = 'none';
