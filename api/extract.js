@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://wvwoqqfizgbhvdzlqscc.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_iLtSrF52sRfzalwcR4Nt-w_dJiU2q16';
 const DAILY_LIMIT = 3;
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const OPENAI_MODEL = 'gpt-4o-mini';
 
 const EXTRACTION_PROMPT = `이 이미지는 블로그 체험단 모집 공고 캡쳐입니다. 다음 항목을 추출해주세요.
 
@@ -76,36 +76,46 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'MISSING_IMAGE' });
     }
 
-    // Gemini API 호출
-    const geminiApiKey = process.env.GEMINI_API_KEY;
-    if (!geminiApiKey) {
-      return res.status(500).json({ error: 'GEMINI_KEY_NOT_CONFIGURED' });
+    // OpenAI API 호출
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      return res.status(500).json({ error: 'OPENAI_KEY_NOT_CONFIGURED' });
     }
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiApiKey}`,
+    const openaiRes = await fetch(
+      'https://api.openai.com/v1/chat/completions',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiApiKey}`
+        },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: EXTRACTION_PROMPT },
-              { inline_data: { mime_type: mimeType || 'image/jpeg', data: imageBase64 } }
+          model: OPENAI_MODEL,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'text', text: EXTRACTION_PROMPT },
+              {
+                type: 'image_url',
+                image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${imageBase64}` }
+              }
             ]
           }],
-          generationConfig: { temperature: 0, maxOutputTokens: 512 }
+          response_format: { type: 'json_object' },
+          temperature: 0,
+          max_tokens: 512
         })
       }
     );
 
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.text();
-      return res.status(502).json({ error: 'GEMINI_API_ERROR', detail: errBody });
+    if (!openaiRes.ok) {
+      const errBody = await openaiRes.text();
+      return res.status(502).json({ error: 'OPENAI_API_ERROR', detail: errBody });
     }
 
-    const geminiData = await geminiRes.json();
-    const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const openaiData = await openaiRes.json();
+    const rawText = openaiData.choices?.[0]?.message?.content || '';
 
     let parsed;
     try {
@@ -115,7 +125,7 @@ export default async function handler(req, res) {
       if (match) {
         parsed = JSON.parse(match[0]);
       } else {
-        return res.status(502).json({ error: 'GEMINI_PARSE_ERROR', raw: rawText });
+        return res.status(502).json({ error: 'OPENAI_PARSE_ERROR', raw: rawText });
       }
     }
 
