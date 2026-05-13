@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#F5EFE6">
 <title>체험단 스케쥴 관리</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
   @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap');
@@ -680,254 +679,9 @@
     .modal h2 { font-size: 20px; }
     .upload { padding: 24px 16px; }
   }
-
-  /* ============== Login Screen ============== */
-  .login-screen {
-    min-height: 100vh;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background:
-      radial-gradient(at 20% 30%, rgba(194, 84, 43, 0.08) 0px, transparent 50%),
-      radial-gradient(at 80% 70%, rgba(90, 124, 92, 0.08) 0px, transparent 50%),
-      var(--bg);
-  }
-  .login-screen.active { display: flex; }
-
-  .login-card {
-    max-width: 400px;
-    width: 100%;
-    background: var(--paper);
-    border-radius: 20px;
-    padding: 40px 32px;
-    box-shadow: 0 20px 60px rgba(42, 37, 34, 0.12);
-    border: 1px solid var(--line);
-    animation: slideUp 0.4s ease;
-  }
-  .login-title {
-    font-family: var(--font-serif);
-    font-weight: 700;
-    font-size: 30px;
-    margin-bottom: 6px;
-    text-align: center;
-    letter-spacing: -0.01em;
-  }
-  .login-title .mark {
-    color: var(--terra);
-    font-style: italic;
-  }
-  .login-sub {
-    text-align: center;
-    color: var(--ink-soft);
-    font-size: 14px;
-    margin-bottom: 32px;
-    line-height: 1.6;
-  }
-
-  .login-providers {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 22px;
-  }
-
-  .provider-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 13px 16px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--card);
-    font-family: var(--font-body);
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--ink);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    width: 100%;
-  }
-  .provider-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(42, 37, 34, 0.08);
-  }
-  .provider-btn:disabled {
-    opacity: 0.5;
-    cursor: wait;
-    transform: none;
-  }
-  .provider-btn .icon {
-    font-size: 18px;
-    line-height: 1;
-  }
-  .provider-btn.kakao {
-    background: #FEE500;
-    color: #181600;
-    border-color: #FEE500;
-  }
-  .provider-btn.kakao:hover { background: #F6DC00; }
-  .provider-btn.google {
-    background: white;
-    color: #1F1F1F;
-    border-color: #DADCE0;
-  }
-  .provider-btn.google:hover { background: #F8F9FA; }
-
-  .divider {
-    display: flex;
-    align-items: center;
-    margin: 18px 0;
-    color: var(--ink-faint);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .divider::before, .divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--line);
-  }
-  .divider::before { margin-right: 12px; }
-  .divider::after { margin-left: 12px; }
-
-  .email-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .email-form input {
-    padding: 11px 14px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--card);
-    font-family: var(--font-body);
-    font-size: 14px;
-    color: var(--ink);
-    width: 100%;
-  }
-  .email-form input:focus {
-    outline: none;
-    border-color: var(--terra);
-  }
-  .email-submit {
-    padding: 11px;
-    background: var(--terra);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-family: var(--font-body);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .email-submit:hover { background: #A8431F; }
-  .email-submit:disabled { opacity: 0.5; cursor: wait; }
-
-  .toggle-mode {
-    text-align: center;
-    font-size: 12px;
-    color: var(--ink-soft);
-    margin-top: 12px;
-  }
-  .toggle-mode a {
-    color: var(--terra);
-    cursor: pointer;
-    text-decoration: underline;
-    font-weight: 600;
-  }
-
-  .login-footer {
-    margin-top: 24px;
-    padding-top: 18px;
-    border-top: 1px dashed var(--line);
-    text-align: center;
-    font-size: 11px;
-    color: var(--ink-faint);
-    line-height: 1.6;
-  }
-
-  /* User menu in header */
-  .user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 4px 10px 4px 4px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 12px;
-    color: var(--ink);
-  }
-  .user-info:hover { background: var(--paper); }
-  .user-avatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--terra);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-  .user-name {
-    max-width: 100px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-weight: 500;
-  }
 </style>
 </head>
 <body>
-
-<!-- ============== Login Screen ============== -->
-<div class="login-screen" id="loginScreen">
-  <div class="login-card">
-    <div class="login-title">체험단 <span class="mark">스케쥴</span></div>
-    <div class="login-sub">블로그 체험단 스케쥴을<br>한 곳에서 관리하세요</div>
-
-    <div class="login-providers">
-      <button class="provider-btn kakao" id="loginKakao">
-        <span class="icon">💬</span>
-        <span>카카오로 시작하기</span>
-      </button>
-      <button class="provider-btn google" id="loginGoogle">
-        <span class="icon">🔍</span>
-        <span>구글로 시작하기</span>
-      </button>
-    </div>
-
-    <div class="divider">또는 이메일</div>
-
-    <form class="email-form" id="emailForm">
-      <input type="email" id="emailInput" placeholder="이메일" autocomplete="email" required />
-      <input type="password" id="passwordInput" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" minlength="6" required />
-      <button type="submit" class="email-submit" id="emailSubmit">로그인</button>
-    </form>
-
-    <div class="toggle-mode">
-      <span id="toggleText">계정이 없으신가요?</span>
-      <a id="toggleMode">회원가입</a>
-    </div>
-
-    <div class="login-footer">
-      로그인 시 이용약관 및 개인정보처리방침에 동의하는 것으로 간주됩니다.<br>
-      별도의 약관 페이지는 추후 추가 예정입니다.
-    </div>
-  </div>
-</div>
-
-<!-- ============== Main App ============== -->
-<div id="mainApp" style="display:none;">
 
 <div class="app">
   <header>
@@ -935,10 +689,6 @@
       <h1>체험단 <span class="mark">스케쥴</span></h1>
       <div class="header-actions">
         <span class="sub" id="todayDate"></span>
-        <div class="user-info" id="userInfo" title="로그아웃하려면 클릭">
-          <div class="user-avatar" id="userAvatar">?</div>
-          <span class="user-name" id="userName">사용자</span>
-        </div>
         <button class="icon-btn" id="btnSettings" aria-label="설정" title="설정">⚙️</button>
       </div>
     </div>
@@ -1091,142 +841,53 @@
 
   const KEY_PREFIX = 'entry:';
 
-  // ============== Supabase Setup ==============
-  const SUPABASE_URL = 'https://wvwoqqfizgbhvdzlqscc.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_iLtSrF52sRfzalwcR4Nt-w_dJiU2q16';
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  });
-  let currentUser = null;
-
-  // ============== DB <-> Frontend 변환 ==============
-  function dbToEntry(row) {
+  // ============== Storage Abstraction ==============
+  // window.storage가 있으면 그것을 사용 (Claude.ai 내부에서), 없으면 localStorage 사용
+  const storage = (function() {
+    const hasNative = typeof window !== 'undefined'
+      && window.storage
+      && typeof window.storage.get === 'function';
+    if (hasNative) return window.storage;
     return {
-      id: row.id,
-      storeName: row.store_name || '',
-      region: row.region || '',
-      content: row.content || '',
-      deadline: row.deadline || '',
-      visitDate: row.visit_date || '',
-      memo: row.memo || '',
-      lat: row.lat,
-      lng: row.lng,
-      locationSource: row.location_source || '',
-      actualAddress: row.actual_address || '',
-      category: row.category || '',
-      completed: row.completed || false,
-      completedAt: row.completed_at || '',
-      createdAt: row.created_at || new Date().toISOString()
-    };
-  }
-
-  function entryToDB(entry) {
-    if (!currentUser) throw new Error('NOT_LOGGED_IN');
-    return {
-      id: entry.id,
-      user_id: currentUser.id,
-      store_name: entry.storeName || '',
-      region: entry.region || '',
-      content: entry.content || '',
-      deadline: entry.deadline || null,
-      visit_date: entry.visitDate || null,
-      memo: entry.memo || '',
-      lat: entry.lat,
-      lng: entry.lng,
-      location_source: entry.locationSource || '',
-      actual_address: entry.actualAddress || '',
-      category: entry.category || '',
-      completed: entry.completed || false,
-      completed_at: entry.completedAt || null,
-      created_at: entry.createdAt
-    };
-  }
-
-  // ============== Storage Abstraction (Supabase-backed) ==============
-  // 기존 코드와 호환성을 위한 인터페이스 유지: get/set/delete/list
-  // entry:* 는 entries 테이블로, 그 외 키는 user_settings 테이블로 라우팅
-  const storage = {
-    async get(key) {
-      if (!currentUser) return null;
-      // entry:xxx → entries 테이블
-      if (key.startsWith(KEY_PREFIX)) {
-        const id = key.slice(KEY_PREFIX.length);
-        const { data, error } = await sb.from('entries').select('*').eq('id', id).maybeSingle();
-        if (error || !data) return null;
-        return { key, value: JSON.stringify(dbToEntry(data)) };
-      }
-      // 설정 키 → user_settings 테이블
-      const { data, error } = await sb.from('user_settings').select(key).eq('user_id', currentUser.id).maybeSingle();
-      if (error || !data || !data[key]) return null;
-      return { key, value: data[key] };
-    },
-
-    async set(key, value) {
-      if (!currentUser) return null;
-      if (key.startsWith(KEY_PREFIX)) {
-        const entry = JSON.parse(value);
-        const row = entryToDB(entry);
-        const { error } = await sb.from('entries').upsert(row, { onConflict: 'id' });
-        if (error) { console.error('entry upsert', error); return null; }
+      async get(key) {
+        const v = localStorage.getItem(key);
+        return v !== null ? { key, value: v } : null;
+      },
+      async set(key, value) {
+        localStorage.setItem(key, value);
         return { key, value };
-      }
-      // 설정 키
-      const updates = { user_id: currentUser.id, [key]: value };
-      const { error } = await sb.from('user_settings').upsert(updates, { onConflict: 'user_id' });
-      if (error) { console.error('settings upsert', error); return null; }
-      return { key, value };
-    },
-
-    async delete(key) {
-      if (!currentUser) return null;
-      if (key.startsWith(KEY_PREFIX)) {
-        const id = key.slice(KEY_PREFIX.length);
-        const { error } = await sb.from('entries').delete().eq('id', id);
-        if (error) { console.error('entry delete', error); return null; }
+      },
+      async delete(key) {
+        localStorage.removeItem(key);
         return { key, deleted: true };
+      },
+      async list(prefix) {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!prefix || (k && k.startsWith(prefix))) keys.push(k);
+        }
+        return { keys };
       }
-      // 설정 키 비우기 (행 자체는 유지)
-      const updates = { user_id: currentUser.id, [key]: '' };
-      const { error } = await sb.from('user_settings').upsert(updates, { onConflict: 'user_id' });
-      if (error) return null;
-      return { key, deleted: true };
-    },
-
-    async list(prefix) {
-      if (!currentUser) return { keys: [] };
-      if (prefix === KEY_PREFIX || prefix === 'entry:') {
-        const { data, error } = await sb.from('entries').select('id').order('created_at', { ascending: false });
-        if (error || !data) return { keys: [] };
-        return { keys: data.map(r => KEY_PREFIX + r.id) };
-      }
-      return { keys: [] };
-    }
-  };
-
-  // ============== ID 생성 (UUID) ==============
-  function uid() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    // fallback
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random() * 16 | 0;
-      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-    });
-  }
+    };
+  })();
 
   // AI API가 사용 가능한 환경인지 (Claude.ai 내부 아티팩트인지)
   let aiAvailable = null; // null=미확인, true=가능, false=불가
 
   // ============== Storage ==============
   async function loadAll() {
-    if (!currentUser) { entries = []; return; }
     try {
-      const { data, error } = await sb.from('entries').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      entries = (data || []).map(dbToEntry);
+      const res = await storage.list(KEY_PREFIX);
+      const keys = res?.keys || [];
+      const items = [];
+      for (const k of keys) {
+        try {
+          const v = await storage.get(k);
+          if (v?.value) items.push(JSON.parse(v.value));
+        } catch (e) { /* skip missing key */ }
+      }
+      entries = items.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     } catch (e) {
       console.error('Storage load failed:', e);
       entries = [];
@@ -1255,6 +916,10 @@
   }
 
   // ============== Utils ==============
+  function uid() {
+    return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
   function todayStr() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -2209,171 +1874,15 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
     });
   }
 
-  // ============== 인증 (Auth) ==============
-  function emailToInitial(email) {
-    if (!email) return '?';
-    return email.charAt(0).toUpperCase();
-  }
-
-  function getUserDisplayName(user) {
-    if (!user) return '사용자';
-    const meta = user.user_metadata || {};
-    return meta.name || meta.full_name || meta.preferred_username || user.email?.split('@')[0] || '사용자';
-  }
-
-  function updateUserUI(user) {
-    if (!user) return;
-    const name = getUserDisplayName(user);
-    document.getElementById('userName').textContent = name;
-    document.getElementById('userAvatar').textContent = emailToInitial(user.email || name);
-  }
-
-  function showLogin() {
-    document.getElementById('loginScreen').classList.add('active');
-    document.getElementById('mainApp').style.display = 'none';
-  }
-
-  function showApp() {
-    document.getElementById('loginScreen').classList.remove('active');
-    document.getElementById('mainApp').style.display = '';
-  }
-
-  async function signOut() {
-    if (!confirm('로그아웃하시겠어요?')) return;
-    await sb.auth.signOut();
-    // 데이터 비우기
-    entries = [];
-    currentUser = null;
-    showLogin();
-    showToast('로그아웃했어요');
-  }
-
-  // ============== 로그인 화면 이벤트 ==============
-  function initLogin() {
-    let isSignupMode = false;
-
-    const emailForm = document.getElementById('emailForm');
-    const emailSubmit = document.getElementById('emailSubmit');
-    const toggleText = document.getElementById('toggleText');
-    const toggleMode = document.getElementById('toggleMode');
-
-    toggleMode.addEventListener('click', () => {
-      isSignupMode = !isSignupMode;
-      if (isSignupMode) {
-        emailSubmit.textContent = '회원가입';
-        toggleText.textContent = '이미 계정이 있으신가요?';
-        toggleMode.textContent = '로그인';
-      } else {
-        emailSubmit.textContent = '로그인';
-        toggleText.textContent = '계정이 없으신가요?';
-        toggleMode.textContent = '회원가입';
-      }
-    });
-
-    emailForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('emailInput').value.trim();
-      const password = document.getElementById('passwordInput').value;
-      if (!email || !password) return;
-
-      emailSubmit.disabled = true;
-      emailSubmit.textContent = '처리 중...';
-
-      try {
-        if (isSignupMode) {
-          const { data, error } = await sb.auth.signUp({ email, password });
-          if (error) throw error;
-          if (data.user && !data.session) {
-            alert('이메일로 인증 링크를 보냈어요. 메일 확인 후 로그인해주세요.');
-            emailSubmit.disabled = false;
-            emailSubmit.textContent = '회원가입';
-            return;
-          }
-          // 자동 로그인된 경우 onAuthStateChange가 처리
-        } else {
-          const { error } = await sb.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-        }
-      } catch (err) {
-        let msg = err.message || '오류가 발생했어요';
-        if (msg.includes('Invalid login')) msg = '이메일 또는 비밀번호가 올바르지 않아요';
-        if (msg.includes('already registered')) msg = '이미 가입된 이메일이에요. 로그인해주세요';
-        if (msg.includes('Password should be at least')) msg = '비밀번호는 6자 이상이어야 해요';
-        alert(msg);
-        emailSubmit.disabled = false;
-        emailSubmit.textContent = isSignupMode ? '회원가입' : '로그인';
-      }
-    });
-
-    document.getElementById('loginKakao').addEventListener('click', async (e) => {
-      e.target.disabled = true;
-      const { error } = await sb.auth.signInWithOAuth({
-        provider: 'kakao',
-        options: { redirectTo: window.location.origin }
-      });
-      if (error) {
-        alert('카카오 로그인 실패: ' + error.message);
-        e.target.disabled = false;
-      }
-    });
-
-    document.getElementById('loginGoogle').addEventListener('click', async (e) => {
-      e.target.disabled = true;
-      const { error } = await sb.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin }
-      });
-      if (error) {
-        alert('구글 로그인 실패: ' + error.message);
-        e.target.disabled = false;
-      }
-    });
-  }
-
   // ============== Boot ==============
   (async function() {
-    initLogin();
-
-    let appInitialized = false;
-    async function bootApp(user) {
-      currentUser = user;
-      updateUserUI(currentUser);
-      showApp();
-      if (!appInitialized) {
-        init();
-        appInitialized = true;
-      }
-      await loadAll();
-      renderActiveList();
-      renderStats();
-    }
-
-    // 인증 상태 변화 감지
-    sb.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await bootApp(session.user);
-      } else {
-        currentUser = null;
-        showLogin();
-      }
-    });
-
-    // 초기 세션 확인
-    const { data: { session } } = await sb.auth.getSession();
-    if (session?.user) {
-      await bootApp(session.user);
-    } else {
-      showLogin();
-    }
-
-    // 로그아웃 버튼
-    const userInfoEl = document.getElementById('userInfo');
-    if (userInfoEl) userInfoEl.addEventListener('click', signOut);
+    init();
+    await loadAll();
+    renderActiveList();
+    renderStats();
   })();
 })();
 </script>
-
-</div><!-- /mainApp -->
 
 </body>
 </html>
