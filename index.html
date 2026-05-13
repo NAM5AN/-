@@ -937,7 +937,6 @@
           <div class="user-avatar" id="userAvatar">?</div>
           <span class="user-name" id="userName">사용자</span>
         </div>
-        <button class="icon-btn" id="btnLogout" aria-label="로그아웃" title="로그아웃">🚪</button>
         <button class="icon-btn" id="btnSettings" aria-label="설정" title="설정">⚙️</button>
       </div>
     </div>
@@ -1070,6 +1069,26 @@
         <button class="btn btn-ghost" id="btnClearGemini">지우기</button>
       </div>
     </div>
+
+    <hr class="settings-divider" />
+
+    <!-- ③ 계정 -->
+    <div class="settings-section">
+      <h3>👤 계정</h3>
+      <div class="field">
+        <span class="field-label">현재 로그인</span>
+        <div id="accountInfo" style="padding:10px 12px; background:var(--card); border:1px solid var(--line); border-radius:8px; font-size:13px; color:var(--ink-soft);">
+          —
+        </div>
+        <div class="settings-hint">
+          로그아웃하면 다른 계정으로 다시 로그인할 수 있어요. 저장된 데이터는 클라우드에 보관되므로 사라지지 않아요.
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btnLogout">🚪 로그아웃</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2085,8 +2104,19 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
     document.getElementById('btnSettings').addEventListener('click', async () => {
       await refreshKakaoStatus();
       await refreshGeminiStatus();
+      // 계정 정보 표시
+      const acctEl = document.getElementById('accountInfo');
+      if (acctEl && currentUser) {
+        const name = getUserDisplayName(currentUser);
+        const email = currentUser.email || '(이메일 미제공)';
+        const provider = currentUser.app_metadata?.provider || 'email';
+        const providerName = { kakao: '카카오', google: '구글', email: '이메일' }[provider] || provider;
+        acctEl.innerHTML = `<strong>${name}</strong> <span style="color:var(--ink-faint); font-size:12px;">· ${providerName}</span><br><span style="font-size:12px;">${email}</span>`;
+      }
       settingsBg.classList.add('active');
     });
+
+    document.getElementById('btnLogout').addEventListener('click', signOut);
 
     document.getElementById('settingsClose').addEventListener('click', () => {
       settingsBg.classList.remove('active');
@@ -2364,10 +2394,6 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
     } else {
       showLogin();
     }
-
-    // 로그아웃 버튼
-    const btnLogoutEl = document.getElementById('btnLogout');
-    if (btnLogoutEl) btnLogoutEl.addEventListener('click', signOut);
   })();
 })();
 </script>
