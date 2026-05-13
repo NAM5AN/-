@@ -439,6 +439,13 @@
     font-weight: 700;
     font-size: 13px;
   }
+  .pin-icon {
+    transform: rotate(45deg);
+    font-size: 15px;
+    line-height: 1;
+    display: block;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+  }
 
   /* ---- Modal ---- */
   .modal-bg {
@@ -957,6 +964,76 @@
     })[c]);
   }
 
+  // ============== 업종별 아이콘 매칭 ==============
+  // 카카오 카테고리(예: "음식점 > 카페 > 테이크아웃") 또는 가게 이름에서 키워드 매칭
+  const CATEGORY_ICONS = [
+    // 음식 - 세부
+    { pattern: /카페|커피|coffee|cafe|에스프레소|로스터/i, icon: '☕' },
+    { pattern: /디저트|케이크|베이커리|빵|제과|마카롱|쿠키|와플|크로플|도넛|크레페|아이스크림|젤라또|빙수/i, icon: '🥐' },
+    { pattern: /초밥|스시|사시미|회|일식|이자카야|라멘|돈까스|우동|소바|덮밥|규동|텐동/i, icon: '🍣' },
+    { pattern: /중식|중화|짜장|짬뽕|마라|훠궈|딤섬|양꼬치/i, icon: '🥡' },
+    { pattern: /파스타|피자|스테이크|양식|이탈리안|프렌치|스페인|타파스/i, icon: '🍝' },
+    { pattern: /햄버거|버거|패스트푸드/i, icon: '🍔' },
+    { pattern: /치킨|닭갈비|찜닭|닭발/i, icon: '🍗' },
+    { pattern: /삼겹살|돼지|소고기|한우|갈비|고깃집|숯불|구이|곱창|막창|족발|보쌈/i, icon: '🥩' },
+    { pattern: /분식|떡볶이|김밥|순대|어묵|튀김|핫도그/i, icon: '🍢' },
+    { pattern: /한식|국밥|백반|냉면|찌개|국수|칼국수|만두|쌈밥|비빔밥|설렁탕|곰탕|순두부|해장국|보리밥|쌈|쌈장/i, icon: '🍚' },
+    { pattern: /해산물|조개|회집|장어|문어|새우|랍스터|게|꽃게|대게/i, icon: '🦐' },
+    { pattern: /샐러드|건강|채식|비건|포케/i, icon: '🥗' },
+    { pattern: /술집|호프|와인|이자카야|포차|바|펍|위스키|칵테일|맥주/i, icon: '🍺' },
+    { pattern: /떡|떡집|한과|전통/i, icon: '🍡' },
+    { pattern: /과일|청과|주스|스무디|쥬스/i, icon: '🍓' },
+    { pattern: /음식점|식당|레스토랑|키친|다이닝|푸드/i, icon: '🍽️' },
+    // 의료/건강
+    { pattern: /피부과|피부|에스테틱|스킨/i, icon: '✨' },
+    { pattern: /성형|미용|시술/i, icon: '💎' },
+    { pattern: /치과|덴탈/i, icon: '🦷' },
+    { pattern: /안과|안경|렌즈/i, icon: '👓' },
+    { pattern: /한의원|한방/i, icon: '🌿' },
+    { pattern: /병원|의원|클리닉|메디컬|내과|외과|소아과|이비인후과|정형외과|산부인과/i, icon: '🏥' },
+    { pattern: /약국/i, icon: '💊' },
+    // 미용/뷰티
+    { pattern: /미용실|헤어|살롱|cut|커트|펌|염색/i, icon: '💇' },
+    { pattern: /네일|페디/i, icon: '💅' },
+    { pattern: /마사지|스파|왁싱|타이|아로마|두피/i, icon: '💆' },
+    { pattern: /속눈썹|래쉬/i, icon: '👁️' },
+    { pattern: /화장품|코스메틱|cosmetic/i, icon: '💄' },
+    // 운동/취미
+    { pattern: /헬스|피트니스|짐|gym|크로스핏/i, icon: '💪' },
+    { pattern: /요가|필라테스|발레/i, icon: '🧘' },
+    { pattern: /수영|풀|swim/i, icon: '🏊' },
+    { pattern: /클라이밍|볼더링/i, icon: '🧗' },
+    { pattern: /골프|스크린골프/i, icon: '⛳' },
+    { pattern: /테니스|스쿼시|배드민턴/i, icon: '🎾' },
+    // 숙박/여행
+    { pattern: /펜션|호텔|모텔|숙박|풀빌라|리조트|게스트하우스|민박/i, icon: '🏨' },
+    { pattern: /캠핑|글램핑|차박/i, icon: '🏕️' },
+    // 기타
+    { pattern: /서점|책|북카페|독립서점/i, icon: '📚' },
+    { pattern: /꽃|플라워|플로리스트|화원/i, icon: '💐' },
+    { pattern: /사진|스튜디오|포토|증명사진/i, icon: '📷' },
+    { pattern: /공방|클래스|원데이|체험|만들기|diy/i, icon: '🎨' },
+    { pattern: /펫|동물|강아지|고양이|반려|애견|미용\s*샵/i, icon: '🐾' },
+    { pattern: /노래방|코노|karaoke/i, icon: '🎤' },
+    { pattern: /pc방|게임|보드게임|방탈출/i, icon: '🎮' },
+    { pattern: /영화|시네마|cgv|메가박스|롯데시네마/i, icon: '🎬' },
+    { pattern: /마트|편의점|시장|쇼핑|아울렛|백화점/i, icon: '🛍️' },
+    { pattern: /세탁|크리닝|빨래/i, icon: '👕' },
+    { pattern: /자동차|정비|세차|타이어/i, icon: '🚗' },
+    { pattern: /가구|인테리어|소품/i, icon: '🛋️' },
+    { pattern: /학원|교습|과외|수학|영어/i, icon: '📖' },
+  ];
+
+  function getCategoryIcon(entry) {
+    if (!entry) return '📍';
+    const text = [entry.category, entry.storeName, entry.content].filter(Boolean).join(' ');
+    if (!text) return '📍';
+    for (const ci of CATEGORY_ICONS) {
+      if (ci.pattern.test(text)) return ci.icon;
+    }
+    return '📍'; // 기본
+  }
+
   function showToast(msg, type = '') {
     const t = document.getElementById('toast');
     t.className = 'toast show ' + type;
@@ -1156,6 +1233,7 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
               lng: parseFloat(place.x),
               address: place.address_name || place.road_address_name || '',
               actualName: place.place_name || '',
+              category: place.category_name || place.category_group_name || '',
               source: 'kakao'
             });
           } else {
@@ -1297,8 +1375,9 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
         const bounds = [];
         list.forEach((e, i) => {
           const urgent = isUrgent(e.deadline);
+          const icon = getCategoryIcon(e);
           const ico = L.divIcon({
-            html: `<div class="pin ${urgent ? 'urgent' : ''}"><span class="pin-num">${i + 1}</span></div>`,
+            html: `<div class="pin ${urgent ? 'urgent' : ''}"><span class="pin-icon">${icon}</span></div>`,
             className: '',
             iconSize: [30, 30],
             iconAnchor: [15, 30]
@@ -1525,6 +1604,7 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
           lat: coords.lat, lng: coords.lng,
           locationSource: coords.source || 'unknown',
           actualAddress: coords.address || '',
+          category: coords.category || '',
           completed: false,
           createdAt: new Date().toISOString()
         };
@@ -1570,6 +1650,7 @@ JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 �
             e.lng = coords.lng;
             e.locationSource = coords.source || 'unknown';
             e.actualAddress = coords.address || '';
+            e.category = coords.category || '';
           } catch (err) { /* keep old */ }
           setLoading(false);
         }
