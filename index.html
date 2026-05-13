@@ -287,6 +287,26 @@
   }
   #fileInput { display: none; }
 
+  .ai-usage-display {
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .ai-usage-display strong {
+    color: var(--terra);
+    font-weight: 700;
+  }
+  .ai-usage-display.exhausted strong {
+    color: var(--rose);
+  }
+  .ai-usage-mini {
+    text-align: center;
+    margin: -8px auto 16px;
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+  .ai-usage-mini strong { color: var(--terra); font-weight: 600; }
+  .ai-usage-mini.exhausted strong { color: var(--rose); }
+
   /* paste 시 깜빡 효과 */
   @keyframes pasteFlash {
     0% { background-color: var(--paper); border-color: var(--line); }
@@ -1129,7 +1149,8 @@
         클릭 · 끌어다 놓기<span class="pc-only"> · <kbd>Ctrl</kbd>+<kbd>V</kbd>로 붙여넣기</span> · AI가 자동으로 정보를 추출해요
       </div>
     </label>
-    <div style="text-align:center; margin-bottom: 24px; margin-top: -12px;">
+    <div class="ai-usage-mini" id="aiUsageMini"></div>
+    <div style="text-align:center; margin-bottom: 24px; margin-top: -8px;">
       <button class="btn btn-ghost" id="btnManualAdd" style="font-size: 12px;">✏️ 직접 입력하기</button>
     </div>
 
@@ -1227,51 +1248,25 @@
   <div class="modal">
     <button class="modal-close" id="settingsClose">✕</button>
     <h2>⚙️ 설정</h2>
-    <div class="modal-sub">두 가지 키를 각각 따로 저장할 수 있어요. 안 써도 앱은 동작합니다.</div>
+    <div class="modal-sub">계정 정보와 사용량을 확인할 수 있어요.</div>
 
-    <!-- ① 카카오맵 -->
+    <!-- ① AI 사용량 -->
     <div class="settings-section">
-      <h3>🗺 정확한 가게 위치 검색 <span id="kakaoStatus" class="status-pill off">미설정</span></h3>
+      <h3>🤖 AI 자동 추출 사용량</h3>
       <div class="field">
-        <span class="field-label">카카오맵 JavaScript 키</span>
-        <input type="text" class="field-input" id="kakaoKeyInput" placeholder="예: 1a2b3c4d5e6f..." autocomplete="off" />
-        <div class="settings-hint">
-          입력하면 <strong>"종로의 시애틀커피하우스"</strong> 같은 검색으로 정확한 가게 위치를 찾아요. 미설정 시 OSM 기반 대략적 위치로 동작합니다.<br><br>
-          <strong>발급 방법</strong> (무료) — <a href="https://developers.kakao.com/console/app" target="_blank">developers.kakao.com</a> → 앱 추가 → <strong>제품 설정 → 카카오맵 → 활성화 ON</strong> → <strong>앱 설정 → 플랫폼 키 → JavaScript 키</strong>에서 도메인 등록 후 키 복사
+        <div id="aiUsageBox" style="padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:10px; font-size:14px; color:var(--ink); text-align:center;">
+          <div id="aiUsageDisplay" class="ai-usage-display">불러오는 중...</div>
+          <div style="font-size:11px; color:var(--ink-faint); margin-top:6px;">사용량은 매일 자정에 초기화됩니다</div>
         </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" id="btnSaveKey">💾 카카오 키 저장</button>
-        <button class="btn btn-ghost" id="btnClearKey">지우기</button>
+        <div class="settings-hint">
+          캡쳐 이미지를 올리면 AI가 상호명/지역/제공 내용/리뷰 마감일을 자동으로 추출해드려요. 사용량을 초과하면 직접 입력으로 사용 가능합니다.
+        </div>
       </div>
     </div>
 
     <hr class="settings-divider" />
 
-    <!-- ② Gemini -->
-    <div class="settings-section">
-      <h3>🤖 이미지 자동 정보 추출 <span id="geminiStatus" class="status-pill off">미설정</span></h3>
-      <div class="field">
-        <span class="field-label">Google Gemini API 키</span>
-        <input type="text" class="field-input" id="geminiKeyInput" placeholder="예: AIzaSy..." autocomplete="off" />
-        <div class="settings-hint">
-          입력하면 캡쳐 이미지에서 <strong>상호명/지역/제공 내용/마감일</strong>을 AI가 자동 추출해요. 무료 할당량: <strong>하루 1500회</strong> (개인 사용에 충분).<br><br>
-          <strong>발급 방법</strong> (무료)<br>
-          1. <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> 접속 → Google 로그인<br>
-          2. <strong>Create API key</strong> 또는 <strong>API 키 만들기</strong> 클릭<br>
-          3. 생성된 키 복사 → 위에 붙여넣기<br>
-          <em>※ 별도 도메인 등록 같은 거 필요 없어요. 키 발급만 하면 됨.</em>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" id="btnSaveGemini">💾 Gemini 키 저장</button>
-        <button class="btn btn-ghost" id="btnClearGemini">지우기</button>
-      </div>
-    </div>
-
-    <hr class="settings-divider" />
-
-    <!-- ③ 계정 -->
+    <!-- ② 계정 -->
     <div class="settings-section">
       <h3>👤 계정</h3>
       <div class="field">
@@ -1317,6 +1312,12 @@
     }
   });
   let currentUser = null;
+
+  // ============== 내장 API 키 (관리자 제공) ==============
+  // 카카오 JS 키는 도메인 제한으로 보호됨 - cheheomdan.vercel.app에서만 작동
+  // Gemini 키는 절대 클라이언트에 두지 않음 - /api/extract 서버 함수에서 처리
+  const KAKAO_KEY = '21466d7ae884ca307c2ec034bd6887e1';
+  const AI_DAILY_LIMIT = 3;
 
   // ============== DB <-> Frontend 변환 ==============
   function dbToEntry(row) {
@@ -1432,13 +1433,9 @@
     });
   }
 
-  // AI API가 사용 가능한 환경인지 (Claude.ai 내부 아티팩트인지)
-  let aiAvailable = null; // null=미확인, true=가능, false=불가
-
   // ============== Storage ==============
   async function loadAll() {
-    console.log('[loadAll] start, currentUser:', currentUser?.id, currentUser?.email);
-    if (!currentUser) { entries = []; console.warn('[loadAll] no currentUser'); return; }
+    if (!currentUser) { entries = []; return; }
     try {
       const { data, error } = await sb.from('entries')
         .select('*')
@@ -1446,7 +1443,6 @@
         .order('created_at', { ascending: false });
       if (error) throw error;
       entries = (data || []).map(dbToEntry);
-      console.log('[loadAll] success, loaded', entries.length, 'entries');
     } catch (e) {
       console.error('[loadAll] failed:', e);
       entries = [];
@@ -1602,20 +1598,64 @@
     el.classList.toggle('active', !!on);
   }
 
-  // ============== AI Image Extraction ==============
+  // ============== AI Image Extraction (via Vercel Serverless Function) ==============
+  // 사용자가 API 키를 입력할 필요 없음. 서버에서 키를 안전하게 관리하고
+  // 하루 N회 사용량 제한도 서버에서 체크함.
   async function extractFromImage(file) {
-    // ① Gemini 키가 있으면 우선 시도 (브라우저에서 직접 호출 가능)
-    const geminiKey = await storage.get('gemini_api_key');
-    if (geminiKey?.value) {
-      try {
-        return await geminiExtractFromImage(file, geminiKey.value);
-      } catch (e) {
-        console.warn('Gemini extraction failed:', e);
-        // 실패 시 Anthropic으로 fallback
+    if (!currentUser) throw new Error('NOT_LOGGED_IN');
+
+    const base64 = await readFileAsBase64(file);
+    const mimeType = file.type || 'image/jpeg';
+
+    // 현재 세션의 액세스 토큰 가져오기
+    const { data: sessionData } = await sb.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) throw new Error('NO_TOKEN');
+
+    const response = await fetch('/api/extract', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ imageBase64: base64, mimeType })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      // 사용량 초과
+      if (response.status === 429 && result.error === 'DAILY_LIMIT_EXCEEDED') {
+        const err = new Error('DAILY_LIMIT_EXCEEDED');
+        err.code = 'DAILY_LIMIT_EXCEEDED';
+        err.limit = result.limit;
+        err.used = result.used;
+        throw err;
       }
+      // 인증 문제
+      if (response.status === 401) {
+        const err = new Error('NOT_AUTHENTICATED');
+        err.code = 'NOT_AUTHENTICATED';
+        throw err;
+      }
+      // 그 외 오류
+      const err = new Error(result.error || 'EXTRACTION_FAILED');
+      err.code = result.error || 'UNKNOWN';
+      throw err;
     }
-    // ② Anthropic Claude (Claude.ai 내부에서만 작동)
-    return await anthropicExtractFromImage(file);
+
+    // 성공: 사용량 정보 업데이트 (UI 갱신용)
+    if (result.usage) {
+      lastUsage = result.usage;
+      refreshUsageDisplay();
+    }
+
+    return {
+      storeName: result.data?.storeName || '',
+      region: result.data?.region || '',
+      content: result.data?.content || '',
+      deadline: result.data?.deadline || ''
+    };
   }
 
   async function readFileAsBase64(file) {
@@ -1627,140 +1667,75 @@
     });
   }
 
-  function buildExtractionPrompt() {
-    return `이 이미지는 블로그 체험단 모집 공고 캡쳐입니다. 다음 항목을 추출해주세요.
+  // 사용량 추적 (브라우저 상태)
+  let lastUsage = null; // { used, limit, remaining }
 
-JSON 형식으로만 답변하세요 (코드 블록이나 다른 설명 절대 금지):
-{
-  "storeName": "상호명 또는 업체명",
-  "region": "지역 (시/도 + 구/군, 예: 서울 강남구)",
-  "content": "체험단에게 제공되는 내용/서비스/제품",
-  "deadline": "리뷰 마감일 (YYYY-MM-DD 형식, 추출 불가하면 빈 문자열)"
-}
-
-[deadline 추출 규칙 - 매우 중요]
-체험단 공고에는 보통 두 가지 날짜가 있습니다. 헷갈리지 마세요:
-  ① "모집 마감일" / "선정 마감일" / "신청 마감일" / "모집 및 선정 기간" → 이건 절대 추출하면 안 됨
-  ② "리뷰 마감일" / "리뷰 마감" / "포스팅 마감" / "콘텐츠 등록 마감" → 이것을 추출해야 함
-
-deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
-공고에 "리뷰 마감"이 명시적으로 적혀있으면 그 날짜를, 없으면 가장 늦은 날짜를 추출하세요.
-모집 마감일이나 신청 마감일만 있고 리뷰 마감일이 없다면 빈 문자열로 두세요.
-
-[형식]
-- 모든 날짜는 YYYY-MM-DD 형식으로 변환 (예: "26.06.09" → "2026-06-09")
-- 찾지 못한 항목은 빈 문자열로 두세요.`;
+  // 서버에서 직접 오늘 사용량 조회 (페이지 로드 시 호출)
+  async function fetchTodayUsage() {
+    if (!currentUser) return null;
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await sb.from('daily_usage')
+        .select('count')
+        .eq('user_id', currentUser.id)
+        .eq('date', today)
+        .maybeSingle();
+      const used = data?.count || 0;
+      lastUsage = {
+        used,
+        limit: AI_DAILY_LIMIT,
+        remaining: Math.max(0, AI_DAILY_LIMIT - used)
+      };
+      refreshUsageDisplay();
+      return lastUsage;
+    } catch (e) {
+      console.warn('Failed to fetch usage:', e);
+      return null;
+    }
   }
 
-  // Google Gemini API (브라우저에서 직접 호출 가능, 무료 티어 있음)
-  async function geminiExtractFromImage(file, apiKey) {
-    const base64 = await readFileAsBase64(file);
-    const mediaType = file.type || 'image/jpeg';
-    const prompt = buildExtractionPrompt();
+  function refreshUsageDisplay() {
+    if (!lastUsage) return;
+    const { used, limit, remaining } = lastUsage;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inline_data: { mime_type: mediaType, data: base64 } },
-              { text: prompt }
-            ]
-          }],
-          generationConfig: {
-            response_mime_type: 'application/json',
-            temperature: 0.2
-          }
-        })
+    // 설정 모달 큰 표시
+    const main = document.getElementById('aiUsageDisplay');
+    if (main) {
+      main.innerHTML = `오늘 AI 추출 <strong>${used}</strong> / ${limit}회 사용 (남은 횟수 <strong>${remaining}</strong>회)`;
+      main.className = 'ai-usage-display' + (remaining === 0 ? ' exhausted' : '');
+    }
+
+    // 업로드 영역 아래 미니 표시
+    const mini = document.getElementById('aiUsageMini');
+    if (mini) {
+      if (remaining === 0) {
+        mini.innerHTML = `오늘 AI 추출을 모두 사용했어요 (<strong>${used}</strong>/${limit}). 직접 입력으로 사용 가능해요`;
+      } else {
+        mini.innerHTML = `오늘 AI 추출 <strong>${used}</strong>/${limit}회 사용 (남은 횟수 <strong>${remaining}</strong>회)`;
       }
-    );
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      throw new Error('Gemini API 실패 (' + response.status + '): ' + errText.slice(0, 200));
+      mini.className = 'ai-usage-mini' + (remaining === 0 ? ' exhausted' : '');
     }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const cleaned = text.replace(/```json|```/g, '').trim();
-    const json = JSON.parse(cleaned);
-    return {
-      storeName: json.storeName || '',
-      region: json.region || '',
-      content: json.content || '',
-      deadline: json.deadline || ''
-    };
-  }
-
-  // Anthropic Claude (Claude.ai 내부 아티팩트에서만 인증됨)
-  async function anthropicExtractFromImage(file) {
-    const base64 = await readFileAsBase64(file);
-    const mediaType = file.type || 'image/jpeg';
-    const prompt = buildExtractionPrompt();
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('AI 분석 실패: ' + response.status);
-    }
-
-    const data = await response.json();
-    const text = data.content.map(c => c.text || '').join('').trim();
-    const cleaned = text.replace(/```json|```/g, '').trim();
-    const json = JSON.parse(cleaned);
-    return {
-      storeName: json.storeName || '',
-      region: json.region || '',
-      content: json.content || '',
-      deadline: json.deadline || ''
-    };
   }
 
   // ============== Geocoding ==============
   let kakaoLoadPromise = null;
-  let kakaoLoadedKey = null;
 
-  async function loadKakaoSDK(key) {
-    if (!key) throw new Error('NO_KEY');
-    // 같은 키로 이미 로드되었으면 재사용
-    if (kakaoLoadedKey === key && window.kakao && window.kakao.maps && window.kakao.maps.services) {
+  async function loadKakaoSDK() {
+    // 이미 로드되었으면 재사용
+    if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
       return window.kakao;
-    }
-    // 다른 키로 변경됐으면 페이지 새로고침 필요 (Kakao SDK는 한번만 로드 가능)
-    if (kakaoLoadedKey && kakaoLoadedKey !== key) {
-      throw new Error('KEY_CHANGED_RELOAD_NEEDED');
     }
     if (kakaoLoadPromise) return kakaoLoadPromise;
 
     kakaoLoadPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(key)}&libraries=services&autoload=false`;
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(KAKAO_KEY)}&libraries=services&autoload=false`;
       script.onload = () => {
         if (!window.kakao || !window.kakao.maps) {
           reject(new Error('SDK_LOAD_FAIL'));
           return;
         }
-        window.kakao.maps.load(() => {
-          kakaoLoadedKey = key;
-          resolve(window.kakao);
-        });
+        window.kakao.maps.load(() => resolve(window.kakao));
       };
       script.onerror = () => reject(new Error('SDK_LOAD_FAIL'));
       document.head.appendChild(script);
@@ -1769,12 +1744,8 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
   }
 
   async function geocodeWithKakao(storeName, region) {
-    const keyRec = await storage.get('kakao_api_key');
-    const key = keyRec?.value;
-    if (!key) return null;
-
     try {
-      await loadKakaoSDK(key);
+      await loadKakaoSDK();
     } catch (e) {
       console.warn('Kakao SDK load failed:', e.message);
       return null;
@@ -2009,28 +1980,19 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
   async function ensureMap() {
     if (map) return map;
 
-    const keyRec = await storage.get('kakao_api_key');
-    const key = keyRec?.value;
-    if (!key) {
-      // 키 없으면 빈 상태 표시
-      const empty = document.getElementById('mapEmpty');
-      if (empty) empty.style.display = '';
-      return null;
-    }
-
     try {
-      await loadKakaoSDK(key);
+      await loadKakaoSDK();
     } catch (e) {
       console.warn('Kakao SDK load failed for map:', e.message);
       const empty = document.getElementById('mapEmpty');
       if (empty) {
-        empty.innerHTML = '<div class="icon">⚠️</div><div>지도 로드 실패</div><div style="font-size:11px;">카카오 API 키를 확인해주세요</div>';
+        empty.innerHTML = '<div class="icon">⚠️</div><div>지도 로드 실패</div><div style="font-size:11px;">네트워크를 확인해주세요</div>';
         empty.style.display = '';
       }
       return null;
     }
 
-    // 키는 있는데 지도 컨테이너만 비었을 수 있음
+    // SDK 로드 성공 → 빈 상태 숨기고 지도 생성
     const empty = document.getElementById('mapEmpty');
     if (empty) empty.style.display = 'none';
 
@@ -2231,35 +2193,46 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
       return;
     }
 
+    // 사용량이 0이면 미리 거절 (서버 왕복 절약)
+    if (lastUsage && lastUsage.remaining === 0) {
+      showToast(`오늘은 AI 추출을 ${lastUsage.limit}회 모두 사용했어요. 직접 입력해주세요`, 'error');
+      openNewEntryModal({ fromAI: false });
+      return;
+    }
+
     setLoading(true, 'AI가 이미지에서 정보를 추출하는 중...');
 
     let extracted = null;
-    let usedMethod = null;
+    let errorCode = null;
     try {
-      // 어떤 방식이 쓰일지 확인
-      const geminiKey = await storage.get('gemini_api_key');
-      if (geminiKey?.value) usedMethod = 'gemini';
-
       extracted = await extractFromImage(file);
-      aiAvailable = true;
     } catch (err) {
       console.warn('AI extraction failed:', err);
-      aiAvailable = false;
+      errorCode = err.code || 'UNKNOWN';
     }
 
     setLoading(false);
 
     if (extracted) {
       openNewEntryModal({ ...extracted, fromAI: true });
-      if (usedMethod === 'gemini') {
-        showToast('Gemini로 자동 추출했어요. 확인 후 저장하세요', 'success');
+      const remaining = lastUsage?.remaining;
+      if (remaining !== undefined) {
+        showToast(`AI 추출 완료! 오늘 ${remaining}회 남음`, 'success');
+      } else {
+        showToast('AI가 자동 추출했어요. 확인 후 저장하세요', 'success');
       }
     } else {
-      const hasGeminiKey = !!(await storage.get('gemini_api_key'))?.value;
-      if (hasGeminiKey) {
-        showToast('Gemini 호출이 실패했어요. 키나 할당량을 확인해주세요', 'error');
+      // 에러 종류별 안내
+      if (errorCode === 'DAILY_LIMIT_EXCEEDED') {
+        // 서버에서 거부 → 최신 사용량으로 표시 갱신
+        await fetchTodayUsage();
+        showToast(`오늘은 AI 추출을 ${AI_DAILY_LIMIT}회 모두 사용했어요. 직접 입력해주세요`, 'error');
+      } else if (errorCode === 'NOT_AUTHENTICATED') {
+        showToast('로그인이 필요해요. 다시 로그인해주세요', 'error');
+      } else if (errorCode === 'JSON_PARSE_FAILED') {
+        showToast('AI 분석은 됐는데 결과 파싱에 실패했어요. 직접 입력해주세요', 'error');
       } else {
-        showToast('AI 추출은 ⚙️에서 Gemini 키 설정 후 사용 가능해요', 'error');
+        showToast('AI 추출에 실패했어요. 직접 입력해주세요', 'error');
       }
       openNewEntryModal({ fromAI: false });
     }
@@ -2515,25 +2488,8 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
 
     // ===== 설정 모달 =====
     const settingsBg = document.getElementById('settingsBg');
-    const kakaoKeyInput = document.getElementById('kakaoKeyInput');
-    const kakaoStatus = document.getElementById('kakaoStatus');
-
-    async function refreshKakaoStatus() {
-      const rec = await storage.get('kakao_api_key');
-      if (rec?.value) {
-        kakaoStatus.textContent = '설정됨 ✓';
-        kakaoStatus.className = 'status-pill ok';
-        kakaoKeyInput.value = rec.value;
-      } else {
-        kakaoStatus.textContent = '미설정';
-        kakaoStatus.className = 'status-pill off';
-        kakaoKeyInput.value = '';
-      }
-    }
 
     document.getElementById('btnSettings').addEventListener('click', async () => {
-      await refreshKakaoStatus();
-      await refreshGeminiStatus();
       // 계정 정보 표시
       const acctEl = document.getElementById('accountInfo');
       if (acctEl && currentUser) {
@@ -2543,6 +2499,8 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
         const providerName = { kakao: '카카오', google: '구글', email: '이메일' }[provider] || provider;
         acctEl.innerHTML = `<strong>${name}</strong> <span style="color:var(--ink-faint); font-size:12px;">· ${providerName}</span><br><span style="font-size:12px;">${email}</span>`;
       }
+      // 사용량 새로고침 (최신 값으로)
+      await fetchTodayUsage();
       settingsBg.classList.add('active');
     });
 
@@ -2554,139 +2512,6 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
 
     settingsBg.addEventListener('click', (e) => {
       if (e.target.id === 'settingsBg') settingsBg.classList.remove('active');
-    });
-
-    document.getElementById('btnSaveKey').addEventListener('click', async () => {
-      const key = kakaoKeyInput.value.trim();
-      if (!key) {
-        showToast('키를 입력해주세요', 'error');
-        return;
-      }
-
-      // 키 검증 시도
-      setLoading(true, '카카오 API 키 확인 중...');
-      try {
-        // 이미 다른 키로 로드된 경우 새로고침 안내
-        if (kakaoLoadedKey && kakaoLoadedKey !== key) {
-          await storage.set('kakao_api_key', key);
-          setLoading(false);
-          showToast('키를 저장했어요. 새로고침 후 적용됩니다', 'success');
-          await refreshKakaoStatus();
-          settingsBg.classList.remove('active');
-          return;
-        }
-        await loadKakaoSDK(key);
-        // 테스트 검색
-        const test = await new Promise((resolve) => {
-          const ps = new window.kakao.maps.services.Places();
-          ps.keywordSearch('서울역', (data, status) => {
-            resolve(status === window.kakao.maps.services.Status.OK);
-          });
-        });
-        if (!test) throw new Error('API 호출 실패 - 도메인 등록을 확인해주세요');
-        await storage.set('kakao_api_key', key);
-        setLoading(false);
-        showToast('카카오 API 키 저장 완료!', 'success');
-        await refreshKakaoStatus();
-        settingsBg.classList.remove('active');
-        // 지도 탭에 있으면 즉시 다시 렌더링
-        if (currentView === 'map') {
-          map = null; // 새로 만들도록
-          renderMap();
-        }
-      } catch (e) {
-        setLoading(false);
-        showToast('키 검증 실패: ' + (e.message || '도메인 등록 확인 필요'), 'error');
-      }
-    });
-
-    document.getElementById('btnClearKey').addEventListener('click', async () => {
-      if (!confirm('카카오 API 키를 지울까요?')) return;
-      await storage.delete('kakao_api_key');
-      showToast('키를 지웠어요');
-      await refreshKakaoStatus();
-      // 지도 상태 리셋
-      map = null;
-      kakaoOverlays.forEach(o => o.setMap(null));
-      kakaoOverlays = [];
-      closeInfoWindow();
-      const empty = document.getElementById('mapEmpty');
-      if (empty) {
-        empty.innerHTML = '<div class="icon">🗺️</div><div>지도 없음</div><div style="font-size:11px; max-width:280px;">설정에서 카카오 API 키를 등록하면 등록된 체험단 위치를 지도로 볼 수 있어요</div>';
-        empty.style.display = '';
-      }
-      // 컨테이너 안의 카카오 지도 DOM 제거 (있을 경우)
-      const container = document.getElementById('mapView');
-      if (container) {
-        Array.from(container.children).forEach(child => {
-          if (child.id !== 'mapEmpty') container.removeChild(child);
-        });
-      }
-    });
-
-    // ===== Gemini 키 =====
-    const geminiKeyInput = document.getElementById('geminiKeyInput');
-    const geminiStatus = document.getElementById('geminiStatus');
-
-    async function refreshGeminiStatus() {
-      const rec = await storage.get('gemini_api_key');
-      if (rec?.value) {
-        geminiStatus.textContent = '설정됨 ✓';
-        geminiStatus.className = 'status-pill ok';
-        geminiKeyInput.value = rec.value;
-      } else {
-        geminiStatus.textContent = '미설정';
-        geminiStatus.className = 'status-pill off';
-        geminiKeyInput.value = '';
-      }
-    }
-
-    document.getElementById('btnSaveGemini').addEventListener('click', async () => {
-      const key = geminiKeyInput.value.trim();
-      if (!key) {
-        showToast('키를 입력해주세요', 'error');
-        return;
-      }
-
-      setLoading(true, 'Gemini API 키 확인 중...');
-      try {
-        // 가벼운 테스트 호출
-        const testResp = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key)}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: 'ok' }] }],
-              generationConfig: { maxOutputTokens: 5 }
-            })
-          }
-        );
-
-        if (!testResp.ok) {
-          const errBody = await testResp.text().catch(() => '');
-          let msg = '키가 유효하지 않습니다';
-          if (testResp.status === 400) msg = '키 형식 오류';
-          else if (testResp.status === 403) msg = '권한 없음 - 키가 비활성화되었거나 잘못됨';
-          else if (testResp.status === 429) msg = '할당량 초과';
-          throw new Error(msg);
-        }
-
-        await storage.set('gemini_api_key', key);
-        setLoading(false);
-        showToast('Gemini API 키 저장 완료!', 'success');
-        await refreshGeminiStatus();
-      } catch (e) {
-        setLoading(false);
-        showToast('검증 실패: ' + (e.message || '알 수 없는 오류'), 'error');
-      }
-    });
-
-    document.getElementById('btnClearGemini').addEventListener('click', async () => {
-      if (!confirm('Gemini API 키를 지울까요?')) return;
-      await storage.delete('gemini_api_key');
-      showToast('키를 지웠어요');
-      await refreshGeminiStatus();
     });
   }
 
@@ -2813,9 +2638,7 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
 
   // ============== Boot ==============
   (async function() {
-    console.log('[BOOT] start');
     initLogin();
-    console.log('[BOOT] initLogin done');
 
     let appInitialized = false;
     let bootInProgress = false;
@@ -2827,35 +2650,31 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
         return;
       }
       bootInProgress = true;
-      console.log('[BOOT] bootApp start', user?.id, user?.email);
       try {
         currentUser = user;
         updateUserUI(currentUser);
         showApp();
 
         if (!appInitialized) {
-          console.log('[BOOT] calling init()');
           try {
             init();
             appInitialized = true;
-            console.log('[BOOT] init() OK');
           } catch (e) {
             console.error('[BOOT] init() FAILED:', e);
             alert('초기화 실패: ' + (e?.message || e));
           }
-        } else {
-          console.log('[BOOT] init() already done, skipping');
         }
 
         try {
           await loadAll();
-          console.log('[BOOT] loadAll done');
         } catch (e) {
           console.error('[BOOT] loadAll FAILED:', e);
         }
         renderActiveList();
         renderStats();
-        console.log('[BOOT] bootApp complete');
+
+        // 오늘 AI 사용량 가져오기 (UI 표시용)
+        fetchTodayUsage().catch(e => console.warn('Usage fetch failed:', e));
       } finally {
         bootInProgress = false;
       }
@@ -2866,7 +2685,6 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
     // 인증 토큰 갱신과 쿼리 검증이 서로 대기하다 deadlock이 발생함.
     // queueMicrotask로 별도 마이크로태스크로 분리해야 안전함.
     sb.auth.onAuthStateChange((event, session) => {
-      console.log('[BOOT] authStateChange:', event, '| has user:', !!session?.user);
       queueMicrotask(async () => {
         try {
           if (session?.user) {
