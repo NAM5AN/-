@@ -272,7 +272,35 @@
     font-size: 12px;
     color: var(--ink-soft);
   }
+  .upload-hint kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    margin: 0 1px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.3;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
   #fileInput { display: none; }
+
+  /* paste 시 깜빡 효과 */
+  @keyframes pasteFlash {
+    0% { background-color: var(--paper); border-color: var(--line); }
+    20% { background-color: rgba(90, 124, 92, 0.18); border-color: var(--sage); }
+    100% { background-color: var(--paper); border-color: var(--line); }
+  }
+  .upload.paste-flash {
+    animation: pasteFlash 0.6s ease;
+  }
+
+  /* 모바일에선 Ctrl+V 힌트 숨김 (사용 못 함) */
+  @media (max-width: 600px) {
+    .pc-only { display: none; }
+  }
 
   /* ---- Cards ---- */
   .card-grid {
@@ -1032,7 +1060,9 @@
       <input type="file" id="fileInput" accept="image/*" />
       <span class="upload-icon">📷</span>
       <div class="upload-title">체험단 캡쳐 이미지 올리기</div>
-      <div class="upload-hint">클릭하거나 이미지를 끌어다 놓으세요 · AI가 자동으로 정보를 추출해요</div>
+      <div class="upload-hint">
+        클릭 · 끌어다 놓기<span class="pc-only"> · <kbd>Ctrl</kbd>+<kbd>V</kbd>로 붙여넣기</span> · AI가 자동으로 정보를 추출해요
+      </div>
     </label>
     <div style="text-align:center; margin-bottom: 24px; margin-top: -12px;">
       <button class="btn btn-ghost" id="btnManualAdd" style="font-size: 12px;">✏️ 직접 입력하기</button>
@@ -2091,6 +2121,50 @@ deadline 필드에는 반드시 ②번(리뷰 마감일)만 넣으세요.
       zone.classList.remove('drag');
       const f = e.dataTransfer.files[0];
       if (f) handleFile(f);
+    });
+
+    // Ctrl+V 클립보드 이미지 붙여넣기 (PC 유저용)
+    // 텍스트 입력 중이거나 모달 열렸을 때는 무시
+    document.addEventListener('paste', (e) => {
+      // 텍스트 입력 필드에 포커스가 있으면 무시 (텍스트 붙여넣기는 정상 처리되게)
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+        return;
+      }
+      // 모달이 열려있으면 무시
+      if (document.getElementById('modalBg')?.classList.contains('active')) return;
+      if (document.getElementById('settingsBg')?.classList.contains('active')) return;
+      // 로그인 화면이면 무시
+      if (document.getElementById('loginScreen')?.classList.contains('active')) return;
+
+      // 클립보드에서 이미지 찾기
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            // 진행중 탭이 아니면 자동으로 전환
+            if (currentView !== 'active') {
+              switchView('active');
+            }
+            // 시각 피드백
+            const zoneEl = document.getElementById('uploadZone');
+            if (zoneEl) {
+              zoneEl.classList.remove('paste-flash');
+              // 강제 reflow로 애니메이션 재시작
+              void zoneEl.offsetWidth;
+              zoneEl.classList.add('paste-flash');
+              setTimeout(() => zoneEl.classList.remove('paste-flash'), 700);
+            }
+            showToast('📋 클립보드 이미지 붙여넣기됨', 'success');
+            handleFile(file);
+            return;
+          }
+        }
+      }
     });
 
     // Modal
