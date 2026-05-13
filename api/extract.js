@@ -1,13 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb'
-    }
-  }
-};
-
 const SUPABASE_URL = 'https://wvwoqqfizgbhvdzlqscc.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_iLtSrF52sRfzalwcR4Nt-w_dJiU2q16';
 const DAILY_LIMIT = 3;
@@ -42,7 +34,6 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'METHOD_NOT_ALLOWED' });
     }
 
-    // 1. 사용자 JWT 검증
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'NOT_AUTHENTICATED' });
@@ -63,35 +54,6 @@ export default async function handler(req, res) {
     }
     const userId = userData.user.id;
 
-    // 2. 오늘 사용량 체크
     const today = new Date().toISOString().slice(0, 10);
     const { data: usage, error: usageError } = await supabase
       .from('daily_usage')
-      .select('count')
-      .eq('user_id', userId)
-      .eq('date', today)
-      .maybeSingle();
-
-    if (usageError) {
-      return res.status(500).json({
-        error: 'USAGE_QUERY_FAILED',
-        detail: usageError.message
-      });
-    }
-
-    const currentCount = usage?.count || 0;
-    if (currentCount >= DAILY_LIMIT) {
-      return res.status(429).json({
-        error: 'DAILY_LIMIT_EXCEEDED',
-        limit: DAILY_LIMIT,
-        used: currentCount,
-        remaining: 0
-      });
-    }
-
-    // 3. 요청 본문에서 이미지 데이터 받기
-    const { imageBase64, mimeType } = req.body || {};
-    if (!imageBase64 || !mimeType) {
-      return res.status(400).json({
-        error: 'MISSING_IMAGE',
-        detail: `imageBase64: ${!!imageBase64
