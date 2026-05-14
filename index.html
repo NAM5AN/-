@@ -306,6 +306,14 @@
   }
   .ai-usage-mini strong { color: var(--terra); font-weight: 600; }
   .ai-usage-mini.exhausted strong { color: var(--rose); }
+  .ai-usage-display.admin strong {
+    color: #d4af37;
+    font-weight: 700;
+  }
+  .ai-usage-mini.admin strong {
+    color: #d4af37;
+    font-weight: 600;
+  }
 
   /* paste 시 깜빡 효과 */
   @keyframes pasteFlash {
@@ -1673,6 +1681,15 @@
   // 서버에서 직접 오늘 사용량 조회 (페이지 로드 시 호출)
   async function fetchTodayUsage() {
     if (!currentUser) return null;
+
+    // 관리자 체크 (클라이언트 측 UI 표시용 - 실제 권한은 서버가 검증)
+    const isAdmin = currentUser.app_metadata?.is_admin === true;
+    if (isAdmin) {
+      lastUsage = { isAdmin: true };
+      refreshUsageDisplay();
+      return lastUsage;
+    }
+
     try {
       const today = new Date().toISOString().slice(0, 10);
       const { data } = await sb.from('daily_usage')
@@ -1696,6 +1713,22 @@
 
   function refreshUsageDisplay() {
     if (!lastUsage) return;
+
+    // 관리자 모드 표시
+    if (lastUsage.isAdmin) {
+      const main = document.getElementById('aiUsageDisplay');
+      if (main) {
+        main.innerHTML = `👑 <strong>관리자 모드</strong> · 무제한 사용`;
+        main.className = 'ai-usage-display admin';
+      }
+      const mini = document.getElementById('aiUsageMini');
+      if (mini) {
+        mini.innerHTML = `👑 <strong>관리자 모드</strong> · 무제한 사용`;
+        mini.className = 'ai-usage-mini admin';
+      }
+      return;
+    }
+
     const { used, limit, remaining } = lastUsage;
 
     // 설정 모달 큰 표시
@@ -2193,8 +2226,8 @@
       return;
     }
 
-    // 사용량이 0이면 미리 거절 (서버 왕복 절약)
-    if (lastUsage && lastUsage.remaining === 0) {
+    // 관리자가 아니고 사용량이 0이면 미리 거절 (서버 왕복 절약)
+    if (!lastUsage?.isAdmin && lastUsage && lastUsage.remaining === 0) {
       showToast(`오늘은 AI 추출을 ${lastUsage.limit}회 모두 사용했어요. 직접 입력해주세요`, 'error');
       openNewEntryModal({ fromAI: false });
       return;
