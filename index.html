@@ -868,6 +868,156 @@
     box-shadow: none;
   }
 
+  /* ---- Notify Settings (카톡 알림) ---- */
+  .notify-status-card {
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .notify-status-card.enabled {
+    background: rgba(254, 229, 0, 0.08);
+    border-color: rgba(254, 229, 0, 0.4);
+  }
+  .notify-status-text {
+    font-size: 14px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .notify-status-text .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .notify-status-text .badge.on {
+    background: rgba(90, 124, 92, 0.15);
+    color: var(--sage);
+  }
+  .notify-status-text .badge.off {
+    background: var(--line);
+    color: var(--ink-soft);
+  }
+  .btn-notify-toggle {
+    padding: 8px 14px;
+    background: #FEE500;
+    color: #181600;
+    border: 1px solid #FEE500;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn-notify-toggle:hover {
+    background: #F6DC00;
+    transform: translateY(-1px);
+  }
+  .btn-notify-toggle.off-mode {
+    background: transparent;
+    color: var(--ink-soft);
+    border-color: var(--line);
+  }
+  .btn-notify-toggle.off-mode:hover {
+    background: var(--line);
+    color: var(--ink);
+  }
+  .btn-notify-toggle:disabled {
+    opacity: 0.5;
+    cursor: wait;
+    transform: none;
+  }
+
+  /* ---- Onboarding Modal (카톡 알림 권유) ---- */
+  .onboarding-modal {
+    max-width: 420px;
+    text-align: center;
+    padding: 36px 28px 28px;
+  }
+  .onboarding-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    line-height: 1;
+  }
+  .onboarding-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 22px;
+    margin-bottom: 10px;
+    color: var(--ink);
+  }
+  .onboarding-desc {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+    margin-bottom: 24px;
+    word-break: keep-all;
+  }
+  .onboarding-desc strong {
+    color: var(--terra);
+    font-weight: 600;
+  }
+  .onboarding-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .btn-onboarding-primary {
+    padding: 13px 16px;
+    background: #FEE500;
+    color: #181600;
+    border: 1px solid #FEE500;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-onboarding-primary:hover {
+    background: #F6DC00;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(254, 229, 0, 0.3);
+  }
+  .btn-onboarding-primary:disabled {
+    opacity: 0.5;
+    cursor: wait;
+    transform: none;
+  }
+  .btn-onboarding-later {
+    padding: 11px 16px;
+    background: transparent;
+    color: var(--ink-soft);
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  .btn-onboarding-later:hover {
+    color: var(--ink);
+  }
+  .onboarding-hint {
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--ink-faint);
+    line-height: 1.6;
+  }
+
   /* ---- Loading / Toast ---- */
   .loading {
     position: fixed; inset: 0;
@@ -1312,7 +1462,29 @@
 
     <hr class="settings-divider" />
 
-    <!-- ② 계정 -->
+    <!-- ② 알림 설정 -->
+    <div class="settings-section">
+      <h3>🔔 알림 설정</h3>
+      <div class="field">
+        <span class="field-label">카카오톡 알림</span>
+        <div class="notify-status-card" id="notifyStatusCard">
+          <div class="notify-status-text">
+            <span id="notifyStatusIcon">💬</span>
+            <span id="notifyStatusLabel">불러오는 중...</span>
+            <span class="badge off" id="notifyStatusBadge">확인 중</span>
+          </div>
+          <button class="btn-notify-toggle" id="btnNotifyToggle">켜기</button>
+        </div>
+        <div class="settings-hint">
+          체험단 마감일과 방문 예정일을 카카오톡 '나에게 메시지'로 알려드려요. <br>
+          🚧 알림 발송 기능은 v3.0에서 정식 출시 예정입니다. 지금은 동의만 받아둘 수 있어요.
+        </div>
+      </div>
+    </div>
+
+    <hr class="settings-divider" />
+
+    <!-- ③ 계정 -->
     <div class="settings-section">
       <h3>👤 계정</h3>
       <div class="field">
@@ -1334,6 +1506,30 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- 카톡 알림 온보딩 모달 -->
+<div class="modal-bg" id="onboardingBg">
+  <div class="modal onboarding-modal">
+    <div class="onboarding-icon">💌</div>
+    <div class="onboarding-title">카톡 알림 받을까요?</div>
+    <div class="onboarding-desc">
+      체험단 <strong>마감일·방문 예정일</strong>이 다가올 때<br>
+      카카오톡으로 알려드릴 수 있어요.<br><br>
+      놓치면 안 되는 일정, 카톡 알림으로 챙기세요!
+    </div>
+    <div class="onboarding-actions">
+      <button class="btn-onboarding-primary" id="btnOnboardingEnable">
+        <span>💬</span>
+        <span>지금 카톡 알림 켜기</span>
+      </button>
+      <button class="btn-onboarding-later" id="btnOnboardingLater">나중에 할게요</button>
+    </div>
+    <div class="onboarding-hint">
+      ⓘ 이미 동의하신 경우 별도 작업 없이 자동 활성화됩니다.<br>
+      언제든 설정에서 변경할 수 있어요.
+    </div>
+  </div>
+</div>
 
 <script>
 (function() {
@@ -2579,6 +2775,30 @@
     document.getElementById('btnLogout').addEventListener('click', signOut);
     document.getElementById('btnDeleteAccount').addEventListener('click', deleteAccount);
 
+    // ===== 카톡 알림 설정 =====
+    document.getElementById('btnNotifyToggle').addEventListener('click', handleNotifyToggle);
+
+    // 온보딩 모달 이벤트
+    document.getElementById('btnOnboardingEnable').addEventListener('click', (e) => {
+      enableKakaoNotify(e.currentTarget);
+    });
+    document.getElementById('btnOnboardingLater').addEventListener('click', () => {
+      setNotifyStatus('disabled');
+      markOnboardingShown();
+      updateNotifyUI();
+      closeOnboarding();
+      showToast('나중에 설정 메뉴에서 켜실 수 있어요');
+    });
+    // 배경 클릭으로 닫기 = '나중에'와 동일 처리
+    document.getElementById('onboardingBg').addEventListener('click', (e) => {
+      if (e.target.id === 'onboardingBg') {
+        setNotifyStatus('disabled');
+        markOnboardingShown();
+        updateNotifyUI();
+        closeOnboarding();
+      }
+    });
+
     document.getElementById('settingsClose').addEventListener('click', () => {
       settingsBg.classList.remove('active');
     });
@@ -2617,7 +2837,146 @@
     document.getElementById('mainApp').style.display = '';
   }
 
-  async function signOut() {
+  // ============== 카톡 알림 설정 (Kakao Notify) ==============
+  // localStorage 기반 상태 관리 (v3.x에서 실제 발송 기능 추가 시 서버 검증으로 업그레이드 예정)
+  // 키: notify_kakao_status_{userId} = 'enabled' | 'disabled'
+  //     notify_onboarding_{userId} = '1' (온보딩 노출 완료 표시)
+
+  function getNotifyKey(suffix) {
+    if (!currentUser) return null;
+    return `notify_${suffix}_${currentUser.id}`;
+  }
+
+  function getNotifyStatus() {
+    const key = getNotifyKey('kakao_status');
+    if (!key) return null;
+    return localStorage.getItem(key) || null;
+  }
+
+  function setNotifyStatus(status) {
+    const key = getNotifyKey('kakao_status');
+    if (!key) return;
+    if (status) localStorage.setItem(key, status);
+    else localStorage.removeItem(key);
+  }
+
+  function hasShownOnboarding() {
+    const key = getNotifyKey('onboarding');
+    if (!key) return false;
+    return localStorage.getItem(key) === '1';
+  }
+
+  function markOnboardingShown() {
+    const key = getNotifyKey('onboarding');
+    if (!key) return;
+    localStorage.setItem(key, '1');
+  }
+
+  function updateNotifyUI() {
+    const status = getNotifyStatus();
+    const card = document.getElementById('notifyStatusCard');
+    const icon = document.getElementById('notifyStatusIcon');
+    const label = document.getElementById('notifyStatusLabel');
+    const badge = document.getElementById('notifyStatusBadge');
+    const btn = document.getElementById('btnNotifyToggle');
+
+    if (!card || !label || !badge || !btn) return;
+
+    if (status === 'enabled') {
+      card.classList.add('enabled');
+      icon.textContent = '💬';
+      label.textContent = '카카오톡 알림';
+      badge.textContent = '켜짐';
+      badge.className = 'badge on';
+      btn.textContent = '끄기';
+      btn.classList.add('off-mode');
+    } else {
+      card.classList.remove('enabled');
+      icon.textContent = '🔕';
+      label.textContent = '카카오톡 알림';
+      badge.textContent = '꺼짐';
+      badge.className = 'badge off';
+      btn.textContent = '켜기';
+      btn.classList.remove('off-mode');
+    }
+  }
+
+  // 카카오 OAuth 재인증으로 talk_message 동의 받기
+  async function enableKakaoNotify(buttonEl) {
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      buttonEl.textContent = '카카오로 이동 중...';
+    }
+
+    // 동의 화면 강제 표시 (prompt=consent)
+    // 성공 시 localStorage를 'enabled'로 표시할 거라는 의도를 미리 기록
+    setNotifyStatus('pending_enable');
+
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: {
+        redirectTo: window.location.origin,
+        scopes: 'profile_nickname,profile_image,account_email,talk_message',
+        queryParams: { prompt: 'consent' }
+      }
+    });
+
+    if (error) {
+      setNotifyStatus(null);
+      if (buttonEl) {
+        buttonEl.disabled = false;
+        buttonEl.textContent = '켜기';
+      }
+      showToast('카카오 동의 요청 실패: ' + error.message, 'error');
+    }
+    // 성공 시 페이지가 카카오로 리디렉트됨
+  }
+
+  function disableKakaoNotify() {
+    if (!confirm('카카오톡 알림을 끄시겠어요?\n\n카카오 계정 자체의 권한을 완전히 해제하려면\n카카오 계정 관리(accounts.kakao.com)에서 추가로 해제해주세요.')) {
+      return;
+    }
+    setNotifyStatus('disabled');
+    updateNotifyUI();
+    showToast('카카오톡 알림을 껐어요');
+  }
+
+  function handleNotifyToggle() {
+    const status = getNotifyStatus();
+    if (status === 'enabled') {
+      disableKakaoNotify();
+    } else {
+      enableKakaoNotify(document.getElementById('btnNotifyToggle'));
+    }
+  }
+
+  // 온보딩 모달 표시 여부 결정
+  function showOnboardingIfNeeded() {
+    if (!currentUser) return;
+    if (hasShownOnboarding()) return;
+
+    // 'pending_enable' 상태면 (카카오 동의 받고 막 돌아온 상태) 자동으로 enabled 처리
+    if (getNotifyStatus() === 'pending_enable') {
+      setNotifyStatus('enabled');
+      markOnboardingShown();
+      updateNotifyUI();
+      showToast('카카오톡 알림이 켜졌어요 🔔', 'success');
+      return;
+    }
+
+    // 약간의 딜레이 후 모달 표시 (앱 로딩과 자연스럽게 분리)
+    setTimeout(() => {
+      const bg = document.getElementById('onboardingBg');
+      if (bg) bg.classList.add('active');
+    }, 800);
+  }
+
+  function closeOnboarding() {
+    const bg = document.getElementById('onboardingBg');
+    if (bg) bg.classList.remove('active');
+  }
+
+
     if (!confirm('로그아웃하시겠어요?')) return;
     await sb.auth.signOut();
     // 데이터 비우기
@@ -2758,6 +3117,10 @@
 
         // 오늘 AI 사용량 가져오기 (UI 표시용)
         fetchTodayUsage().catch(e => console.warn('Usage fetch failed:', e));
+
+        // 카톡 알림 설정 UI 갱신 + 온보딩 모달 표시 여부 결정
+        updateNotifyUI();
+        showOnboardingIfNeeded();
       } finally {
         bootInProgress = false;
       }
