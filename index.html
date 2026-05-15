@@ -2976,7 +2976,7 @@
     if (bg) bg.classList.remove('active');
   }
 
-
+  async function signOut() {
     if (!confirm('로그아웃하시겠어요?')) return;
     await sb.auth.signOut();
     // 데이터 비우기
