@@ -17,7 +17,7 @@
 <meta property="og:title" content="체험단 매니저">
 <meta property="og:description" content="AI로 체험단 일정을 자동 관리하세요. 이미지 한 장이면 마감일, 리뷰 일정, 위치까지 자동 등록.">
 <meta property="og:site_name" content="체험단 매니저">
-<meta property="og:url" content="https://cheheomdan.vercel.app">
+<meta property="og:url" content="https://cheheomdan-manager.com">
 <meta property="og:locale" content="ko_KR">
 
 <!-- Twitter Card -->
@@ -833,6 +833,41 @@
   }
   .btn-danger:hover { background: rgba(216, 123, 123, 0.1); }
 
+  /* ---- Delete Account Button (회원탈퇴) ---- */
+  .btn-delete-account {
+    padding: 10px 16px;
+    background: rgba(216, 123, 123, 0.1);
+    color: var(--rose);
+    border: 1px solid rgba(216, 123, 123, 0.35);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-delete-account:hover {
+    background: var(--rose);
+    color: white;
+    border-color: var(--rose);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(216, 123, 123, 0.25);
+  }
+  .btn-delete-account:active {
+    transform: translateY(0);
+  }
+  .btn-delete-account:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
   /* ---- Loading / Toast ---- */
   .loading {
     position: fixed; inset: 0;
@@ -1308,6 +1343,7 @@
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="btnLogout">🚪 로그아웃</button>
+        <button class="btn-delete-account" id="btnDeleteAccount">🗑️ 회원탈퇴</button>
       </div>
     </div>
 
@@ -2558,6 +2594,7 @@
     });
 
     document.getElementById('btnLogout').addEventListener('click', signOut);
+    document.getElementById('btnDeleteAccount').addEventListener('click', deleteAccount);
 
     document.getElementById('settingsClose').addEventListener('click', () => {
       settingsBg.classList.remove('active');
@@ -2605,6 +2642,77 @@
     currentUser = null;
     showLogin();
     showToast('로그아웃했어요');
+  }
+
+  // ============== 회원 탈퇴 ==============
+  async function deleteAccount() {
+    // 1단계: 1차 안내 및 확인
+    const firstConfirm = confirm(
+      '⚠️ 회원 탈퇴 안내\n\n' +
+      '• 모든 일정 데이터가 영구 삭제됩니다\n' +
+      '• 카카오 앱 연결이 해제됩니다\n' +
+      '• 이 작업은 되돌릴 수 없습니다\n\n' +
+      '계속하시겠습니까?'
+    );
+    if (!firstConfirm) return;
+
+    // 2단계: 텍스트 입력 확인 (실수 방지)
+    const text = prompt('탈퇴를 진행하시려면 "탈퇴"를 입력해주세요');
+    if (text !== '탈퇴') {
+      if (text !== null) showToast('입력이 일치하지 않아 취소되었습니다', 'error');
+      return;
+    }
+
+    // 3단계: 버튼 비활성화 + 로딩
+    const btn = document.getElementById('btnDeleteAccount');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '처리 중...';
+    }
+    setLoading(true, '회원 탈퇴 처리 중...');
+
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        setLoading(false);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🗑️ 회원탈퇴';
+        }
+        showToast('세션이 만료되었습니다. 다시 로그인해주세요', 'error');
+        return;
+      }
+
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await res.json();
+      setLoading(false);
+
+      if (res.ok) {
+        // 클라이언트 측 정리
+        await sb.auth.signOut();
+        entries = [];
+        currentUser = null;
+        alert('회원 탈퇴가 완료되었습니다.\n그동안 이용해주셔서 감사합니다.');
+        location.href = '/';
+      } else {
+        throw new Error(result.error || '알 수 없는 오류');
+      }
+    } catch (err) {
+      console.error('탈퇴 오류:', err);
+      setLoading(false);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '🗑️ 회원탈퇴';
+      }
+      showToast(`탈퇴 처리 실패: ${err.message}`, 'error');
+    }
   }
 
   // ============== 로그인 화면 이벤트 ==============
