@@ -2700,8 +2700,8 @@
 
   // ============== 로그인 화면 이벤트 ==============
   // 카카오 로그인 단독 지원
-  // TODO: 카카오 개발자 콘솔에 '카카오톡 메시지 전송' 동의항목 등록 후 scope에 'talk_message' 추가
-  //       (v3.x 카카오톡 알림 기능용)
+  // talk_message scope: 카카오톡 '나에게 메시지' 발송용 (체험단 마감/방문일 알림)
+  // 카카오 콘솔 > 카카오 로그인 > 동의항목 > 접근권한 > 카카오톡 메시지 전송 = 선택 동의
   function initLogin() {
     document.getElementById('loginKakao').addEventListener('click', async (e) => {
       e.target.disabled = true;
@@ -2709,7 +2709,7 @@
         provider: 'kakao',
         options: {
           redirectTo: window.location.origin,
-          scopes: 'profile_nickname,profile_image,account_email'
+          scopes: 'profile_nickname,profile_image,account_email,talk_message'
         }
       });
       if (error) {
