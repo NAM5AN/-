@@ -1151,23 +1151,6 @@
         <span class="icon">💬</span>
         <span>카카오로 시작하기</span>
       </button>
-      <button class="provider-btn google" id="loginGoogle">
-        <span class="icon">🔍</span>
-        <span>구글로 시작하기</span>
-      </button>
-    </div>
-
-    <div class="divider">또는 이메일</div>
-
-    <form class="email-form" id="emailForm">
-      <input type="email" id="emailInput" placeholder="이메일" autocomplete="email" required />
-      <input type="password" id="passwordInput" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" minlength="6" required />
-      <button type="submit" class="email-submit" id="emailSubmit">로그인</button>
-    </form>
-
-    <div class="toggle-mode">
-      <span id="toggleText">계정이 없으신가요?</span>
-      <a id="toggleMode">회원가입</a>
     </div>
 
     <div class="login-footer">
@@ -2716,82 +2699,20 @@
   }
 
   // ============== 로그인 화면 이벤트 ==============
+  // 카카오 로그인 단독 지원
+  // talk_message scope: 카카오톡 '나에게 메시지' 발송용 (체험단 마감/방문일 알림)
   function initLogin() {
-    let isSignupMode = false;
-
-    const emailForm = document.getElementById('emailForm');
-    const emailSubmit = document.getElementById('emailSubmit');
-    const toggleText = document.getElementById('toggleText');
-    const toggleMode = document.getElementById('toggleMode');
-
-    toggleMode.addEventListener('click', () => {
-      isSignupMode = !isSignupMode;
-      if (isSignupMode) {
-        emailSubmit.textContent = '회원가입';
-        toggleText.textContent = '이미 계정이 있으신가요?';
-        toggleMode.textContent = '로그인';
-      } else {
-        emailSubmit.textContent = '로그인';
-        toggleText.textContent = '계정이 없으신가요?';
-        toggleMode.textContent = '회원가입';
-      }
-    });
-
-    emailForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('emailInput').value.trim();
-      const password = document.getElementById('passwordInput').value;
-      if (!email || !password) return;
-
-      emailSubmit.disabled = true;
-      emailSubmit.textContent = '처리 중...';
-
-      try {
-        if (isSignupMode) {
-          const { data, error } = await sb.auth.signUp({ email, password });
-          if (error) throw error;
-          if (data.user && !data.session) {
-            alert('이메일로 인증 링크를 보냈어요. 메일 확인 후 로그인해주세요.');
-            emailSubmit.disabled = false;
-            emailSubmit.textContent = '회원가입';
-            return;
-          }
-          // 자동 로그인된 경우 onAuthStateChange가 처리
-        } else {
-          const { error } = await sb.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-        }
-      } catch (err) {
-        let msg = err.message || '오류가 발생했어요';
-        if (msg.includes('Invalid login')) msg = '이메일 또는 비밀번호가 올바르지 않아요';
-        if (msg.includes('already registered')) msg = '이미 가입된 이메일이에요. 로그인해주세요';
-        if (msg.includes('Password should be at least')) msg = '비밀번호는 6자 이상이어야 해요';
-        alert(msg);
-        emailSubmit.disabled = false;
-        emailSubmit.textContent = isSignupMode ? '회원가입' : '로그인';
-      }
-    });
-
     document.getElementById('loginKakao').addEventListener('click', async (e) => {
       e.target.disabled = true;
       const { error } = await sb.auth.signInWithOAuth({
         provider: 'kakao',
-        options: { redirectTo: window.location.origin }
+        options: {
+          redirectTo: window.location.origin,
+          scopes: 'profile_nickname,profile_image,account_email,talk_message'
+        }
       });
       if (error) {
         alert('카카오 로그인 실패: ' + error.message);
-        e.target.disabled = false;
-      }
-    });
-
-    document.getElementById('loginGoogle').addEventListener('click', async (e) => {
-      e.target.disabled = true;
-      const { error } = await sb.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.origin }
-      });
-      if (error) {
-        alert('구글 로그인 실패: ' + error.message);
         e.target.disabled = false;
       }
     });
