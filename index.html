@@ -1477,7 +1477,7 @@
         </div>
         <div class="settings-hint">
           체험단 마감일과 방문 예정일을 카카오톡 '나에게 메시지'로 알려드려요. <br>
-          🚧 알림 발송 기능은 v3.0에서 정식 출시 예정입니다. 지금은 동의만 받아둘 수 있어요.
+          🚧 알림 발송 기능은 추후 정식 출시 예정입니다. 지금은 동의만 받아둘 수 있어요.
         </div>
       </div>
     </div>
@@ -2882,6 +2882,9 @@
 
     if (!card || !label || !badge || !btn) return;
 
+    // 부팅/페이지 복귀 시 disabled 상태 항상 초기화 (bfcache 대응)
+    btn.disabled = false;
+
     if (status === 'enabled') {
       card.classList.add('enabled');
       icon.textContent = '💬';
@@ -2953,9 +2956,9 @@
   // 온보딩 모달 표시 여부 결정
   function showOnboardingIfNeeded() {
     if (!currentUser) return;
-    if (hasShownOnboarding()) return;
 
-    // 'pending_enable' 상태면 (카카오 동의 받고 막 돌아온 상태) 자동으로 enabled 처리
+    // 'pending_enable' 상태(OAuth 후 막 돌아온 상태)는 항상 'enabled'로 승격
+    // hasShownOnboarding 여부와 무관하게 처리되어야 함 (설정 메뉴에서 켜는 경우 포함)
     if (getNotifyStatus() === 'pending_enable') {
       setNotifyStatus('enabled');
       markOnboardingShown();
@@ -2964,12 +2967,26 @@
       return;
     }
 
-    // 약간의 딜레이 후 모달 표시 (앱 로딩과 자연스럽게 분리)
+    // 이미 온보딩을 본 적 있으면 모달 표시 X
+    if (hasShownOnboarding()) return;
+
+    // 첫 가입자에게 온보딩 모달 표시
     setTimeout(() => {
       const bg = document.getElementById('onboardingBg');
       if (bg) bg.classList.add('active');
     }, 800);
   }
+
+  // bfcache로 돌아온 경우 (카카오에서 뒤로가기 등) 멈춰있는 상태 복구
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      // pending_enable이 남아있으면 취소로 간주하고 정리
+      if (getNotifyStatus() === 'pending_enable') {
+        setNotifyStatus(null);
+      }
+      updateNotifyUI();
+    }
+  });
 
   function closeOnboarding() {
     const bg = document.getElementById('onboardingBg');
