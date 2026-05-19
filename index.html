@@ -1018,6 +1018,125 @@
     line-height: 1.6;
   }
 
+  /* ---- Premium Plan (유료 플랜) ---- */
+  .plan-card {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--card);
+  }
+  .plan-card.premium {
+    border-color: var(--mustard);
+    background: linear-gradient(135deg, rgba(194, 157, 44, 0.08), rgba(194, 157, 44, 0.02));
+  }
+  .plan-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .plan-name {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .plan-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+  }
+  .plan-badge.free {
+    background: var(--line);
+    color: var(--ink-soft);
+  }
+  .plan-badge.premium {
+    background: var(--mustard);
+    color: white;
+  }
+  .plan-benefits {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .plan-benefits li {
+    font-size: 13px;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.5;
+  }
+  .plan-benefits li .check {
+    color: var(--sage);
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+  .plan-benefits li .lock {
+    flex-shrink: 0;
+    opacity: 0.5;
+  }
+  .btn-upgrade {
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--mustard);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-upgrade:hover {
+    background: #A8841F;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(194, 157, 44, 0.3);
+  }
+  .btn-upgrade:disabled {
+    opacity: 0.5;
+    cursor: wait;
+    transform: none;
+    box-shadow: none;
+  }
+  .beta-notice {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(90, 124, 92, 0.1);
+    border: 1px dashed var(--sage);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--sage);
+    line-height: 1.6;
+    text-align: center;
+  }
+  .beta-notice strong {
+    font-weight: 700;
+  }
+  .plan-active-info {
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.6;
+  }
+  .plan-active-info .expire-date {
+    color: var(--mustard);
+    font-weight: 600;
+  }
+
   /* ---- Loading / Toast ---- */
   .loading {
     position: fixed; inset: 0;
@@ -1445,6 +1564,36 @@
     <button class="modal-close" id="settingsClose">✕</button>
     <h2>⚙️ 설정</h2>
     <div class="modal-sub">계정 정보와 사용량을 확인할 수 있어요.</div>
+
+    <!-- ⓪ 플랜 -->
+    <div class="settings-section">
+      <h3>💎 플랜</h3>
+      <div class="field">
+        <div class="plan-card" id="planCard">
+          <div class="plan-header">
+            <span class="plan-name" id="planName">불러오는 중...</span>
+            <span class="plan-badge free" id="planBadge">FREE</span>
+          </div>
+          <ul class="plan-benefits" id="planBenefits">
+            <!-- JS가 채움 -->
+          </ul>
+          <!-- 무료 유저: 업그레이드 버튼 + 베타 안내 -->
+          <div id="planUpgradeArea">
+            <button class="btn-upgrade" id="btnUpgrade">⚡ 프리미엄 시작하기</button>
+            <div class="beta-notice">
+              🎉 <strong>베타 기간 한정</strong> — 프리미엄 혜택을<br>
+              지금 신청하면 <strong>2026년 9월 30일까지 무료</strong>로 이용할 수 있어요!
+            </div>
+          </div>
+          <!-- 프리미엄 유저: 활성 상태 안내 -->
+          <div id="planActiveArea" style="display:none;">
+            <div class="plan-active-info" id="planActiveInfo"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="settings-divider" />
 
     <!-- ① AI 사용량 -->
     <div class="settings-section">
@@ -1925,8 +2074,17 @@
       return lastUsage;
     }
 
+    // 프리미엄 체크 — 활성 프리미엄이면 무제한 표시
+    if (isSubscriptionPremium(currentSubscription)) {
+      lastUsage = { isPremium: true };
+      refreshUsageDisplay();
+      return lastUsage;
+    }
+
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      // KST 기준 오늘 날짜 (서버 api/extract.js와 동일 기준)
+      const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const today = kstNow.toISOString().slice(0, 10);
       const { data } = await sb.from('daily_usage')
         .select('count')
         .eq('user_id', currentUser.id)
@@ -1959,6 +2117,21 @@
       const mini = document.getElementById('aiUsageMini');
       if (mini) {
         mini.innerHTML = `👑 <strong>관리자 모드</strong> · 무제한 사용`;
+        mini.className = 'ai-usage-mini admin';
+      }
+      return;
+    }
+
+    // 프리미엄 모드 표시
+    if (lastUsage.isPremium) {
+      const main = document.getElementById('aiUsageDisplay');
+      if (main) {
+        main.innerHTML = `💎 <strong>프리미엄</strong> · AI 추출 무제한`;
+        main.className = 'ai-usage-display admin';
+      }
+      const mini = document.getElementById('aiUsageMini');
+      if (mini) {
+        mini.innerHTML = `💎 <strong>프리미엄</strong> · AI 추출 무제한`;
         mini.className = 'ai-usage-mini admin';
       }
       return;
@@ -2767,6 +2940,9 @@
         const providerName = { kakao: '카카오', google: '구글', email: '이메일' }[provider] || provider;
         acctEl.innerHTML = `<strong>${name}</strong> <span style="color:var(--ink-faint); font-size:12px;">· ${providerName}</span><br><span style="font-size:12px;">${email}</span>`;
       }
+      // 구독 정보 + 플랜 UI 새로고침
+      await fetchSubscription();
+      updatePlanUI();
       // 사용량 새로고침 (최신 값으로)
       await fetchTodayUsage();
       settingsBg.classList.add('active');
@@ -2774,6 +2950,9 @@
 
     document.getElementById('btnLogout').addEventListener('click', signOut);
     document.getElementById('btnDeleteAccount').addEventListener('click', deleteAccount);
+
+    // ===== 유료 플랜 =====
+    document.getElementById('btnUpgrade').addEventListener('click', activatePremium);
 
     // ===== 카톡 알림 설정 =====
     document.getElementById('btnNotifyToggle').addEventListener('click', handleNotifyToggle);
@@ -2835,6 +3014,135 @@
   function showApp() {
     document.getElementById('loginScreen').classList.remove('active');
     document.getElementById('mainApp').style.display = '';
+  }
+
+  // ============== 유료 플랜 (Premium) ==============
+  // 구독 상태는 subscriptions 테이블에서 조회 (RLS로 본인 것만 읽기 가능)
+  // 활성화는 서버 API(/api/activate-premium)를 통해서만 — 클라이언트 직접 쓰기 차단
+
+  let currentSubscription = null; // { plan, status, expires_at, source }
+
+  // 구독이 유효한 프리미엄인지 판별
+  function isSubscriptionPremium(sub) {
+    if (!sub) return false;
+    if (sub.plan !== 'premium' || sub.status !== 'active') return false;
+    if (sub.expires_at && Date.now() > new Date(sub.expires_at).getTime()) return false;
+    return true;
+  }
+
+  // 구독 정보 조회
+  async function fetchSubscription() {
+    if (!currentUser) { currentSubscription = null; return; }
+    try {
+      const { data } = await sb.from('subscriptions')
+        .select('plan, status, expires_at, source')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      currentSubscription = data || null;
+    } catch (e) {
+      console.warn('구독 정보 조회 실패:', e);
+      currentSubscription = null;
+    }
+  }
+
+  // 만료일을 'YYYY년 M월 D일' 형식으로
+  function formatExpireDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  }
+
+  // 플랜 카드 UI 갱신
+  function updatePlanUI() {
+    const card = document.getElementById('planCard');
+    const nameEl = document.getElementById('planName');
+    const badgeEl = document.getElementById('planBadge');
+    const benefitsEl = document.getElementById('planBenefits');
+    const upgradeArea = document.getElementById('planUpgradeArea');
+    const activeArea = document.getElementById('planActiveArea');
+    const activeInfo = document.getElementById('planActiveInfo');
+    if (!card || !nameEl || !badgeEl || !benefitsEl) return;
+
+    const isPremium = isSubscriptionPremium(currentSubscription);
+
+    if (isPremium) {
+      card.classList.add('premium');
+      nameEl.innerHTML = '💎 프리미엄';
+      badgeEl.textContent = 'PREMIUM';
+      badgeEl.className = 'plan-badge premium';
+      benefitsEl.innerHTML = `
+        <li><span class="check">✓</span><span>AI 자동 추출 <strong>무제한</strong></span></li>
+        <li><span class="check">✓</span><span>체험단 일정 무제한 등록</span></li>
+        <li><span class="check">✓</span><span>향후 추가되는 프리미엄 기능 우선 이용</span></li>
+      `;
+      if (upgradeArea) upgradeArea.style.display = 'none';
+      if (activeArea) activeArea.style.display = '';
+      if (activeInfo) {
+        const expStr = formatExpireDate(currentSubscription.expires_at);
+        const isBeta = currentSubscription.source === 'beta_free';
+        activeInfo.innerHTML = isBeta
+          ? `🎉 베타 프리미엄 이용 중<br><span class="expire-date">${expStr}</span>까지 무료로 이용할 수 있어요`
+          : `💎 프리미엄 이용 중<br>${expStr ? `<span class="expire-date">${expStr}</span>까지` : ''}`;
+      }
+    } else {
+      card.classList.remove('premium');
+      nameEl.innerHTML = '🆓 무료';
+      badgeEl.textContent = 'FREE';
+      badgeEl.className = 'plan-badge free';
+      benefitsEl.innerHTML = `
+        <li><span class="check">✓</span><span>AI 자동 추출 하루 3회</span></li>
+        <li><span class="check">✓</span><span>체험단 일정 무제한 등록</span></li>
+        <li><span class="lock">🔒</span><span style="opacity:0.7;">AI 무제한 추출 — 프리미엄</span></li>
+      `;
+      if (upgradeArea) upgradeArea.style.display = '';
+      if (activeArea) activeArea.style.display = 'none';
+    }
+  }
+
+  // 프리미엄 신청 (서버 API 호출)
+  async function activatePremium() {
+    const btn = document.getElementById('btnUpgrade');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '신청 처리 중...';
+    }
+
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        showToast('세션이 만료되었습니다. 다시 로그인해주세요', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '⚡ 프리미엄 시작하기'; }
+        return;
+      }
+
+      const res = await fetch('/api/activate-premium', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        // 구독 정보 새로고침 후 UI 갱신
+        await fetchSubscription();
+        updatePlanUI();
+        // AI 사용량 표시도 갱신 (프리미엄이면 무제한 표시)
+        await fetchTodayUsage();
+        if (result.alreadyPremium) {
+          showToast('이미 프리미엄 이용 중이에요 💎', 'success');
+        } else {
+          showToast('프리미엄이 활성화되었어요! 🎉', 'success');
+        }
+      } else {
+        throw new Error(result.error || '알 수 없는 오류');
+      }
+    } catch (err) {
+      console.error('프리미엄 활성화 오류:', err);
+      showToast(`프리미엄 신청 실패: ${err.message}`, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '⚡ 프리미엄 시작하기'; }
+    }
   }
 
   // ============== 카톡 알림 설정 (Kakao Notify) ==============
@@ -3132,7 +3440,9 @@
         renderActiveList();
         renderStats();
 
-        // 오늘 AI 사용량 가져오기 (UI 표시용)
+        // 구독 정보 먼저 가져온 뒤 AI 사용량 표시 (프리미엄이면 무제한 표시)
+        await fetchSubscription();
+        updatePlanUI();
         fetchTodayUsage().catch(e => console.warn('Usage fetch failed:', e));
 
         // 카톡 알림 설정 UI 갱신 + 온보딩 모달 표시 여부 결정
