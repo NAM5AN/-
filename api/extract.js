@@ -20,6 +20,16 @@ function isAdminUser(user) {
   return false;
 }
 
+// 오늘 날짜를 한국시간(KST, UTC+9) 기준 YYYY-MM-DD로 반환.
+// toISOString()은 UTC 기준이라 그대로 쓰면 한국 자정이 아닌 오전 9시에
+// 날짜가 바뀐다. 일일 사용량 초기화 시점과 AI 연도 추론을 모두
+// 한국시간 기준으로 맞추기 위해 사용.
+function getKSTDate() {
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
 // 프롬프트는 함수로 생성 — 오늘 날짜를 주입해 연도 추론 정확도를 높임
 function buildExtractionPrompt(today) {
   return `이 이미지는 블로그 체험단 모집 공고 캡쳐입니다. 다음 항목을 추출해주세요.
@@ -99,7 +109,8 @@ export default async function handler(req, res) {
     const userId = userData.user.id;
     const isAdmin = isAdminUser(userData.user);
 
-    const today = new Date().toISOString().slice(0, 10);
+    // 한국시간(KST) 기준 오늘 날짜 — 사용량 제한과 AI 연도 추론 양쪽에 사용
+    const today = getKSTDate();
     const { data: usage } = await supabase
       .from('daily_usage')
       .select('count')
