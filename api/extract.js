@@ -20,6 +20,20 @@ function isAdminUser(user) {
   return false;
 }
 
+// 구독 정보를 받아 현재 유효한 프리미엄 유저인지 판별.
+//  - plan === 'premium' AND status === 'active'
+//  - expires_at이 있으면 아직 만료 전이어야 함
+function isPremiumActive(subscription) {
+  if (!subscription) return false;
+  if (subscription.plan !== 'premium') return false;
+  if (subscription.status !== 'active') return false;
+  if (subscription.expires_at) {
+    const expires = new Date(subscription.expires_at).getTime();
+    if (Date.now() > expires) return false; // 만료됨
+  }
+  return true;
+}
+
 // 오늘 날짜를 한국시간(KST, UTC+9) 기준 YYYY-MM-DD로 반환.
 // toISOString()은 UTC 기준이라 그대로 쓰면 한국 자정이 아닌 오전 9시에
 // 날짜가 바뀐다. 일일 사용량 초기화 시점과 AI 연도 추론을 모두
@@ -109,6 +123,17 @@ export default async function handler(req, res) {
     const userId = userData.user.id;
     const isAdmin = isAdminUser(userData.user);
 
+    // 구독 정보 조회 → 프리미엄 여부 판별
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('plan, status, expires_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const isPremium = isPremiumActive(subscription);
+
+    // 제한을 우회할 수 있는 유저: 관리자 또는 활성 프리미엄
+    const isUnlimited = isAdmin || isPremium;
+
     // 한국시간(KST) 기준 오늘 날짜 — 사용량 제한과 AI 연도 추론 양쪽에 사용
     const today = getKSTDate();
     const { data: usage } = await supabase
@@ -120,8 +145,8 @@ export default async function handler(req, res) {
 
     const currentCount = usage?.count || 0;
 
-    // 관리자는 일일 제한 우회 (일반 유저만 제한 적용)
-    if (!isAdmin && currentCount >= DAILY_LIMIT) {
+    // 무제한 유저(관리자/프리미엄)는 일일 제한 우회 (일반 무료 유저만 제한 적용)
+    if (!isUnlimited && currentCount >= DAILY_LIMIT) {
       return res.status(429).json({
         error: 'DAILY_LIMIT_EXCEEDED',
         limit: DAILY_LIMIT,
@@ -193,8 +218,8 @@ export default async function handler(req, res) {
     // ===== 후처리: deadline 연도 보정 (AI가 과거 연도로 추론한 경우 방어) =====
     parsed.deadline = correctDeadlineYear(parsed.deadline, today);
 
-    // 사용량 기록 — 관리자는 카운트하지 않음 (무제한)
-    if (!isAdmin) {
+    // 사용량 기록 — 무제한 유저(관리자/프리미엄)는 카운트하지 않음
+    if (!isUnlimited) {
       if (currentCount === 0) {
         await supabase.from('daily_usage').insert({ user_id: userId, date: today, count: 1 });
       } else {
@@ -206,11 +231,15 @@ export default async function handler(req, res) {
       }
     }
 
-    // 응답 — 관리자는 무제한 표시, 일반 유저는 사용량 정보 포함
+    // 응답 — 무제한 유저는 plan 정보 포함, 일반 유저는 사용량 정보 포함
     return res.status(200).json({
       data: parsed,
-      usage: isAdmin
-        ? { isAdmin: true }
+      usage: isUnlimited
+        ? {
+            isAdmin: isAdmin,
+            isPremium: isPremium,
+            unlimited: true
+          }
         : {
             used: currentCount + 1,
             limit: DAILY_LIMIT,
