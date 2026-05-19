@@ -5,6 +5,21 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_iLtSrF52sRfzalwcR4Nt-w_dJiU2q16
 const DAILY_LIMIT = 3;
 const OPENAI_MODEL = 'gpt-4o';
 
+// 관리자 UID 화이트리스트 (app_metadata.is_admin 플래그와 함께 이중으로 체크)
+const ADMIN_USER_IDS = [
+  '00712584-e37a-46c3-ac31-387f73b6523c'
+];
+
+// 유저가 관리자인지 판별 — 다음 중 하나라도 만족하면 관리자
+//  (1) app_metadata.is_admin === true
+//  (2) UID가 ADMIN_USER_IDS 화이트리스트에 포함
+function isAdminUser(user) {
+  if (!user) return false;
+  if (user.app_metadata?.is_admin === true) return true;
+  if (ADMIN_USER_IDS.includes(user.id)) return true;
+  return false;
+}
+
 // 프롬프트는 함수로 생성 — 오늘 날짜를 주입해 연도 추론 정확도를 높임
 function buildExtractionPrompt(today) {
   return `이 이미지는 블로그 체험단 모집 공고 캡쳐입니다. 다음 항목을 추출해주세요.
@@ -82,6 +97,7 @@ export default async function handler(req, res) {
       });
     }
     const userId = userData.user.id;
+    const isAdmin = isAdminUser(userData.user);
 
     const today = new Date().toISOString().slice(0, 10);
     const { data: usage } = await supabase
@@ -92,7 +108,9 @@ export default async function handler(req, res) {
       .single();
 
     const currentCount = usage?.count || 0;
-    if (currentCount >= DAILY_LIMIT) {
+
+    // 관리자는 일일 제한 우회 (일반 유저만 제한 적용)
+    if (!isAdmin && currentCount >= DAILY_LIMIT) {
       return res.status(429).json({
         error: 'DAILY_LIMIT_EXCEEDED',
         limit: DAILY_LIMIT,
@@ -164,23 +182,29 @@ export default async function handler(req, res) {
     // ===== 후처리: deadline 연도 보정 (AI가 과거 연도로 추론한 경우 방어) =====
     parsed.deadline = correctDeadlineYear(parsed.deadline, today);
 
-    if (currentCount === 0) {
-      await supabase.from('daily_usage').insert({ user_id: userId, date: today, count: 1 });
-    } else {
-      await supabase
-        .from('daily_usage')
-        .update({ count: currentCount + 1 })
-        .eq('user_id', userId)
-        .eq('date', today);
+    // 사용량 기록 — 관리자는 카운트하지 않음 (무제한)
+    if (!isAdmin) {
+      if (currentCount === 0) {
+        await supabase.from('daily_usage').insert({ user_id: userId, date: today, count: 1 });
+      } else {
+        await supabase
+          .from('daily_usage')
+          .update({ count: currentCount + 1 })
+          .eq('user_id', userId)
+          .eq('date', today);
+      }
     }
 
+    // 응답 — 관리자는 무제한 표시, 일반 유저는 사용량 정보 포함
     return res.status(200).json({
       data: parsed,
-      usage: {
-        used: currentCount + 1,
-        limit: DAILY_LIMIT,
-        remaining: DAILY_LIMIT - currentCount - 1
-      }
+      usage: isAdmin
+        ? { isAdmin: true }
+        : {
+            used: currentCount + 1,
+            limit: DAILY_LIMIT,
+            remaining: DAILY_LIMIT - currentCount - 1
+          }
     });
 
   } catch (err) {
