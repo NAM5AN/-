@@ -172,10 +172,24 @@
         <span class="field-label">📍 지역</span>
         <input type="text" class="field-input" id="mRegion" placeholder="예) 서울 강남구" />
       </div>
-      <div class="field">
-        <span class="field-label">📌 실제 주소 <span style="font-weight:400; color:var(--ink-faint); font-size:11px;">(지도 핀 위치, 직접 수정 가능)</span></span>
-        <input type="text" class="field-input" id="mActualAddress" placeholder="자동 검색 결과 또는 직접 입력" />
-        <div class="field-hint" id="mAddressHint" style="display:none;"></div>
+      <div class="field" id="mAddressField" style="display:none;">
+        <span class="field-label">📌 실제 주소 <span style="font-weight:400; color:var(--ink-faint); font-size:11px;">(지도 핀 위치)</span></span>
+        <!-- 읽기 모드 -->
+        <div class="address-read-row" id="mAddressRead">
+          <div class="field-hint" style="flex:1; margin:0;">
+            <span class="field-hint-label">실제 위치</span>📌 <span id="mAddressReadText"></span>
+          </div>
+          <button type="button" class="address-edit-btn" id="mAddressEditBtn" title="주소 직접 수정">✏️</button>
+        </div>
+        <!-- 편집 모드 (기본 숨김) -->
+        <div class="address-edit-row" id="mAddressEdit" style="display:none;">
+          <input type="text" class="field-input" id="mActualAddress" placeholder="정확한 주소를 입력하세요" style="flex:1;" />
+          <button type="button" class="address-action-btn confirm" id="mAddressConfirmBtn" title="적용">✓</button>
+          <button type="button" class="address-action-btn cancel" id="mAddressCancelBtn" title="취소">✕</button>
+        </div>
+        <div class="field-hint-info" id="mAddressEditHint" style="display:none;">
+          💡 저장하면 입력한 주소로 지도 핀 위치를 다시 찾아요
+        </div>
       </div>
       <div class="field">
         <span class="field-label">🎁 제공 내용</span>
@@ -1343,9 +1357,23 @@
     document.getElementById('mVisitDate').value = e.visitDate || '';
     document.getElementById('mMemo').value = e.memo || '';
 
-    // 카카오에서 찾은 실제 주소 표시 (편집 가능한 input)
-    document.getElementById('mActualAddress').value = e.actualAddress || '';
-    document.getElementById('mAddressHint').style.display = 'none';
+    // 카카오에서 찾은 실제 주소 표시 (읽기 모드)
+    // 주소가 있으면 필드 노출 + 읽기 모드, 없으면 필드 자체 숨김
+    const addrField = document.getElementById('mAddressField');
+    const addrInput = document.getElementById('mActualAddress');
+    const addrText = document.getElementById('mAddressReadText');
+    if (e.actualAddress) {
+      addrField.style.display = '';
+      addrText.textContent = e.actualAddress;
+      addrInput.value = e.actualAddress;
+      // 편집 모드 닫기, 읽기 모드 표시
+      setAddressEditMode(false);
+    } else {
+      // 주소 없으면 필드 자체를 숨기되, 사용자가 편집 모드로 강제 열 수도 있게
+      // (등록 직후엔 주소 없는 게 정상이므로 일단 숨김 유지)
+      addrField.style.display = 'none';
+      addrInput.value = '';
+    }
 
     document.getElementById('btnComplete').style.display = e.completed ? 'none' : '';
     document.getElementById('btnRestore').style.display = e.completed ? '' : 'none';
@@ -1371,9 +1399,10 @@
     document.getElementById('mVisitDate').value = '';
     document.getElementById('mMemo').value = '';
 
-    // 신규 등록 시 실제 주소는 빈 값 (저장 시 자동 검색됨)
+    // 신규 등록 시 실제 주소 필드 숨김 (저장 후 자동 검색되면 나타남)
+    document.getElementById('mAddressField').style.display = 'none';
     document.getElementById('mActualAddress').value = '';
-    document.getElementById('mAddressHint').style.display = 'none';
+    setAddressEditMode(false);
 
     document.getElementById('btnComplete').style.display = 'none';
     document.getElementById('btnRestore').style.display = 'none';
@@ -1386,6 +1415,33 @@
     document.getElementById('modalBg').classList.remove('active');
     editingId = null;
     isNewEntry = false;
+  }
+
+  // 실제 주소 필드의 읽기/편집 모드 전환
+  // editing=true → input 활성화, 확인/취소 버튼 표시
+  // editing=false → 읽기 모드 (초록 hint + 연필 버튼)
+  function setAddressEditMode(editing) {
+    const readRow = document.getElementById('mAddressRead');
+    const editRow = document.getElementById('mAddressEdit');
+    const hint = document.getElementById('mAddressEditHint');
+    if (!readRow || !editRow) return;
+    if (editing) {
+      readRow.style.display = 'none';
+      editRow.style.display = '';
+      if (hint) hint.style.display = '';
+      // 포커스 + 텍스트 끝으로
+      const inp = document.getElementById('mActualAddress');
+      if (inp) {
+        setTimeout(() => {
+          inp.focus();
+          inp.setSelectionRange(inp.value.length, inp.value.length);
+        }, 50);
+      }
+    } else {
+      readRow.style.display = '';
+      editRow.style.display = 'none';
+      if (hint) hint.style.display = 'none';
+    }
   }
 
   // ============== View Switching ==============
@@ -1557,6 +1613,30 @@
     document.getElementById('btnManualAdd').addEventListener('click', () => {
       openNewEntryModal({ fromAI: false });
     });
+
+    // 실제 주소 편집 모드 토글 (연필 버튼)
+    const editBtn = document.getElementById('mAddressEditBtn');
+    if (editBtn) {
+      editBtn.addEventListener('click', () => setAddressEditMode(true));
+    }
+    // 확인 버튼: 읽기 모드 텍스트 갱신 후 닫기 (실제 저장은 [💾 저장] 누를 때)
+    const confirmBtn = document.getElementById('mAddressConfirmBtn');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        const newVal = document.getElementById('mActualAddress').value.trim();
+        document.getElementById('mAddressReadText').textContent = newVal || '(주소 없음)';
+        setAddressEditMode(false);
+      });
+    }
+    // 취소 버튼: 변경 사항 버리고 원래 값 복원 후 읽기 모드로
+    const cancelBtn = document.getElementById('mAddressCancelBtn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        const original = document.getElementById('mAddressReadText').textContent;
+        document.getElementById('mActualAddress').value = original === '(주소 없음)' ? '' : original;
+        setAddressEditMode(false);
+      });
+    }
 
     document.getElementById('btnSave').addEventListener('click', async () => {
       const storeName = document.getElementById('mStoreName').value.trim();
