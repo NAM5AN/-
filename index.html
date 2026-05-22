@@ -160,7 +160,7 @@
     <span class="footer-sep">·</span>
     <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>
     <span class="footer-sep">·</span>
-    <a href="mailto:cheheomdan.manager@gmail.com">문의</a>
+    <a href="#" id="footerContact">문의</a>
   </footer>
 </div>
 
@@ -2567,6 +2567,42 @@
     const bannerLogin = document.getElementById('btnGuestBannerLogin');
     if (bannerLogin) {
       bannerLogin.addEventListener('click', openLoginModal);
+    }
+
+    // 푸터 [문의] — 카카오 채널 준비 중이라 이메일 복사 + 안내 토스트
+    const footerContact = document.getElementById('footerContact');
+    if (footerContact) {
+      footerContact.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = 'cheheomdan.manager@gmail.com';
+        let copied = false;
+        // 모던 Clipboard API 시도
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(email);
+            copied = true;
+          }
+        } catch (_) { /* 폴백으로 진행 */ }
+        // 폴백: 임시 textarea + execCommand (iOS Safari 등)
+        if (!copied) {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = email;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            copied = true;
+          } catch (_) { copied = false; }
+        }
+        if (copied) {
+          showToast(`📋 ${email} 복사됨 · 카카오 채널은 준비 중이에요`, 'success');
+        } else {
+          showToast(`카카오 채널은 준비 중이에요 · ${email}로 문의해주세요`, 'success');
+        }
+      });
     }
   }
 
