@@ -171,7 +171,11 @@
       <div class="field">
         <span class="field-label">📍 지역</span>
         <input type="text" class="field-input" id="mRegion" placeholder="예) 서울 강남구" />
-        <div class="field-hint" id="mActualAddress" style="display:none;"></div>
+      </div>
+      <div class="field">
+        <span class="field-label">📌 실제 주소 <span style="font-weight:400; color:var(--ink-faint); font-size:11px;">(지도 핀 위치, 직접 수정 가능)</span></span>
+        <input type="text" class="field-input" id="mActualAddress" placeholder="자동 검색 결과 또는 직접 입력" />
+        <div class="field-hint" id="mAddressHint" style="display:none;"></div>
       </div>
       <div class="field">
         <span class="field-label">🎁 제공 내용</span>
@@ -922,7 +926,6 @@
       if (storeName && region) {
         queries.push(`${region} ${storeName}`);
         queries.push(`${storeName} ${region}`);
-        // region이 시/구/군 등의 접미사가 없으면 '시' 부착 버전도 추가
         const hasSuffix = /(시|구|군|동|읍|면|로|길)$/.test(region.trim());
         if (!hasSuffix) {
           queries.push(`${region}시 ${storeName}`);
@@ -930,9 +933,6 @@
       }
       if (storeName) queries.push(storeName);
       if (region) queries.push(region);
-
-      console.log('[geocode] 검색 쿼리 시도 순서:', queries);
-      console.log('[geocode] storeName:', JSON.stringify(storeName), '/ region:', JSON.stringify(region));
 
       // 후보 매장의 적합도 점수 계산
       // 높을수록 좋은 매칭. 점수 기준:
@@ -959,17 +959,12 @@
           return;
         }
         const q = queries[qIdx++];
-        console.log(`[geocode] 쿼리 ${qIdx}: "${q}"`);
         ps.keywordSearch(q, (data, status) => {
           if (status === window.kakao.maps.services.Status.OK && data && data.length > 0) {
-            console.log(`[geocode]   → 결과 ${data.length}개:`);
             data.slice(0, 5).forEach((p, i) => {
               const s = scoreCandidate(p, qIdx - 1, i);
-              console.log(`    [${i}] (점수 ${s}) ${p.place_name} | ${p.address_name}`);
               allCandidates.push({ place: p, score: s });
             });
-          } else {
-            console.log(`[geocode]   → 결과 없음 (status: ${status})`);
           }
           tryNext();
         });
@@ -977,7 +972,6 @@
 
       const finalize = () => {
         if (allCandidates.length === 0) {
-          console.log('[geocode] 모든 쿼리 실패');
           resolve(null);
           return;
         }
@@ -991,14 +985,9 @@
             unique.push(c);
           }
         }
-        // 점수 내림차순 정렬
+        // 점수 내림차순 정렬 후 최고 점수 매장 선택
         unique.sort((a, b) => b.score - a.score);
-        console.log('[geocode] 최종 후보 (점수순):');
-        unique.slice(0, 5).forEach((c, i) => {
-          console.log(`  [${i}] (점수 ${c.score}) ${c.place.place_name} | ${c.place.address_name}`);
-        });
         const best = unique[0].place;
-        console.log('[geocode] ✅ 최종 선택:', best.place_name, '-', best.address_name);
         resolve({
           lat: parseFloat(best.y),
           lng: parseFloat(best.x),
@@ -1354,14 +1343,9 @@
     document.getElementById('mVisitDate').value = e.visitDate || '';
     document.getElementById('mMemo').value = e.memo || '';
 
-    // 카카오에서 찾은 실제 주소 표시
-    const actualEl = document.getElementById('mActualAddress');
-    if (e.actualAddress) {
-      actualEl.innerHTML = `<span class="field-hint-label">실제 위치</span>📌 ${escapeHtml(e.actualAddress)}`;
-      actualEl.style.display = '';
-    } else {
-      actualEl.style.display = 'none';
-    }
+    // 카카오에서 찾은 실제 주소 표시 (편집 가능한 input)
+    document.getElementById('mActualAddress').value = e.actualAddress || '';
+    document.getElementById('mAddressHint').style.display = 'none';
 
     document.getElementById('btnComplete').style.display = e.completed ? 'none' : '';
     document.getElementById('btnRestore').style.display = e.completed ? '' : 'none';
@@ -1387,8 +1371,9 @@
     document.getElementById('mVisitDate').value = '';
     document.getElementById('mMemo').value = '';
 
-    // 신규 등록 시 실제 주소 숨기기 (아직 검색 안 됨)
-    document.getElementById('mActualAddress').style.display = 'none';
+    // 신규 등록 시 실제 주소는 빈 값 (저장 시 자동 검색됨)
+    document.getElementById('mActualAddress').value = '';
+    document.getElementById('mAddressHint').style.display = 'none';
 
     document.getElementById('btnComplete').style.display = 'none';
     document.getElementById('btnRestore').style.display = 'none';
@@ -1580,6 +1565,7 @@
       const deadline = document.getElementById('mDeadline').value.trim();
       const visitDate = document.getElementById('mVisitDate').value.trim();
       const memo = document.getElementById('mMemo').value;
+      const userAddress = document.getElementById('mActualAddress').value.trim();
 
       if (!storeName && !region) {
         showToast('상호명이나 지역 중 하나는 입력해주세요', 'error');
@@ -1587,11 +1573,23 @@
       }
 
       if (isNewEntry) {
-        // 신규 저장 - 지오코딩 필요
+        // 신규 저장
+        // 우선순위:
+        //   1. 사용자가 '실제 주소'를 직접 입력했으면 그걸로 지오코딩
+        //   2. 아니면 평소처럼 storeName+region으로 검색
         setLoading(true, '가게 위치를 찾는 중...');
         let coords = null;
         try {
-          coords = await geocode(storeName, region);
+          if (userAddress) {
+            // 사용자 직접 입력 주소 우선 — 주소만으로 지오코딩
+            coords = await geocode('', userAddress);
+            // 실패 시 fallback
+            if (!coords) coords = { lat: 37.5665, lng: 126.9780, source: 'fallback', address: userAddress };
+            else coords.address = userAddress; // 사용자 입력을 그대로 저장 (카카오 정규화 안 함)
+          } else {
+            coords = await geocode(storeName, region);
+            if (!coords) coords = { lat: 37.5665, lng: 126.9780, source: 'fallback' };
+          }
         } catch (e) {
           coords = { lat: 37.5665, lng: 126.9780, source: 'fallback' };
         }
@@ -1601,7 +1599,7 @@
           storeName, region, content, deadline, visitDate, memo,
           lat: coords.lat, lng: coords.lng,
           locationSource: coords.source || 'unknown',
-          actualAddress: coords.address || '',
+          actualAddress: coords.address || userAddress || '',
           category: coords.category || '',
           completed: false,
           createdAt: new Date().toISOString()
@@ -1614,7 +1612,9 @@
           renderActiveList();
           renderStats();
           if (currentView === 'map') renderMap();
-          if (coords.source === 'kakao') {
+          if (userAddress) {
+            showToast(`📍 직접 입력한 주소로 등록`, 'success');
+          } else if (coords.source === 'kakao') {
             showToast(`📍 ${coords.actualName || storeName} 위치 찾음`, 'success');
           } else if (coords.source === 'osm') {
             showToast(`등록 완료 (대략적인 위치)`, 'success');
@@ -1632,6 +1632,7 @@
         if (!e) return;
 
         const regionChanged = (e.region !== region) || (e.storeName !== storeName);
+        const addressChanged = (e.actualAddress || '') !== userAddress;
         e.storeName = storeName;
         e.region = region;
         e.content = content;
@@ -1639,8 +1640,31 @@
         e.visitDate = visitDate;
         e.memo = memo;
 
-        // 지역/상호명 바뀌면 위치도 다시 찾기
-        if (regionChanged) {
+        // 위치 갱신 로직:
+        //   1. 사용자가 실제 주소를 직접 수정했으면 → 그 주소로 다시 지오코딩
+        //   2. 사용자가 주소는 안 건드렸지만 상호/지역이 바뀌었으면 → 자동 재검색
+        //   3. 아무것도 안 바뀌었으면 → 기존 위치 유지
+        if (addressChanged && userAddress) {
+          // 사용자가 직접 입력한 주소로 지오코딩
+          setLoading(true, '주소로 위치 찾는 중...');
+          try {
+            const coords = await geocode('', userAddress);
+            if (coords) {
+              e.lat = coords.lat;
+              e.lng = coords.lng;
+              e.locationSource = coords.source || 'unknown';
+            }
+            // 사용자 입력 주소 그대로 저장 (카카오 정규화 안 함)
+            e.actualAddress = userAddress;
+          } catch (err) {
+            e.actualAddress = userAddress; // 지오코딩 실패해도 주소는 저장
+          }
+          setLoading(false);
+        } else if (addressChanged && !userAddress) {
+          // 사용자가 주소를 비웠으면 actualAddress만 비움 (좌표는 유지)
+          e.actualAddress = '';
+        } else if (regionChanged) {
+          // 주소 직접 수정은 없지만 상호/지역이 바뀌었으면 자동 재검색
           setLoading(true, '위치 업데이트 중...');
           try {
             const coords = await geocode(storeName, region);
@@ -1676,6 +1700,7 @@
       e.deadline = document.getElementById('mDeadline').value.trim();
       e.visitDate = document.getElementById('mVisitDate').value.trim();
       e.memo = document.getElementById('mMemo').value;
+      e.actualAddress = document.getElementById('mActualAddress').value.trim();
       e.completed = true;
       e.completedAt = new Date().toISOString();
       const ok = await saveEntry(e);
