@@ -1697,6 +1697,25 @@
     if (avatarEl) avatarEl.textContent = emailToInitial(user.email || name);
   }
 
+  // 게스트 모드일 때 UI 요소 일부 조정 (안내 메시지 등)
+  // 부팅 시 + 로그인/로그아웃으로 모드 전환 시 호출됨
+  function applyGuestModeUI() {
+    const uploadHint = document.querySelector('.upload-hint');
+    if (!uploadHint) return;
+
+    if (isGuestMode) {
+      // 게스트 모드: 시뮬레이션 안내 (어떤 이미지든 샘플 결과가 나온다는 안내)
+      uploadHint.innerHTML =
+        '🎭 <strong>둘러보기 모드</strong> · 어떤 이미지를 올려도 샘플 추출 결과가 나타나요';
+      uploadHint.style.color = 'var(--mustard)';
+    } else {
+      // 로그인 모드: 원래 안내 복원
+      uploadHint.innerHTML =
+        '클릭 · 끌어다 놓기<span class="pc-only"> · <kbd>Ctrl</kbd>+<kbd>V</kbd>로 붙여넣기</span> · AI가 자동으로 정보를 추출해요';
+      uploadHint.style.color = '';
+    }
+  }
+
   function showLogin() {
     document.getElementById('loginScreen').classList.add('active');
     document.getElementById('mainApp').style.display = 'none';
@@ -2058,6 +2077,7 @@
     renderActiveList();
     renderStats();
     updateUserUI(null);
+    applyGuestModeUI(); // 업로드 영역 안내 메시지 갱신
     showToast('로그아웃했어요');
   }
 
@@ -2173,6 +2193,7 @@
         isGuestMode = !user;
 
         updateUserUI(currentUser);
+        applyGuestModeUI(); // 게스트 모드일 때 안내 텍스트/UI 조정
         showApp();
 
         if (!appInitialized) {
