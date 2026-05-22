@@ -57,16 +57,31 @@
 <!-- ============== Main App ============== -->
 <div id="mainApp" style="display:none;">
 
+<!-- 게스트 모드 안내 배너 (비로그인 시 상단 고정) -->
+<div id="guestBanner" class="guest-banner" style="display:none;">
+  <div class="guest-banner-inner">
+    <span class="guest-banner-text">
+      👋 <strong>둘러보기 중이에요</strong> · 내 데이터를 저장하려면 로그인해주세요
+    </span>
+    <button class="guest-banner-btn" id="btnGuestBannerLogin">카카오로 시작하기</button>
+  </div>
+</div>
+
 <div class="app">
   <header>
     <div class="title-row">
       <h1>체험단 <span class="mark">매니저</span></h1>
       <div class="header-actions">
         <span class="sub" id="todayDate"></span>
+        <!-- 로그인 상태: 사용자 정보 표시 -->
         <div class="user-info" id="userInfo" title="사용자">
           <div class="user-avatar" id="userAvatar">?</div>
           <span class="user-name" id="userName">사용자</span>
         </div>
+        <!-- 게스트 상태: 로그인 버튼 (헤더용 작은 버튼) -->
+        <button class="btn-login-header" id="btnHeaderLogin" style="display:none;">
+          🔑 로그인
+        </button>
         <button class="icon-btn" id="btnSettings" aria-label="설정" title="설정"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
       </div>
     </div>
@@ -188,6 +203,27 @@
 <div class="loading" id="loading">
   <div class="spinner"></div>
   <div class="loading-text" id="loadingText">이미지에서 정보를 추출하는 중...</div>
+</div>
+
+<!-- Login Modal (게스트 모드에서 [로그인] 버튼 클릭 시 표시) -->
+<div class="modal-bg" id="loginModalBg">
+  <div class="modal login-modal">
+    <button class="modal-close" id="loginModalClose">✕</button>
+    <div class="login-modal-content">
+      <div class="login-modal-icon">🔑</div>
+      <h2 class="login-modal-title">로그인</h2>
+      <div class="login-modal-sub">
+        간편하게 로그인하고 나만의 체험단 일정을 관리해보세요
+      </div>
+      <button class="provider-btn kakao" id="btnModalLoginKakao">
+        <span class="icon">💬</span>
+        <span>카카오로 시작하기</span>
+      </button>
+      <div class="login-modal-footer">
+        로그인 시 <a href="#" id="linkTerms">이용약관</a>과 <a href="#" id="linkPrivacy">개인정보처리방침</a>에 동의하게 돼요
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Settings Modal -->
@@ -1713,23 +1749,32 @@
   // 게스트 모드일 때 UI 요소 일부 조정 (안내 메시지 등)
   // 부팅 시 + 로그인/로그아웃으로 모드 전환 시 호출됨
   function applyGuestModeUI() {
+    // 1. 상단 배너 (게스트 모드에서만 표시)
+    const banner = document.getElementById('guestBanner');
+    if (banner) banner.style.display = isGuestMode ? '' : 'none';
+
+    // 2. 헤더: 게스트면 userInfo 숨기고 [로그인] 버튼 노출
+    const userInfo = document.getElementById('userInfo');
+    const headerLogin = document.getElementById('btnHeaderLogin');
+    if (userInfo) userInfo.style.display = isGuestMode ? 'none' : '';
+    if (headerLogin) headerLogin.style.display = isGuestMode ? '' : 'none';
+
+    // 3. 업로드 영역 안내 메시지
     const uploadHint = document.querySelector('.upload-hint');
     if (uploadHint) {
       if (isGuestMode) {
-        // 게스트 모드: 시뮬레이션 안내 (어떤 이미지든 샘플 결과가 나온다는 안내)
         uploadHint.innerHTML =
           '🎭 <strong>둘러보기 모드</strong> · 어떤 이미지를 올려도 샘플 추출 결과가 나타나요' +
           '<br><span style="font-size: 11px; opacity: 0.85;">샘플은 실제 업체가 아닌 임의 정보예요</span>';
         uploadHint.style.color = 'var(--mustard)';
       } else {
-        // 로그인 모드: 원래 안내 복원
         uploadHint.innerHTML =
           '클릭 · 끌어다 놓기<span class="pc-only"> · <kbd>Ctrl</kbd>+<kbd>V</kbd>로 붙여넣기</span> · AI가 자동으로 정보를 추출해요';
         uploadHint.style.color = '';
       }
     }
 
-    // 지도 안내바: 로그인 모드로 전환되면 항상 숨김
+    // 4. 지도 안내바: 로그인 모드로 전환되면 항상 숨김
     // (게스트 모드에서 지도 탭에 있을 때만 보이게 — 표시는 switchView가 담당)
     const mapNotice = document.getElementById('guestMapNotice');
     if (mapNotice && !isGuestMode) {
@@ -2177,21 +2222,76 @@
   // 카카오 로그인 단독 지원
   // talk_message scope: 카카오톡 '나에게 메시지' 발송용 (체험단 마감/방문일 알림)
   // 카카오 콘솔 > 카카오 로그인 > 동의항목 > 접근권한 > 카카오톡 메시지 전송 = 선택 동의
-  function initLogin() {
-    document.getElementById('loginKakao').addEventListener('click', async (e) => {
-      e.target.disabled = true;
-      const { error } = await sb.auth.signInWithOAuth({
-        provider: 'kakao',
-        options: {
-          redirectTo: window.location.origin,
-          scopes: 'profile_nickname,profile_image,account_email,talk_message'
-        }
-      });
-      if (error) {
-        alert('카카오 로그인 실패: ' + error.message);
-        e.target.disabled = false;
+
+  // 카카오 OAuth 호출 (로그인 화면/모달 공통)
+  async function triggerKakaoLogin(buttonEl) {
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      const original = buttonEl.dataset.originalText || buttonEl.textContent;
+      buttonEl.dataset.originalText = original;
+      buttonEl.textContent = '카카오로 이동 중...';
+    }
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: {
+        redirectTo: window.location.origin,
+        scopes: 'profile_nickname,profile_image,account_email,talk_message'
       }
     });
+    if (error) {
+      showToast('카카오 로그인 실패: ' + error.message, 'error');
+      if (buttonEl) {
+        buttonEl.disabled = false;
+        buttonEl.textContent = buttonEl.dataset.originalText || buttonEl.textContent;
+      }
+    }
+    // 성공 시 카카오로 리디렉트
+  }
+
+  // 로그인 모달 열기/닫기
+  function openLoginModal() {
+    const bg = document.getElementById('loginModalBg');
+    if (bg) bg.classList.add('active');
+  }
+  function closeLoginModal() {
+    const bg = document.getElementById('loginModalBg');
+    if (bg) bg.classList.remove('active');
+  }
+
+  function initLogin() {
+    // 기존 로그인 화면(.login-screen)의 카카오 버튼
+    const loginKakao = document.getElementById('loginKakao');
+    if (loginKakao) {
+      loginKakao.addEventListener('click', (e) => triggerKakaoLogin(e.currentTarget));
+    }
+
+    // 로그인 모달 (게스트 모드용)
+    const modalKakao = document.getElementById('btnModalLoginKakao');
+    if (modalKakao) {
+      modalKakao.addEventListener('click', (e) => triggerKakaoLogin(e.currentTarget));
+    }
+    const modalClose = document.getElementById('loginModalClose');
+    if (modalClose) {
+      modalClose.addEventListener('click', closeLoginModal);
+    }
+    // 배경 클릭으로 모달 닫기
+    const modalBg = document.getElementById('loginModalBg');
+    if (modalBg) {
+      modalBg.addEventListener('click', (e) => {
+        if (e.target === modalBg) closeLoginModal();
+      });
+    }
+
+    // 헤더의 [로그인] 버튼 → 모달 열기
+    const headerLogin = document.getElementById('btnHeaderLogin');
+    if (headerLogin) {
+      headerLogin.addEventListener('click', openLoginModal);
+    }
+    // 배너의 [카카오로 시작하기] 버튼 → 모달 열기
+    const bannerLogin = document.getElementById('btnGuestBannerLogin');
+    if (bannerLogin) {
+      bannerLogin.addEventListener('click', openLoginModal);
+    }
   }
 
   // ============== Boot ==============
