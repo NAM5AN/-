@@ -1,0 +1,392 @@
+/* ============================================
+   screens.css
+   - 큰 화면 단위 스타일
+   - 모달 공통 구조 (modal-bg, modal, modal-close, modal-actions)
+   - 로그인 화면 (login-screen, login-card, provider-btn)
+   - 설정 화면 (settings-section, settings-hint, settings-divider)
+   - 온보딩 모달 (onboarding-modal)
+   - 디테일 모달 구조 (detail-meta)
+   ============================================ */
+
+/* ---- Modal Base (공통 모달 구조) ---- */
+.modal-bg {
+  position: fixed; inset: 0;
+  background: rgba(42, 37, 34, 0.5);
+  backdrop-filter: blur(6px);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1000;
+  padding: 40px 16px;
+  overflow-y: auto;
+  animation: fadeIn 0.2s ease;
+}
+.modal-bg.active { display: flex; }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal {
+  background: var(--paper);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 540px;
+  padding: 28px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+  animation: slideUp 0.25s ease;
+  position: relative;
+}
+.modal-close {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 32px; height: 32px;
+  border: none;
+  background: var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.modal-close:hover { background: var(--ink-faint); color: white; }
+
+.modal h2 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 24px;
+  margin-bottom: 4px;
+  padding-right: 40px;
+  word-break: keep-all;
+}
+.modal-sub {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.detail-meta {
+  display: grid;
+  gap: 12px;
+}
+
+/* ---- Settings Modal ---- */
+.settings-section {
+  margin-bottom: 8px;
+}
+.settings-divider {
+  border: 0;
+  border-top: 1px dashed var(--line);
+  margin: 24px 0;
+}
+.settings-section h3 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--ink);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.settings-hint {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--card);
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+.settings-hint a { color: var(--terra); text-decoration: underline; }
+.settings-hint code {
+  font-family: ui-monospace, Menlo, monospace;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+.status-pill.ok { background: rgba(90, 124, 92, 0.15); color: var(--sage); }
+.status-pill.off { background: var(--line); color: var(--ink-soft); }
+
+/* ---- Login Screen ---- */
+.login-screen {
+  min-height: 100vh;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(at 20% 30%, rgba(194, 84, 43, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 70%, rgba(90, 124, 92, 0.08) 0px, transparent 50%),
+    var(--bg);
+}
+.login-screen.active { display: flex; }
+
+.login-card {
+  max-width: 400px;
+  width: 100%;
+  background: var(--paper);
+  border-radius: 20px;
+  padding: 40px 32px;
+  box-shadow: 0 20px 60px rgba(42, 37, 34, 0.12);
+  border: 1px solid var(--line);
+  animation: slideUp 0.4s ease;
+}
+.login-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 30px;
+  margin-bottom: 6px;
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+.login-title .mark {
+  color: var(--terra);
+  font-style: italic;
+}
+.login-sub {
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+.login-providers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.provider-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+.provider-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(42, 37, 34, 0.08);
+}
+.provider-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+  transform: none;
+}
+.provider-btn .icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.provider-btn.kakao {
+  background: #FEE500;
+  color: #181600;
+  border-color: #FEE500;
+}
+.provider-btn.kakao:hover { background: #F6DC00; }
+.provider-btn.google {
+  background: white;
+  color: #1F1F1F;
+  border-color: #DADCE0;
+}
+.provider-btn.google:hover { background: #F8F9FA; }
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 18px 0;
+  color: var(--ink-faint);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.divider::before { margin-right: 12px; }
+.divider::after { margin-left: 12px; }
+
+.email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.email-form input {
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink);
+  width: 100%;
+}
+.email-form input:focus {
+  outline: none;
+  border-color: var(--terra);
+}
+.email-submit {
+  padding: 11px;
+  background: var(--terra);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.email-submit:hover { background: #A8431F; }
+.email-submit:disabled { opacity: 0.5; cursor: wait; }
+
+.toggle-mode {
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 12px;
+}
+.toggle-mode a {
+  color: var(--terra);
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.login-footer {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--line);
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+  line-height: 1.6;
+}
+
+/* ---- Onboarding Modal (카톡 알림 권유) ---- */
+.onboarding-modal {
+  max-width: 420px;
+  text-align: center;
+  padding: 36px 28px 28px;
+}
+.onboarding-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+.onboarding-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 22px;
+  margin-bottom: 10px;
+  color: var(--ink);
+}
+.onboarding-desc {
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+  margin-bottom: 24px;
+  word-break: keep-all;
+}
+.onboarding-desc strong {
+  color: var(--terra);
+  font-weight: 600;
+}
+.onboarding-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.btn-onboarding-primary {
+  padding: 13px 16px;
+  background: #FEE500;
+  color: #181600;
+  border: 1px solid #FEE500;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-onboarding-primary:hover {
+  background: #F6DC00;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(254, 229, 0, 0.3);
+}
+.btn-onboarding-primary:disabled {
+  opacity: 0.5;
+  cursor: wait;
+  transform: none;
+}
+.btn-onboarding-later {
+  padding: 11px 16px;
+  background: transparent;
+  color: var(--ink-soft);
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.btn-onboarding-later:hover {
+  color: var(--ink);
+}
+.onboarding-hint {
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  line-height: 1.6;
+}
+
+/* ---- Mobile Responsive ---- */
+@media (max-width: 600px) {
+  .modal { padding: 22px 18px; }
+  .modal h2 { font-size: 20px; }
+}
