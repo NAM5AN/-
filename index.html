@@ -26,6 +26,7 @@
 <meta name="twitter:description" content="AI로 체험단 일정을 자동 관리하세요.">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="scripts/sample-data.js"></script>
 <link rel="stylesheet" href="styles/base.css">
 <link rel="stylesheet" href="styles/layout.css">
 <link rel="stylesheet" href="styles/components.css">
@@ -316,6 +317,10 @@
   let map = null;
   let currentView = 'active';
 
+  // 게스트 모드 (둘러보기) — 로그인 없이 사이트를 체험하는 모드
+  // 데이터는 메모리에만 존재. 새로고침 시 원본 샘플로 복원.
+  let isGuestMode = false;
+
   const KEY_PREFIX = 'entry:';
 
   // ============== Supabase Setup ==============
@@ -451,7 +456,17 @@
   }
 
   // ============== Storage ==============
+  // 게스트 모드에서는 Supabase 호출 없이 메모리(entries 배열)에서만 동작.
+  // 로그인 모드에서는 Supabase entries 테이블과 동기화.
+
   async function loadAll() {
+    // 게스트 모드: 샘플 데이터로 entries 초기화 (있으면)
+    if (isGuestMode) {
+      const samples = window.GUEST_SAMPLE_ENTRIES || [];
+      // 깊은 복사 — 사용자가 수정해도 원본은 유지
+      entries = samples.map(e => JSON.parse(JSON.stringify(e)));
+      return;
+    }
     if (!currentUser) { entries = []; return; }
     try {
       const { data, error } = await sb.from('entries')
@@ -467,6 +482,16 @@
   }
 
   async function saveEntry(entry) {
+    // 게스트 모드: 메모리 entries 배열에만 반영
+    if (isGuestMode) {
+      const idx = entries.findIndex(e => e.id === entry.id);
+      if (idx >= 0) {
+        entries[idx] = entry;
+      } else {
+        entries.unshift(entry);
+      }
+      return true;
+    }
     try {
       await storage.set(KEY_PREFIX + entry.id, JSON.stringify(entry));
       return true;
@@ -477,6 +502,11 @@
   }
 
   async function deleteEntry(id) {
+    // 게스트 모드: 메모리에서만 제거
+    if (isGuestMode) {
+      entries = entries.filter(e => e.id !== id);
+      return true;
+    }
     try {
       await storage.delete(KEY_PREFIX + id);
       entries = entries.filter(e => e.id !== id);
