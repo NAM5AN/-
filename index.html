@@ -1656,10 +1656,17 @@
   }
 
   function updateUserUI(user) {
-    if (!user) return;
+    const nameEl = document.getElementById('userName');
+    const avatarEl = document.getElementById('userAvatar');
+    if (!user) {
+      // 게스트 모드: 헤더에 둘러보기 안내 표시
+      if (nameEl) nameEl.textContent = '둘러보기';
+      if (avatarEl) avatarEl.textContent = '👤';
+      return;
+    }
     const name = getUserDisplayName(user);
-    document.getElementById('userName').textContent = name;
-    document.getElementById('userAvatar').textContent = emailToInitial(user.email || name);
+    if (nameEl) nameEl.textContent = name;
+    if (avatarEl) avatarEl.textContent = emailToInitial(user.email || name);
   }
 
   function showLogin() {
@@ -2017,7 +2024,12 @@
     // 데이터 비우기
     entries = [];
     currentUser = null;
-    showLogin();
+    // 로그인 화면 대신 게스트 모드로 전환 (로그아웃 후에도 사이트는 계속 둘러볼 수 있음)
+    isGuestMode = true;
+    await loadAll();
+    renderActiveList();
+    renderStats();
+    updateUserUI(null);
     showToast('로그아웃했어요');
   }
 
@@ -2128,7 +2140,10 @@
       }
       bootInProgress = true;
       try {
+        // user가 null이면 게스트 모드로 부팅
         currentUser = user;
+        isGuestMode = !user;
+
         updateUserUI(currentUser);
         showApp();
 
@@ -2150,14 +2165,17 @@
         renderActiveList();
         renderStats();
 
-        // 구독 정보 먼저 가져온 뒤 AI 사용량 표시 (프리미엄이면 무제한 표시)
-        await fetchSubscription();
-        updatePlanUI();
-        fetchTodayUsage().catch(e => console.warn('Usage fetch failed:', e));
+        // 게스트 모드는 구독/사용량/알림 서버 호출 모두 스킵 (로그인 안 됨)
+        if (!isGuestMode) {
+          // 구독 정보 먼저 가져온 뒤 AI 사용량 표시 (프리미엄이면 무제한 표시)
+          await fetchSubscription();
+          updatePlanUI();
+          fetchTodayUsage().catch(e => console.warn('Usage fetch failed:', e));
 
-        // 카톡 알림 설정 UI 갱신 + 온보딩 모달 표시 여부 결정
-        updateNotifyUI();
-        showOnboardingIfNeeded();
+          // 카톡 알림 설정 UI 갱신 + 온보딩 모달 표시 여부 결정
+          updateNotifyUI();
+          showOnboardingIfNeeded();
+        }
       } finally {
         bootInProgress = false;
       }
@@ -2171,11 +2189,12 @@
       queueMicrotask(async () => {
         try {
           if (session?.user) {
+            // 로그인 상태: 본인 데이터로 부팅
             await bootApp(session.user);
           } else {
+            // 비로그인: 로그인 화면 대신 게스트 모드로 부팅
             currentUser = null;
-            appInitialized = false;
-            showLogin();
+            await bootApp(null);
           }
         } catch (e) {
           console.error('[BOOT] authStateChange handler failed:', e);
