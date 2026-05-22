@@ -1665,22 +1665,40 @@
     document.getElementById('btnSettings').addEventListener('click', async () => {
       // 계정 정보 표시
       const acctEl = document.getElementById('accountInfo');
-      if (acctEl && currentUser) {
-        const name = getUserDisplayName(currentUser);
-        const email = currentUser.email || '(이메일 미제공)';
-        const provider = currentUser.app_metadata?.provider || 'email';
-        const providerName = { kakao: '카카오', google: '구글', email: '이메일' }[provider] || provider;
-        acctEl.innerHTML = `<strong>${name}</strong> <span style="color:var(--ink-faint); font-size:12px;">· ${providerName}</span><br><span style="font-size:12px;">${email}</span>`;
+      if (acctEl) {
+        if (isGuestMode) {
+          acctEl.innerHTML = '<span style="color:var(--ink-faint); font-style:italic;">로그인하면 계정 정보가 표시돼요</span>';
+        } else if (currentUser) {
+          const name = getUserDisplayName(currentUser);
+          const email = currentUser.email || '(이메일 미제공)';
+          const provider = currentUser.app_metadata?.provider || 'email';
+          const providerName = { kakao: '카카오', google: '구글', email: '이메일' }[provider] || provider;
+          acctEl.innerHTML = `<strong>${name}</strong> <span style="color:var(--ink-faint); font-size:12px;">· ${providerName}</span><br><span style="font-size:12px;">${email}</span>`;
+        }
       }
-      // 구독 정보 + 플랜 UI 새로고침
-      await fetchSubscription();
-      updatePlanUI();
-      // 사용량 새로고침 (최신 값으로)
-      await fetchTodayUsage();
+
+      // 게스트 모드: 서버 호출 없이 안내만 표시
+      if (isGuestMode) {
+        applyGuestSettingsContent();
+      } else {
+        // 로그인 모드: 구독 정보 + 사용량 새로고침
+        await fetchSubscription();
+        updatePlanUI();
+        await fetchTodayUsage();
+      }
       settingsBg.classList.add('active');
     });
 
-    document.getElementById('btnLogout').addEventListener('click', signOut);
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      // 게스트 모드: 로그인 모달 열기 / 로그인 상태: 로그아웃
+      if (isGuestMode) {
+        // 설정 모달 먼저 닫고 로그인 모달 열기
+        settingsBg.classList.remove('active');
+        openLoginModal();
+      } else {
+        signOut();
+      }
+    });
     document.getElementById('btnDeleteAccount').addEventListener('click', deleteAccount);
 
     // ===== 유료 플랜 =====
@@ -1779,6 +1797,82 @@
     const mapNotice = document.getElementById('guestMapNotice');
     if (mapNotice && !isGuestMode) {
       mapNotice.style.display = 'none';
+    }
+
+    // 5. 설정 모달 — 계정 섹션 (로그아웃↔로그인, 회원탈퇴 숨김)
+    const btnLogout = document.getElementById('btnLogout');
+    const btnDeleteAccount = document.getElementById('btnDeleteAccount');
+    if (btnLogout) {
+      if (isGuestMode) {
+        btnLogout.innerHTML = '🔑 로그인';
+        btnLogout.classList.add('btn-primary');
+        btnLogout.classList.remove('btn-ghost');
+      } else {
+        btnLogout.innerHTML = '🚪 로그아웃';
+        btnLogout.classList.add('btn-ghost');
+        btnLogout.classList.remove('btn-primary');
+      }
+    }
+    if (btnDeleteAccount) {
+      btnDeleteAccount.style.display = isGuestMode ? 'none' : '';
+    }
+  }
+
+  // 게스트 모드용 설정 모달 콘텐츠 채우기
+  // 플랜/AI사용량/카톡알림 섹션을 "로그인 필요" 안내로 대체
+  function applyGuestSettingsContent() {
+    // 플랜 카드 → 무료 플랜 UI + 업그레이드 버튼 비활성화 안내
+    const planNameEl = document.getElementById('planName');
+    const planBadgeEl = document.getElementById('planBadge');
+    const planBenefitsEl = document.getElementById('planBenefits');
+    const upgradeArea = document.getElementById('planUpgradeArea');
+    const activeArea = document.getElementById('planActiveArea');
+    const planCard = document.getElementById('planCard');
+
+    if (planCard && planNameEl && planBadgeEl && planBenefitsEl) {
+      planCard.classList.remove('premium');
+      planNameEl.innerHTML = '🎭 둘러보기';
+      planBadgeEl.textContent = 'GUEST';
+      planBadgeEl.className = 'plan-badge free';
+      planBenefitsEl.innerHTML = `
+        <li><span class="lock">🔒</span><span style="opacity:0.8;">로그인하면 무료/프리미엄 플랜을 이용할 수 있어요</span></li>
+      `;
+      if (upgradeArea) {
+        upgradeArea.innerHTML = `
+          <button class="btn-upgrade" id="btnGuestSettingsLogin">🔑 카카오로 로그인하기</button>
+          <div class="beta-notice">
+            로그인 후 베타 프리미엄을 <strong>2026년 9월 30일까지 무료</strong>로 이용할 수 있어요
+          </div>
+        `;
+        upgradeArea.style.display = '';
+        // 새로 생성된 버튼에 이벤트 연결
+        const guestLoginBtn = document.getElementById('btnGuestSettingsLogin');
+        if (guestLoginBtn) {
+          guestLoginBtn.addEventListener('click', () => {
+            document.getElementById('settingsBg').classList.remove('active');
+            openLoginModal();
+          });
+        }
+      }
+      if (activeArea) activeArea.style.display = 'none';
+    }
+
+    // AI 사용량 표시 → 시뮬레이션 안내로
+    const aiUsageDisplay = document.getElementById('aiUsageDisplay');
+    if (aiUsageDisplay) {
+      aiUsageDisplay.innerHTML = '🎭 <strong>둘러보기 모드</strong> · AI 추출은 데모 결과로 시뮬레이션돼요';
+      aiUsageDisplay.className = 'ai-usage-display';
+    }
+
+    // 카톡 알림 섹션 → 로그인 필요 안내로
+    const notifyCard = document.querySelector('.notify-status-card');
+    if (notifyCard) {
+      notifyCard.innerHTML = `
+        <div class="notify-status-text">
+          <span>🔒 로그인 후 사용할 수 있어요</span>
+        </div>
+      `;
+      notifyCard.classList.remove('enabled');
     }
   }
 
