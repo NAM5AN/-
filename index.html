@@ -931,6 +931,9 @@
       if (storeName) queries.push(storeName);
       if (region) queries.push(region);
 
+      console.log('[geocode] 검색 쿼리 시도 순서:', queries);
+      console.log('[geocode] region 텍스트:', JSON.stringify(region));
+
       // 검색 결과 중에서 region이 주소에 포함된 것을 우선 채택.
       // 그래야 동명 업체가 여러 곳에 있을 때 입력한 region과 일치하는 매장이 선택됨.
       function pickBestMatch(data, region) {
@@ -943,16 +946,30 @@
           (p.address_name || '').includes(regionKey) ||
           (p.road_address_name || '').includes(regionKey)
         );
+        if (matched) {
+          console.log('[geocode] ✅ region 매칭 성공:', matched.place_name, '-', matched.address_name);
+        } else {
+          console.log('[geocode] ⚠️ region 매칭 실패, data[0] 폴백');
+        }
         return matched || data[0];
       }
 
       let idx = 0;
       const tryNext = () => {
-        if (idx >= queries.length) { resolve(null); return; }
+        if (idx >= queries.length) {
+          console.log('[geocode] 모든 쿼리 실패');
+          resolve(null); return;
+        }
         const q = queries[idx++];
+        console.log(`[geocode] 쿼리 ${idx}: "${q}"`);
         ps.keywordSearch(q, (data, status) => {
           if (status === window.kakao.maps.services.Status.OK && data && data.length > 0) {
+            console.log(`[geocode]   → 결과 ${data.length}개:`);
+            data.slice(0, 5).forEach((p, i) => {
+              console.log(`    [${i}] ${p.place_name} | ${p.address_name} | ${p.road_address_name || '-'}`);
+            });
             const place = pickBestMatch(data, region);
+            console.log('[geocode] 최종 선택:', place.place_name, '-', place.address_name);
             resolve({
               lat: parseFloat(place.y),
               lng: parseFloat(place.x),
@@ -962,6 +979,7 @@
               source: 'kakao'
             });
           } else {
+            console.log(`[geocode]   → 결과 없음 (status: ${status})`);
             tryNext();
           }
         });
