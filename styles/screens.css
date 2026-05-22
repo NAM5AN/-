@@ -390,3 +390,44 @@
   .modal { padding: 22px 18px; }
   .modal h2 { font-size: 20px; }
 }
+/* ---- Login Modal (게스트 모드에서 [로그인] 클릭 시) ---- */
+.login-modal {
+  max-width: 400px;
+  padding: 36px 28px 28px;
+}
+.login-modal-content {
+  text-align: center;
+}
+.login-modal-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+.login-modal-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: var(--ink);
+  padding-right: 0;
+}
+.login-modal-sub {
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  word-break: keep-all;
+}
+.login-modal .provider-btn {
+  width: 100%;
+}
+.login-modal-footer {
+  margin-top: 18px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  line-height: 1.6;
+}
+.login-modal-footer a {
+  color: var(--terra);
+  text-decoration: underline;
+}
