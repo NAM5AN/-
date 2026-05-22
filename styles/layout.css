@@ -5,6 +5,7 @@
    - 통계 표시줄
    - 빈 상태 (empty state)
    - 정렬 컨트롤 바
+   - 앱 푸터
    ============================================ */
 
 /* ---- App Container ---- */
@@ -212,12 +213,7 @@ header {
   font-weight: 500;
 }
 
-/* ---- Responsive ---- */
-@media (max-width: 600px) {
-  .app { padding: 18px 14px 60px; }
-  .card-grid { grid-template-columns: 1fr; }
-}
-/* ---- App Footer ---- */
+/* ---- App Footer (이용약관/개인정보처리방침 링크) ---- */
 .app-footer {
   margin-top: 48px;
   padding-top: 24px;
@@ -239,4 +235,12 @@ header {
 .app-footer .footer-sep {
   margin: 0 8px;
   opacity: 0.5;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+  .app { padding: 18px 14px 60px; }
+  .card-grid { grid-template-columns: 1fr; }
+  .app-footer { font-size: 11px; }
+  .app-footer .footer-sep { margin: 0 5px; }
 }
