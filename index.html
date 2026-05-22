@@ -649,6 +649,13 @@
   // 사용자가 API 키를 입력할 필요 없음. 서버에서 키를 안전하게 관리하고
   // 하루 N회 사용량 제한도 서버에서 체크함.
   async function extractFromImage(file) {
+    // 게스트 모드: 실제 OpenAI 호출 없이 시뮬레이션으로 처리
+    // - 비용/보안 위험 회피 (익명 사용자에게 진짜 API 노출 시 자동화 공격 가능)
+    // - 사용자 경험은 거의 동일 (1.5초 로딩 후 미리 준비된 결과 표시)
+    if (isGuestMode) {
+      return simulateGuestExtraction();
+    }
+
     if (!currentUser) throw new Error('NOT_LOGGED_IN');
 
     const base64 = await readFileAsBase64(file);
@@ -703,6 +710,22 @@
       content: result.data?.content || '',
       deadline: result.data?.deadline || ''
     };
+  }
+
+  // 게스트 모드용 AI 추출 시뮬레이션
+  // GUEST_AI_DEMO_RESULTS에서 랜덤으로 하나 선택해 가짜 로딩 후 반환
+  async function simulateGuestExtraction() {
+    const demos = window.GUEST_AI_DEMO_RESULTS || [];
+    if (demos.length === 0) {
+      // 폴백: 데모 데이터가 없으면 빈 결과
+      await new Promise(r => setTimeout(r, 1500));
+      return { storeName: '', region: '', content: '', deadline: '' };
+    }
+    // 진짜 AI 호출처럼 1.5초 정도 로딩 시간
+    await new Promise(r => setTimeout(r, 1500));
+    // 깊은 복사로 반환 (원본 보호)
+    const pick = demos[Math.floor(Math.random() * demos.length)];
+    return JSON.parse(JSON.stringify(pick));
   }
 
   async function readFileAsBase64(file) {
@@ -1311,11 +1334,16 @@
 
     if (extracted) {
       openNewEntryModal({ ...extracted, fromAI: true });
-      const remaining = lastUsage?.remaining;
-      if (remaining !== undefined) {
-        showToast(`AI 추출 완료! 오늘 ${remaining}회 남음`, 'success');
+      if (isGuestMode) {
+        // 게스트 모드: 시뮬레이션임을 명시
+        showToast('✨ AI 추출 데모 완료! (로그인하면 실제 이미지로 추출 가능)', 'success');
       } else {
-        showToast('AI가 자동 추출했어요. 확인 후 저장하세요', 'success');
+        const remaining = lastUsage?.remaining;
+        if (remaining !== undefined) {
+          showToast(`AI 추출 완료! 오늘 ${remaining}회 남음`, 'success');
+        } else {
+          showToast('AI가 자동 추출했어요. 확인 후 저장하세요', 'success');
+        }
       }
     } else {
       // 에러 종류별 안내
