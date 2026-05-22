@@ -1,0 +1,219 @@
+/* ============================================
+   layout.css
+   - 페이지 전체 구조 (app 컨테이너, header, tabs)
+   - 카드 그리드 배치
+   - 통계 표시줄
+   - 빈 상태 (empty state)
+   - 정렬 컨트롤 바
+   ============================================ */
+
+/* ---- App Container ---- */
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px 80px;
+}
+
+/* ---- Header ---- */
+header {
+  margin-bottom: 28px;
+}
+
+.title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-row {
+  color: var(--ink-faint);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.stat-row strong {
+  color: var(--terra);
+  font-weight: 600;
+}
+
+/* ---- Tabs ---- */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+
+.tab {
+  padding: 12px 18px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  position: relative;
+  margin-bottom: -1px;
+}
+.tab:hover { color: var(--ink); }
+.tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--terra);
+  font-weight: 600;
+}
+.tab .count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  background: var(--line);
+  color: var(--ink-soft);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.tab.active .count { background: var(--terra); color: white; }
+
+/* ---- Card Grid ---- */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* ---- Empty State ---- */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--ink-soft);
+}
+.empty-state .em {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.empty-state .sm {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+/* ---- Sort Controls ---- */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.sort-bar .sort-label {
+  color: var(--ink-faint);
+  font-size: 12px;
+  margin-right: 2px;
+}
+.sort-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 28px 6px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%236B5D54' d='M6 8.5L2 4.5h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+}
+.sort-select:hover {
+  border-color: var(--terra-soft);
+}
+.sort-select:focus {
+  outline: none;
+  border-color: var(--terra);
+}
+.sort-dir-btn {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+.sort-dir-btn:hover {
+  border-color: var(--terra);
+  color: var(--terra);
+}
+.sort-dir-btn:active {
+  transform: scale(0.92);
+}
+
+/* ---- User Info in Header ---- */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px 4px 4px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  transition: all 0.2s;
+  font-size: 12px;
+  color: var(--ink);
+}
+.user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--terra);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.user-name {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+  .app { padding: 18px 14px 60px; }
+  .card-grid { grid-template-columns: 1fr; }
+}
