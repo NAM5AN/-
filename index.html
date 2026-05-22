@@ -915,10 +915,36 @@
 
     return new Promise((resolve) => {
       const ps = new window.kakao.maps.services.Places();
+
+      // 검색어 우선순위 — 동명 업체가 많은 경우를 대비해 region을 다양한 형태로 결합
+      // 예: region이 '시흥'이면 '시흥시 일미양꼬치', '일미양꼬치 시흥', '시흥 일미양꼬치' 시도
       const queries = [];
-      if (storeName && region) queries.push(`${region} ${storeName}`);
+      if (storeName && region) {
+        // region이 '시', '구', '동' 등의 접미사가 없으면 '시'를 붙여 행정구역 명시
+        const hasSuffix = /(시|구|군|동|읍|면|로|길)$/.test(region.trim());
+        if (!hasSuffix) {
+          queries.push(`${region}시 ${storeName}`);
+        }
+        queries.push(`${storeName} ${region}`);
+        queries.push(`${region} ${storeName}`);
+      }
       if (storeName) queries.push(storeName);
       if (region) queries.push(region);
+
+      // 검색 결과 중에서 region이 주소에 포함된 것을 우선 채택.
+      // 그래야 동명 업체가 여러 곳에 있을 때 입력한 region과 일치하는 매장이 선택됨.
+      function pickBestMatch(data, region) {
+        if (!data || data.length === 0) return null;
+        if (!region) return data[0];
+
+        // 후보들 중 주소나 도로명주소에 region 텍스트가 포함된 것 우선
+        const regionKey = region.trim();
+        const matched = data.find(p =>
+          (p.address_name || '').includes(regionKey) ||
+          (p.road_address_name || '').includes(regionKey)
+        );
+        return matched || data[0];
+      }
 
       let idx = 0;
       const tryNext = () => {
@@ -926,7 +952,7 @@
         const q = queries[idx++];
         ps.keywordSearch(q, (data, status) => {
           if (status === window.kakao.maps.services.Status.OK && data && data.length > 0) {
-            const place = data[0];
+            const place = pickBestMatch(data, region);
             resolve({
               lat: parseFloat(place.y),
               lng: parseFloat(place.x),
