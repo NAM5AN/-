@@ -787,3 +787,77 @@
     padding: 10px 12px;
   }
 }
+/* ---- Guest Banner (상단 안내 배너) ---- */
+.guest-banner {
+  background: linear-gradient(135deg, #FEE500 0%, #FDD835 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 10px 20px;
+}
+.guest-banner-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.guest-banner-text {
+  font-size: 13px;
+  color: #181600;
+  line-height: 1.5;
+}
+.guest-banner-text strong {
+  font-weight: 700;
+}
+.guest-banner-btn {
+  padding: 7px 14px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #FEE500;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.guest-banner-btn:hover {
+  background: #181600;
+  transform: translateY(-1px);
+}
+@media (max-width: 600px) {
+  .guest-banner { padding: 8px 14px; }
+  .guest-banner-text { font-size: 12px; }
+  .guest-banner-btn { font-size: 11px; padding: 6px 12px; }
+}
+
+/* ---- Header Login Button (게스트 헤더용) ---- */
+.btn-login-header {
+  padding: 6px 14px;
+  background: #FEE500;
+  color: #181600;
+  border: 1px solid #FEE500;
+  border-radius: 18px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.btn-login-header:hover {
+  background: #F6DC00;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(254, 229, 0, 0.4);
+}
+.btn-login-header:disabled {
+  opacity: 0.5;
+  cursor: wait;
+  transform: none;
+}
