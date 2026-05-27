@@ -26,11 +26,1117 @@
 <meta name="twitter:description" content="AI로 체험단 일정을 자동 관리하세요.">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="scripts/sample-data.js"></script>
-<link rel="stylesheet" href="styles/base.css">
-<link rel="stylesheet" href="styles/layout.css">
-<link rel="stylesheet" href="styles/components.css">
-<link rel="stylesheet" href="styles/screens.css">
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
+  @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap');
+
+  :root {
+    --bg: #F5EFE6;
+    --paper: #FBF7F0;
+    --card: #FFFFFF;
+    --ink: #2A2522;
+    --ink-soft: #6B5D54;
+    --ink-faint: #A89B8F;
+    --line: #E8DFD3;
+    --terra: #C2542B;
+    --terra-soft: #E89977;
+    --sage: #5A7C5C;
+    --mustard: #C29D2C;
+    --rose: #D87B7B;
+    --shadow: 0 1px 2px rgba(42, 37, 34, 0.04), 0 4px 16px rgba(42, 37, 34, 0.06);
+    --shadow-lift: 0 4px 8px rgba(42, 37, 34, 0.08), 0 12px 32px rgba(42, 37, 34, 0.10);
+    --font-serif: 'Gowun Batang', serif;
+    --font-body: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  body {
+    background-image:
+      radial-gradient(at 12% 8%, rgba(194, 84, 43, 0.04) 0px, transparent 50%),
+      radial-gradient(at 88% 92%, rgba(90, 124, 92, 0.04) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  .app {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+  }
+
+  /* ---- Header ---- */
+  header {
+    margin-bottom: 28px;
+  }
+
+  .title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .icon-btn {
+    background: none;
+    border: 1px solid var(--line);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-soft);
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .icon-btn svg {
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+    display: block;
+  }
+  .icon-btn:hover {
+    background: var(--card);
+    color: var(--terra);
+    border-color: var(--terra-soft);
+  }
+  .icon-btn:active {
+    transform: scale(0.94);
+    background: var(--terra-soft);
+  }
+
+  .settings-hint {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: var(--card);
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .settings-hint a { color: var(--terra); text-decoration: underline; }
+  .settings-hint code {
+    font-family: ui-monospace, Menlo, monospace;
+    background: var(--bg);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  .status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+  }
+  .status-pill.ok { background: rgba(90, 124, 92, 0.15); color: var(--sage); }
+  .status-pill.off { background: var(--line); color: var(--ink-soft); }
+
+  .settings-section {
+    margin-bottom: 8px;
+  }
+  .settings-divider {
+    border: 0;
+    border-top: 1px dashed var(--line);
+    margin: 24px 0;
+  }
+  .settings-section h3 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  h1 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 32px;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  h1 .mark {
+    color: var(--terra);
+    font-style: italic;
+  }
+
+  .sub {
+    color: var(--ink-soft);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+
+  .stat-row {
+    color: var(--ink-faint);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .stat-row strong {
+    color: var(--terra);
+    font-weight: 600;
+  }
+
+  /* ---- Tabs ---- */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    padding: 12px 18px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--terra);
+    font-weight: 600;
+  }
+  .tab .count {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    background: var(--line);
+    color: var(--ink-soft);
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tab.active .count { background: var(--terra); color: white; }
+
+  /* ---- Upload Zone ---- */
+  .upload {
+    display: block;
+    width: 100%;
+    border: 2px dashed var(--line);
+    border-radius: 14px;
+    background: var(--paper);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 24px;
+    position: relative;
+    box-sizing: border-box;
+  }
+  .upload:hover {
+    border-color: var(--terra-soft);
+    background: rgba(232, 153, 119, 0.05);
+  }
+  .upload.drag {
+    border-color: var(--terra);
+    background: rgba(194, 84, 43, 0.08);
+    transform: scale(1.01);
+  }
+  .upload-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .upload-title {
+    font-family: var(--font-serif);
+    font-size: 17px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .upload-hint {
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .upload-hint kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    margin: 0 1px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.3;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+  #fileInput { display: none; }
+
+  .ai-usage-display {
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .ai-usage-display strong {
+    color: var(--terra);
+    font-weight: 700;
+  }
+  .ai-usage-display.exhausted strong {
+    color: var(--rose);
+  }
+  .ai-usage-mini {
+    text-align: center;
+    margin: -8px auto 16px;
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+  .ai-usage-mini strong { color: var(--terra); font-weight: 600; }
+  .ai-usage-mini.exhausted strong { color: var(--rose); }
+  .ai-usage-display.admin strong {
+    color: #d4af37;
+    font-weight: 700;
+  }
+  .ai-usage-mini.admin strong {
+    color: #d4af37;
+    font-weight: 600;
+  }
+
+  /* paste 시 깜빡 효과 */
+  @keyframes pasteFlash {
+    0% { background-color: var(--paper); border-color: var(--line); }
+    20% { background-color: rgba(90, 124, 92, 0.18); border-color: var(--sage); }
+    100% { background-color: var(--paper); border-color: var(--line); }
+  }
+  .upload.paste-flash {
+    animation: pasteFlash 0.6s ease;
+  }
+
+  /* 모바일에선 Ctrl+V 힌트 숨김 (사용 못 함) */
+  @media (max-width: 600px) {
+    .pc-only { display: none; }
+  }
+
+  /* ---- Sort Controls ---- */
+  .sort-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .sort-bar .sort-label {
+    color: var(--ink-faint);
+    font-size: 12px;
+    margin-right: 2px;
+  }
+  .sort-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 28px 6px 12px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%236B5D54' d='M6 8.5L2 4.5h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+  }
+  .sort-select:hover {
+    border-color: var(--terra-soft);
+  }
+  .sort-select:focus {
+    outline: none;
+    border-color: var(--terra);
+  }
+  .sort-dir-btn {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .sort-dir-btn:hover {
+    border-color: var(--terra);
+    color: var(--terra);
+  }
+  .sort-dir-btn:active {
+    transform: scale(0.92);
+  }
+
+  /* ---- Cards ---- */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
+    border-color: var(--terra-soft);
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--terra);
+    opacity: 0.7;
+  }
+  .card.urgent::before { background: var(--rose); }
+  .card.completed::before { background: var(--sage); }
+  .card.completed { opacity: 0.7; }
+
+  .card-store {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 19px;
+    color: var(--ink);
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+
+  .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .meta-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .meta-ico {
+    color: var(--ink-faint);
+    font-size: 13px;
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+  }
+  .meta-text { flex: 1; word-break: keep-all; }
+  .deadline-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--line);
+    color: var(--ink-soft);
+  }
+  .deadline-tag.warn { background: rgba(194, 157, 44, 0.15); color: #8B6F00; }
+  .deadline-tag.urgent { background: rgba(216, 123, 123, 0.15); color: #B54E4E; }
+  .deadline-tag.past { background: rgba(168, 155, 143, 0.2); color: var(--ink-soft); text-decoration: line-through; }
+
+  .memo-preview {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-style: italic;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .memo-preview.empty { color: var(--ink-faint); }
+
+  /* ---- Empty State ---- */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ink-soft);
+  }
+  .empty-state .em {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .empty-state .sm {
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  /* ---- Map ---- */
+  #mapView {
+    height: 70vh;
+    min-height: 440px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+    background: var(--paper);
+    overflow: hidden;
+    position: relative;
+  }
+  #mapView .kakao-map-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--ink-faint);
+    font-size: 13px;
+    text-align: center;
+    padding: 30px;
+    z-index: 1;
+  }
+  #mapView .kakao-map-empty .icon {
+    font-size: 40px;
+    opacity: 0.4;
+  }
+  /* 카카오 인포윈도우 커스텀 스타일 */
+  .info-window {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 4px 16px rgba(42, 37, 34, 0.15);
+    min-width: 180px;
+    max-width: 240px;
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .info-window::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-style: solid;
+    border-width: 8px 7px 0 7px;
+    border-color: var(--card) transparent transparent transparent;
+  }
+  .info-window .close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ink-faint);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .info-window .close:hover { color: var(--ink); }
+  .popup-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 6px;
+    color: var(--ink);
+    padding-right: 18px;
+  }
+  .popup-meta {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .popup-btn {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 5px 10px;
+    background: var(--terra);
+    color: white;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    font-family: var(--font-body);
+  }
+
+  /* ---- Custom Map Marker ---- */
+  .pin-wrap {
+    position: relative;
+    width: 0;
+    height: 0;
+    cursor: pointer;
+  }
+  .pin {
+    position: absolute;
+    left: -15px;
+    top: -30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50% 50% 50% 0;
+    background: var(--terra);
+    transform: rotate(-45deg);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .pin-wrap:hover .pin {
+    transform: rotate(-45deg) scale(1.15);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    z-index: 10;
+  }
+  .pin.urgent { background: var(--rose); }
+  .pin-num {
+    transform: rotate(45deg);
+    color: white;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .pin-icon {
+    transform: rotate(45deg);
+    font-size: 15px;
+    line-height: 1;
+    display: block;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+  }
+
+  /* ---- Modal ---- */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(42, 37, 34, 0.5);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1000;
+    padding: 40px 16px;
+    overflow-y: auto;
+    animation: fadeIn 0.2s ease;
+  }
+  .modal-bg.active { display: flex; }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal {
+    background: var(--paper);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 540px;
+    padding: 28px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+    animation: slideUp 0.25s ease;
+    position: relative;
+  }
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    width: 32px; height: 32px;
+    border: none;
+    background: var(--line);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  .modal-close:hover { background: var(--ink-faint); color: white; }
+
+  .modal h2 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 24px;
+    margin-bottom: 4px;
+    padding-right: 40px;
+    word-break: keep-all;
+  }
+  .modal-sub {
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  .field {
+    margin-bottom: 16px;
+  }
+  .field-label {
+    display: block;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .field-input,
+  .field-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--ink);
+    transition: border-color 0.2s;
+  }
+  .field-input:focus,
+  .field-textarea:focus {
+    outline: none;
+    border-color: var(--terra);
+  }
+  .field-textarea {
+    min-height: 100px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+  .field-value {
+    padding: 10px 12px;
+    background: var(--card);
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .field-value.empty { color: var(--ink-faint); font-style: italic; }
+
+  .field-hint {
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: rgba(90, 124, 92, 0.08);
+    border-left: 3px solid var(--sage);
+    border-radius: 4px 8px 8px 4px;
+    font-size: 12px;
+    color: var(--sage);
+    font-weight: 500;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+  .field-hint-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+    margin-right: 4px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+
+  .btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: var(--terra); color: white; }
+  .btn-primary:hover { background: #A8431F; }
+  .btn-success { background: var(--sage); color: white; }
+  .btn-success:hover { background: #45623F; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+  }
+  .btn-ghost:hover { background: var(--line); color: var(--ink); }
+  .btn-danger {
+    background: transparent;
+    color: var(--rose);
+    border: 1px solid transparent;
+    margin-left: auto;
+  }
+  .btn-danger:hover { background: rgba(216, 123, 123, 0.1); }
+
+  /* ---- Delete Account Button (회원탈퇴) ---- */
+  .btn-delete-account {
+    padding: 10px 16px;
+    background: rgba(216, 123, 123, 0.1);
+    color: var(--rose);
+    border: 1px solid rgba(216, 123, 123, 0.35);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-delete-account:hover {
+    background: var(--rose);
+    color: white;
+    border-color: var(--rose);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(216, 123, 123, 0.25);
+  }
+  .btn-delete-account:active {
+    transform: translateY(0);
+  }
+  .btn-delete-account:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* ---- Loading / Toast ---- */
+  .loading {
+    position: fixed; inset: 0;
+    background: rgba(245, 239, 230, 0.85);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .loading.active { display: flex; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--line);
+    border-top-color: var(--terra);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: var(--font-serif);
+    color: var(--ink);
+    font-size: 15px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 12px 20px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-lift);
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 3000;
+    max-width: 90%;
+    text-align: center;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.error { background: var(--rose); }
+  .toast.success { background: var(--sage); }
+
+  /* ---- Detail header in modal ---- */
+  .detail-meta {
+    display: grid;
+    gap: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .app { padding: 18px 14px 60px; }
+    h1 { font-size: 26px; }
+    .card-grid { grid-template-columns: 1fr; }
+    .modal { padding: 22px 18px; }
+    .modal h2 { font-size: 20px; }
+    .upload { padding: 24px 16px; }
+  }
+
+  /* ============== Login Screen ============== */
+  .login-screen {
+    min-height: 100vh;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background:
+      radial-gradient(at 20% 30%, rgba(194, 84, 43, 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 70%, rgba(90, 124, 92, 0.08) 0px, transparent 50%),
+      var(--bg);
+  }
+  .login-screen.active { display: flex; }
+
+  .login-card {
+    max-width: 400px;
+    width: 100%;
+    background: var(--paper);
+    border-radius: 20px;
+    padding: 40px 32px;
+    box-shadow: 0 20px 60px rgba(42, 37, 34, 0.12);
+    border: 1px solid var(--line);
+    animation: slideUp 0.4s ease;
+  }
+  .login-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 30px;
+    margin-bottom: 6px;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  .login-title .mark {
+    color: var(--terra);
+    font-style: italic;
+  }
+  .login-sub {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .login-providers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .provider-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 13px 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+  }
+  .provider-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(42, 37, 34, 0.08);
+  }
+  .provider-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+    transform: none;
+  }
+  .provider-btn .icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+  .provider-btn.kakao {
+    background: #FEE500;
+    color: #181600;
+    border-color: #FEE500;
+  }
+  .provider-btn.kakao:hover { background: #F6DC00; }
+  .provider-btn.google {
+    background: white;
+    color: #1F1F1F;
+    border-color: #DADCE0;
+  }
+  .provider-btn.google:hover { background: #F8F9FA; }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    margin: 18px 0;
+    color: var(--ink-faint);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .divider::before { margin-right: 12px; }
+  .divider::after { margin-left: 12px; }
+
+  .email-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .email-form input {
+    padding: 11px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--ink);
+    width: 100%;
+  }
+  .email-form input:focus {
+    outline: none;
+    border-color: var(--terra);
+  }
+  .email-submit {
+    padding: 11px;
+    background: var(--terra);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .email-submit:hover { background: #A8431F; }
+  .email-submit:disabled { opacity: 0.5; cursor: wait; }
+
+  .toggle-mode {
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 12px;
+  }
+  .toggle-mode a {
+    color: var(--terra);
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  .login-footer {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--line);
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-faint);
+    line-height: 1.6;
+  }
+
+  /* User menu in header */
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 10px 4px 4px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    transition: all 0.2s;
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .user-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--terra);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .user-name {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+</style>
 </head>
 <body>
 
@@ -45,10 +1151,28 @@
         <span class="icon">💬</span>
         <span>카카오로 시작하기</span>
       </button>
+      <button class="provider-btn google" id="loginGoogle">
+        <span class="icon">🔍</span>
+        <span>구글로 시작하기</span>
+      </button>
+    </div>
+
+    <div class="divider">또는 이메일</div>
+
+    <form class="email-form" id="emailForm">
+      <input type="email" id="emailInput" placeholder="이메일" autocomplete="email" required />
+      <input type="password" id="passwordInput" placeholder="비밀번호 (6자 이상)" autocomplete="current-password" minlength="6" required />
+      <button type="submit" class="email-submit" id="emailSubmit">로그인</button>
+    </form>
+
+    <div class="toggle-mode">
+      <span id="toggleText">계정이 없으신가요?</span>
+      <a id="toggleMode">회원가입</a>
     </div>
 
     <div class="login-footer">
-      로그인 시 <a href="/terms.html" target="_blank" rel="noopener">이용약관</a> 및 <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
+      로그인 시 이용약관 및 개인정보처리방침에 동의하는 것으로 간주됩니다.<br>
+      별도의 약관 페이지는 추후 추가 예정입니다.
     </div>
   </div>
 </div>
@@ -56,31 +1180,16 @@
 <!-- ============== Main App ============== -->
 <div id="mainApp" style="display:none;">
 
-<!-- 게스트 모드 안내 배너 (비로그인 시 상단 고정) -->
-<div id="guestBanner" class="guest-banner" style="display:none;">
-  <div class="guest-banner-inner">
-    <span class="guest-banner-text">
-      👋 <strong>둘러보기 중이에요</strong> · 내 데이터를 저장하려면 로그인해주세요
-    </span>
-    <button class="guest-banner-btn" id="btnGuestBannerLogin">카카오로 시작하기</button>
-  </div>
-</div>
-
 <div class="app">
   <header>
     <div class="title-row">
       <h1>체험단 <span class="mark">매니저</span></h1>
       <div class="header-actions">
         <span class="sub" id="todayDate"></span>
-        <!-- 로그인 상태: 사용자 정보 표시 -->
         <div class="user-info" id="userInfo" title="사용자">
           <div class="user-avatar" id="userAvatar">?</div>
           <span class="user-name" id="userName">사용자</span>
         </div>
-        <!-- 게스트 상태: 로그인 버튼 (헤더용 작은 버튼) -->
-        <button class="btn-login-header" id="btnHeaderLogin" style="display:none;">
-          🔑 로그인
-        </button>
         <button class="icon-btn" id="btnSettings" aria-label="설정" title="설정"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
       </div>
     </div>
@@ -123,13 +1232,6 @@
 
   <!-- 지도 뷰 -->
   <section id="viewMap" style="display:none;">
-    <!-- 게스트 모드 전용 안내바 (지도 핀이 임의 주소라 부정확할 수 있음을 알림) -->
-    <div id="guestMapNotice" class="guest-map-notice" style="display:none;">
-      <span class="notice-icon">📍</span>
-      <span class="notice-text">
-        <strong>둘러보기 모드</strong> · 샘플 임의 주소를 사용했으므로 핀 위치가 부정확할 수 있어요
-      </span>
-    </div>
     <div id="mapView">
       <div class="kakao-map-empty" id="mapEmpty">
         <div class="icon">🗺️</div>
@@ -153,15 +1255,6 @@
     </div>
     <div id="completedList"></div>
   </section>
-
-  <!-- App Footer (약관/방침 링크) -->
-  <footer class="app-footer">
-    <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>
-    <span class="footer-sep">·</span>
-    <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>
-    <span class="footer-sep">·</span>
-    <a href="#" id="footerContact">문의</a>
-  </footer>
 </div>
 
 <!-- Modal -->
@@ -179,25 +1272,7 @@
       <div class="field">
         <span class="field-label">📍 지역</span>
         <input type="text" class="field-input" id="mRegion" placeholder="예) 서울 강남구" />
-      </div>
-      <div class="field" id="mAddressField" style="display:none;">
-        <span class="field-label">📌 실제 주소 <span style="font-weight:400; color:var(--ink-faint); font-size:11px;">(지도 핀 위치)</span></span>
-        <!-- 읽기 모드 -->
-        <div class="address-read-row" id="mAddressRead">
-          <div class="field-hint" style="flex:1; margin:0;">
-            <span class="field-hint-label">실제 위치</span>📌 <span id="mAddressReadText"></span>
-          </div>
-          <button type="button" class="address-edit-btn" id="mAddressEditBtn" title="주소 직접 수정">✏️</button>
-        </div>
-        <!-- 편집 모드 (기본 숨김) -->
-        <div class="address-edit-row" id="mAddressEdit" style="display:none;">
-          <input type="text" class="field-input" id="mActualAddress" placeholder="정확한 주소를 입력하세요" style="flex:1;" />
-          <button type="button" class="address-action-btn confirm" id="mAddressConfirmBtn" title="적용">✓</button>
-          <button type="button" class="address-action-btn cancel" id="mAddressCancelBtn" title="취소">✕</button>
-        </div>
-        <div class="field-hint-info" id="mAddressEditHint" style="display:none;">
-          💡 저장하면 입력한 주소로 지도 핀 위치를 다시 찾아요
-        </div>
+        <div class="field-hint" id="mActualAddress" style="display:none;"></div>
       </div>
       <div class="field">
         <span class="field-label">🎁 제공 내용</span>
@@ -231,64 +1306,12 @@
   <div class="loading-text" id="loadingText">이미지에서 정보를 추출하는 중...</div>
 </div>
 
-<!-- Login Modal (게스트 모드에서 [로그인] 버튼 클릭 시 표시) -->
-<div class="modal-bg" id="loginModalBg">
-  <div class="modal login-modal">
-    <button class="modal-close" id="loginModalClose">✕</button>
-    <div class="login-modal-content">
-      <div class="login-modal-icon">🔑</div>
-      <h2 class="login-modal-title">로그인</h2>
-      <div class="login-modal-sub">
-        간편하게 로그인하고 나만의 체험단 일정을 관리해보세요
-      </div>
-      <button class="provider-btn kakao" id="btnModalLoginKakao">
-        <span class="icon">💬</span>
-        <span>카카오로 시작하기</span>
-      </button>
-      <div class="login-modal-footer">
-        로그인 시 <a href="/terms.html" target="_blank" rel="noopener" id="linkTerms">이용약관</a>과 <a href="/privacy.html" target="_blank" rel="noopener" id="linkPrivacy">개인정보처리방침</a>에 동의하게 돼요
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Settings Modal -->
 <div class="modal-bg" id="settingsBg">
   <div class="modal">
     <button class="modal-close" id="settingsClose">✕</button>
     <h2>⚙️ 설정</h2>
     <div class="modal-sub">계정 정보와 사용량을 확인할 수 있어요.</div>
-
-    <!-- ⓪ 플랜 -->
-    <div class="settings-section">
-      <h3>💎 플랜</h3>
-      <div class="field">
-        <div class="plan-card" id="planCard">
-          <div class="plan-header">
-            <span class="plan-name" id="planName">불러오는 중...</span>
-            <span class="plan-badge free" id="planBadge">FREE</span>
-          </div>
-          <ul class="plan-benefits" id="planBenefits">
-            <!-- JS가 채움 -->
-          </ul>
-          <!-- 무료 유저: 업그레이드 버튼 + 베타 안내 -->
-          <div id="planUpgradeArea">
-            <button class="btn-upgrade" id="btnUpgrade">⚡ 프리미엄 시작하기</button>
-            <div class="beta-notice">
-              🎉 <strong>베타 기간 한정</strong> — 프리미엄 혜택을<br>
-              지금 신청하면 <strong>2026년 9월 30일까지 무료</strong>로 이용할 수 있어요!
-            </div>
-          </div>
-          <!-- 프리미엄 유저: 활성 상태 안내 + 해제 버튼 -->
-          <div id="planActiveArea" style="display:none;">
-            <div class="plan-active-info" id="planActiveInfo"></div>
-            <button class="btn-downgrade" id="btnDowngrade">무료 플랜으로 전환</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <hr class="settings-divider" />
 
     <!-- ① AI 사용량 -->
     <div class="settings-section">
@@ -306,29 +1329,7 @@
 
     <hr class="settings-divider" />
 
-    <!-- ② 알림 설정 -->
-    <div class="settings-section">
-      <h3>🔔 알림 설정</h3>
-      <div class="field">
-        <span class="field-label">카카오톡 알림</span>
-        <div class="notify-status-card" id="notifyStatusCard">
-          <div class="notify-status-text">
-            <span id="notifyStatusIcon">💬</span>
-            <span id="notifyStatusLabel">불러오는 중...</span>
-            <span class="badge off" id="notifyStatusBadge">확인 중</span>
-          </div>
-          <button class="btn-notify-toggle" id="btnNotifyToggle">켜기</button>
-        </div>
-        <div class="settings-hint">
-          체험단 마감일과 방문 예정일을 카카오톡 '나에게 메시지'로 알려드려요. <br>
-          🚧 알림 발송 기능은 추후 정식 출시 예정입니다. 지금은 동의만 받아둘 수 있어요.
-        </div>
-      </div>
-    </div>
-
-    <hr class="settings-divider" />
-
-    <!-- ③ 계정 -->
+    <!-- ② 계정 -->
     <div class="settings-section">
       <h3>👤 계정</h3>
       <div class="field">
@@ -351,30 +1352,6 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- 카톡 알림 온보딩 모달 -->
-<div class="modal-bg" id="onboardingBg">
-  <div class="modal onboarding-modal">
-    <div class="onboarding-icon">💌</div>
-    <div class="onboarding-title">카톡 알림 받을까요?</div>
-    <div class="onboarding-desc">
-      체험단 <strong>마감일·방문 예정일</strong>이 다가올 때<br>
-      카카오톡으로 알려드릴 수 있어요.<br><br>
-      놓치면 안 되는 일정, 카톡 알림으로 챙기세요!
-    </div>
-    <div class="onboarding-actions">
-      <button class="btn-onboarding-primary" id="btnOnboardingEnable">
-        <span>💬</span>
-        <span>지금 카톡 알림 켜기</span>
-      </button>
-      <button class="btn-onboarding-later" id="btnOnboardingLater">나중에 할게요</button>
-    </div>
-    <div class="onboarding-hint">
-      ⓘ 이미 동의하신 경우 별도 작업 없이 자동 활성화됩니다.<br>
-      언제든 설정에서 변경할 수 있어요.
-    </div>
-  </div>
-</div>
-
 <script>
 (function() {
   'use strict';
@@ -385,10 +1362,6 @@
   let isNewEntry = false;
   let map = null;
   let currentView = 'active';
-
-  // 게스트 모드 (둘러보기) — 로그인 없이 사이트를 체험하는 모드
-  // 데이터는 메모리에만 존재. 새로고침 시 원본 샘플로 복원.
-  let isGuestMode = false;
 
   const KEY_PREFIX = 'entry:';
 
@@ -525,17 +1498,7 @@
   }
 
   // ============== Storage ==============
-  // 게스트 모드에서는 Supabase 호출 없이 메모리(entries 배열)에서만 동작.
-  // 로그인 모드에서는 Supabase entries 테이블과 동기화.
-
   async function loadAll() {
-    // 게스트 모드: 샘플 데이터로 entries 초기화 (있으면)
-    if (isGuestMode) {
-      const samples = window.GUEST_SAMPLE_ENTRIES || [];
-      // 깊은 복사 — 사용자가 수정해도 원본은 유지
-      entries = samples.map(e => JSON.parse(JSON.stringify(e)));
-      return;
-    }
     if (!currentUser) { entries = []; return; }
     try {
       const { data, error } = await sb.from('entries')
@@ -551,16 +1514,6 @@
   }
 
   async function saveEntry(entry) {
-    // 게스트 모드: 메모리 entries 배열에만 반영
-    if (isGuestMode) {
-      const idx = entries.findIndex(e => e.id === entry.id);
-      if (idx >= 0) {
-        entries[idx] = entry;
-      } else {
-        entries.unshift(entry);
-      }
-      return true;
-    }
     try {
       await storage.set(KEY_PREFIX + entry.id, JSON.stringify(entry));
       return true;
@@ -571,11 +1524,6 @@
   }
 
   async function deleteEntry(id) {
-    // 게스트 모드: 메모리에서만 제거
-    if (isGuestMode) {
-      entries = entries.filter(e => e.id !== id);
-      return true;
-    }
     try {
       await storage.delete(KEY_PREFIX + id);
       entries = entries.filter(e => e.id !== id);
@@ -718,13 +1666,6 @@
   // 사용자가 API 키를 입력할 필요 없음. 서버에서 키를 안전하게 관리하고
   // 하루 N회 사용량 제한도 서버에서 체크함.
   async function extractFromImage(file) {
-    // 게스트 모드: 실제 OpenAI 호출 없이 시뮬레이션으로 처리
-    // - 비용/보안 위험 회피 (익명 사용자에게 진짜 API 노출 시 자동화 공격 가능)
-    // - 사용자 경험은 거의 동일 (1.5초 로딩 후 미리 준비된 결과 표시)
-    if (isGuestMode) {
-      return simulateGuestExtraction();
-    }
-
     if (!currentUser) throw new Error('NOT_LOGGED_IN');
 
     const base64 = await readFileAsBase64(file);
@@ -781,22 +1722,6 @@
     };
   }
 
-  // 게스트 모드용 AI 추출 시뮬레이션
-  // GUEST_AI_DEMO_RESULTS에서 랜덤으로 하나 선택해 가짜 로딩 후 반환
-  async function simulateGuestExtraction() {
-    const demos = window.GUEST_AI_DEMO_RESULTS || [];
-    if (demos.length === 0) {
-      // 폴백: 데모 데이터가 없으면 빈 결과
-      await new Promise(r => setTimeout(r, 1500));
-      return { storeName: '', region: '', content: '', deadline: '' };
-    }
-    // 진짜 AI 호출처럼 1.5초 정도 로딩 시간
-    await new Promise(r => setTimeout(r, 1500));
-    // 깊은 복사로 반환 (원본 보호)
-    const pick = demos[Math.floor(Math.random() * demos.length)];
-    return JSON.parse(JSON.stringify(pick));
-  }
-
   async function readFileAsBase64(file) {
     return new Promise((res, rej) => {
       const r = new FileReader();
@@ -821,17 +1746,8 @@
       return lastUsage;
     }
 
-    // 프리미엄 체크 — 활성 프리미엄이면 무제한 표시
-    if (isSubscriptionPremium(currentSubscription)) {
-      lastUsage = { isPremium: true };
-      refreshUsageDisplay();
-      return lastUsage;
-    }
-
     try {
-      // KST 기준 오늘 날짜 (서버 api/extract.js와 동일 기준)
-      const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-      const today = kstNow.toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
       const { data } = await sb.from('daily_usage')
         .select('count')
         .eq('user_id', currentUser.id)
@@ -864,21 +1780,6 @@
       const mini = document.getElementById('aiUsageMini');
       if (mini) {
         mini.innerHTML = `👑 <strong>관리자 모드</strong> · 무제한 사용`;
-        mini.className = 'ai-usage-mini admin';
-      }
-      return;
-    }
-
-    // 프리미엄 모드 표시
-    if (lastUsage.isPremium) {
-      const main = document.getElementById('aiUsageDisplay');
-      if (main) {
-        main.innerHTML = `💎 <strong>프리미엄</strong> · AI 추출 무제한`;
-        main.className = 'ai-usage-display admin';
-      }
-      const mini = document.getElementById('aiUsageMini');
-      if (mini) {
-        mini.innerHTML = `💎 <strong>프리미엄</strong> · AI 추출 무제한`;
         mini.className = 'ai-usage-mini admin';
       }
       return;
@@ -941,85 +1842,31 @@
 
     return new Promise((resolve) => {
       const ps = new window.kakao.maps.services.Places();
-
-      // 검색어 우선순위 — 동명 업체가 많은 경우를 대비해 region을 다양한 형태로 결합
-      // 모든 쿼리를 다 돌려서 후보를 모은 뒤, 가장 적합한 것을 점수로 선택
       const queries = [];
-      if (storeName && region) {
-        queries.push(`${region} ${storeName}`);
-        queries.push(`${storeName} ${region}`);
-        const hasSuffix = /(시|구|군|동|읍|면|로|길)$/.test(region.trim());
-        if (!hasSuffix) {
-          queries.push(`${region}시 ${storeName}`);
-        }
-      }
+      if (storeName && region) queries.push(`${region} ${storeName}`);
       if (storeName) queries.push(storeName);
       if (region) queries.push(region);
 
-      // 후보 매장의 적합도 점수 계산
-      // 높을수록 좋은 매칭. 점수 기준:
-      //  +100 : storeName 단어가 결과 place_name에 그대로 포함됨 (필수에 가까움)
-      //  +50  : region 단어가 결과 주소에 포함됨
-      //  +10  : 첫 번째 결과인 경우 가산 (카카오의 인기/근접 신호 약간 반영)
-      function scoreCandidate(place, queryIdx, resultIdx) {
-        let score = 0;
-        const placeName = place.place_name || '';
-        const addr = (place.address_name || '') + ' ' + (place.road_address_name || '');
-        if (storeName && placeName.includes(storeName.trim())) score += 100;
-        if (region && addr.includes(region.trim())) score += 50;
-        if (resultIdx === 0) score += 10;
-        return score;
-      }
-
-      // 모든 쿼리를 순차 실행한 뒤 후보를 모아서 점수순 선택
-      const allCandidates = [];
-      let qIdx = 0;
-
+      let idx = 0;
       const tryNext = () => {
-        if (qIdx >= queries.length) {
-          finalize();
-          return;
-        }
-        const q = queries[qIdx++];
+        if (idx >= queries.length) { resolve(null); return; }
+        const q = queries[idx++];
         ps.keywordSearch(q, (data, status) => {
           if (status === window.kakao.maps.services.Status.OK && data && data.length > 0) {
-            data.slice(0, 5).forEach((p, i) => {
-              const s = scoreCandidate(p, qIdx - 1, i);
-              allCandidates.push({ place: p, score: s });
+            const place = data[0];
+            resolve({
+              lat: parseFloat(place.y),
+              lng: parseFloat(place.x),
+              address: place.address_name || place.road_address_name || '',
+              actualName: place.place_name || '',
+              category: place.category_name || place.category_group_name || '',
+              source: 'kakao'
             });
+          } else {
+            tryNext();
           }
-          tryNext();
         });
       };
-
-      const finalize = () => {
-        if (allCandidates.length === 0) {
-          resolve(null);
-          return;
-        }
-        // 중복 제거 (같은 매장이 여러 쿼리에 걸쳐 잡힐 수 있음, 좌표+이름 키로 dedupe)
-        const seen = new Set();
-        const unique = [];
-        for (const c of allCandidates) {
-          const key = `${c.place.x},${c.place.y},${c.place.place_name}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            unique.push(c);
-          }
-        }
-        // 점수 내림차순 정렬 후 최고 점수 매장 선택
-        unique.sort((a, b) => b.score - a.score);
-        const best = unique[0].place;
-        resolve({
-          lat: parseFloat(best.y),
-          lng: parseFloat(best.x),
-          address: best.address_name || best.road_address_name || '',
-          actualName: best.place_name || '',
-          category: best.category_name || best.category_group_name || '',
-          source: 'kakao'
-        });
-      };
-
       tryNext();
     });
   }
@@ -1365,22 +2212,13 @@
     document.getElementById('mVisitDate').value = e.visitDate || '';
     document.getElementById('mMemo').value = e.memo || '';
 
-    // 카카오에서 찾은 실제 주소 표시 (읽기 모드)
-    // 주소가 있으면 필드 노출 + 읽기 모드, 없으면 필드 자체 숨김
-    const addrField = document.getElementById('mAddressField');
-    const addrInput = document.getElementById('mActualAddress');
-    const addrText = document.getElementById('mAddressReadText');
+    // 카카오에서 찾은 실제 주소 표시
+    const actualEl = document.getElementById('mActualAddress');
     if (e.actualAddress) {
-      addrField.style.display = '';
-      addrText.textContent = e.actualAddress;
-      addrInput.value = e.actualAddress;
-      // 편집 모드 닫기, 읽기 모드 표시
-      setAddressEditMode(false);
+      actualEl.innerHTML = `<span class="field-hint-label">실제 위치</span>📌 ${escapeHtml(e.actualAddress)}`;
+      actualEl.style.display = '';
     } else {
-      // 주소 없으면 필드 자체를 숨기되, 사용자가 편집 모드로 강제 열 수도 있게
-      // (등록 직후엔 주소 없는 게 정상이므로 일단 숨김 유지)
-      addrField.style.display = 'none';
-      addrInput.value = '';
+      actualEl.style.display = 'none';
     }
 
     document.getElementById('btnComplete').style.display = e.completed ? 'none' : '';
@@ -1407,10 +2245,8 @@
     document.getElementById('mVisitDate').value = '';
     document.getElementById('mMemo').value = '';
 
-    // 신규 등록 시 실제 주소 필드 숨김 (저장 후 자동 검색되면 나타남)
-    document.getElementById('mAddressField').style.display = 'none';
-    document.getElementById('mActualAddress').value = '';
-    setAddressEditMode(false);
+    // 신규 등록 시 실제 주소 숨기기 (아직 검색 안 됨)
+    document.getElementById('mActualAddress').style.display = 'none';
 
     document.getElementById('btnComplete').style.display = 'none';
     document.getElementById('btnRestore').style.display = 'none';
@@ -1425,33 +2261,6 @@
     isNewEntry = false;
   }
 
-  // 실제 주소 필드의 읽기/편집 모드 전환
-  // editing=true → input 활성화, 확인/취소 버튼 표시
-  // editing=false → 읽기 모드 (초록 hint + 연필 버튼)
-  function setAddressEditMode(editing) {
-    const readRow = document.getElementById('mAddressRead');
-    const editRow = document.getElementById('mAddressEdit');
-    const hint = document.getElementById('mAddressEditHint');
-    if (!readRow || !editRow) return;
-    if (editing) {
-      readRow.style.display = 'none';
-      editRow.style.display = '';
-      if (hint) hint.style.display = '';
-      // 포커스 + 텍스트 끝으로
-      const inp = document.getElementById('mActualAddress');
-      if (inp) {
-        setTimeout(() => {
-          inp.focus();
-          inp.setSelectionRange(inp.value.length, inp.value.length);
-        }, 50);
-      }
-    } else {
-      readRow.style.display = '';
-      editRow.style.display = 'none';
-      if (hint) hint.style.display = 'none';
-    }
-  }
-
   // ============== View Switching ==============
   function switchView(view) {
     currentView = view;
@@ -1461,12 +2270,6 @@
     document.getElementById('viewActive').style.display = view === 'active' ? '' : 'none';
     document.getElementById('viewMap').style.display = view === 'map' ? '' : 'none';
     document.getElementById('viewCompleted').style.display = view === 'completed' ? '' : 'none';
-
-    // 지도 탭 진입 시 게스트 모드라면 안내바 표시
-    const mapNotice = document.getElementById('guestMapNotice');
-    if (mapNotice) {
-      mapNotice.style.display = (view === 'map' && isGuestMode) ? '' : 'none';
-    }
 
     if (view === 'map') renderMap();
     if (view === 'completed') renderCompletedList();
@@ -1501,16 +2304,11 @@
 
     if (extracted) {
       openNewEntryModal({ ...extracted, fromAI: true });
-      if (isGuestMode) {
-        // 게스트 모드: 시뮬레이션임을 명시
-        showToast('✨ AI 추출 데모 완료! (로그인하면 실제 이미지로 추출 가능)', 'success');
+      const remaining = lastUsage?.remaining;
+      if (remaining !== undefined) {
+        showToast(`AI 추출 완료! 오늘 ${remaining}회 남음`, 'success');
       } else {
-        const remaining = lastUsage?.remaining;
-        if (remaining !== undefined) {
-          showToast(`AI 추출 완료! 오늘 ${remaining}회 남음`, 'success');
-        } else {
-          showToast('AI가 자동 추출했어요. 확인 후 저장하세요', 'success');
-        }
+        showToast('AI가 자동 추출했어요. 확인 후 저장하세요', 'success');
       }
     } else {
       // 에러 종류별 안내
@@ -1622,30 +2420,6 @@
       openNewEntryModal({ fromAI: false });
     });
 
-    // 실제 주소 편집 모드 토글 (연필 버튼)
-    const editBtn = document.getElementById('mAddressEditBtn');
-    if (editBtn) {
-      editBtn.addEventListener('click', () => setAddressEditMode(true));
-    }
-    // 확인 버튼: 읽기 모드 텍스트 갱신 후 닫기 (실제 저장은 [💾 저장] 누를 때)
-    const confirmBtn = document.getElementById('mAddressConfirmBtn');
-    if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => {
-        const newVal = document.getElementById('mActualAddress').value.trim();
-        document.getElementById('mAddressReadText').textContent = newVal || '(주소 없음)';
-        setAddressEditMode(false);
-      });
-    }
-    // 취소 버튼: 변경 사항 버리고 원래 값 복원 후 읽기 모드로
-    const cancelBtn = document.getElementById('mAddressCancelBtn');
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => {
-        const original = document.getElementById('mAddressReadText').textContent;
-        document.getElementById('mActualAddress').value = original === '(주소 없음)' ? '' : original;
-        setAddressEditMode(false);
-      });
-    }
-
     document.getElementById('btnSave').addEventListener('click', async () => {
       const storeName = document.getElementById('mStoreName').value.trim();
       const region = document.getElementById('mRegion').value.trim();
@@ -1653,7 +2427,6 @@
       const deadline = document.getElementById('mDeadline').value.trim();
       const visitDate = document.getElementById('mVisitDate').value.trim();
       const memo = document.getElementById('mMemo').value;
-      const userAddress = document.getElementById('mActualAddress').value.trim();
 
       if (!storeName && !region) {
         showToast('상호명이나 지역 중 하나는 입력해주세요', 'error');
@@ -1661,23 +2434,11 @@
       }
 
       if (isNewEntry) {
-        // 신규 저장
-        // 우선순위:
-        //   1. 사용자가 '실제 주소'를 직접 입력했으면 그걸로 지오코딩
-        //   2. 아니면 평소처럼 storeName+region으로 검색
+        // 신규 저장 - 지오코딩 필요
         setLoading(true, '가게 위치를 찾는 중...');
         let coords = null;
         try {
-          if (userAddress) {
-            // 사용자 직접 입력 주소 우선 — 주소만으로 지오코딩
-            coords = await geocode('', userAddress);
-            // 실패 시 fallback
-            if (!coords) coords = { lat: 37.5665, lng: 126.9780, source: 'fallback', address: userAddress };
-            else coords.address = userAddress; // 사용자 입력을 그대로 저장 (카카오 정규화 안 함)
-          } else {
-            coords = await geocode(storeName, region);
-            if (!coords) coords = { lat: 37.5665, lng: 126.9780, source: 'fallback' };
-          }
+          coords = await geocode(storeName, region);
         } catch (e) {
           coords = { lat: 37.5665, lng: 126.9780, source: 'fallback' };
         }
@@ -1687,7 +2448,7 @@
           storeName, region, content, deadline, visitDate, memo,
           lat: coords.lat, lng: coords.lng,
           locationSource: coords.source || 'unknown',
-          actualAddress: coords.address || userAddress || '',
+          actualAddress: coords.address || '',
           category: coords.category || '',
           completed: false,
           createdAt: new Date().toISOString()
@@ -1700,9 +2461,7 @@
           renderActiveList();
           renderStats();
           if (currentView === 'map') renderMap();
-          if (userAddress) {
-            showToast(`📍 직접 입력한 주소로 등록`, 'success');
-          } else if (coords.source === 'kakao') {
+          if (coords.source === 'kakao') {
             showToast(`📍 ${coords.actualName || storeName} 위치 찾음`, 'success');
           } else if (coords.source === 'osm') {
             showToast(`등록 완료 (대략적인 위치)`, 'success');
@@ -1720,7 +2479,6 @@
         if (!e) return;
 
         const regionChanged = (e.region !== region) || (e.storeName !== storeName);
-        const addressChanged = (e.actualAddress || '') !== userAddress;
         e.storeName = storeName;
         e.region = region;
         e.content = content;
@@ -1728,31 +2486,8 @@
         e.visitDate = visitDate;
         e.memo = memo;
 
-        // 위치 갱신 로직:
-        //   1. 사용자가 실제 주소를 직접 수정했으면 → 그 주소로 다시 지오코딩
-        //   2. 사용자가 주소는 안 건드렸지만 상호/지역이 바뀌었으면 → 자동 재검색
-        //   3. 아무것도 안 바뀌었으면 → 기존 위치 유지
-        if (addressChanged && userAddress) {
-          // 사용자가 직접 입력한 주소로 지오코딩
-          setLoading(true, '주소로 위치 찾는 중...');
-          try {
-            const coords = await geocode('', userAddress);
-            if (coords) {
-              e.lat = coords.lat;
-              e.lng = coords.lng;
-              e.locationSource = coords.source || 'unknown';
-            }
-            // 사용자 입력 주소 그대로 저장 (카카오 정규화 안 함)
-            e.actualAddress = userAddress;
-          } catch (err) {
-            e.actualAddress = userAddress; // 지오코딩 실패해도 주소는 저장
-          }
-          setLoading(false);
-        } else if (addressChanged && !userAddress) {
-          // 사용자가 주소를 비웠으면 actualAddress만 비움 (좌표는 유지)
-          e.actualAddress = '';
-        } else if (regionChanged) {
-          // 주소 직접 수정은 없지만 상호/지역이 바뀌었으면 자동 재검색
+        // 지역/상호명 바뀌면 위치도 다시 찾기
+        if (regionChanged) {
           setLoading(true, '위치 업데이트 중...');
           try {
             const coords = await geocode(storeName, region);
@@ -1788,7 +2523,6 @@
       e.deadline = document.getElementById('mDeadline').value.trim();
       e.visitDate = document.getElementById('mVisitDate').value.trim();
       e.memo = document.getElementById('mMemo').value;
-      e.actualAddress = document.getElementById('mActualAddress').value.trim();
       e.completed = true;
       e.completedAt = new Date().toISOString();
       const ok = await saveEntry(e);
@@ -1847,69 +2581,20 @@
     document.getElementById('btnSettings').addEventListener('click', async () => {
       // 계정 정보 표시
       const acctEl = document.getElementById('accountInfo');
-      if (acctEl) {
-        if (isGuestMode) {
-          acctEl.innerHTML = '<span style="color:var(--ink-faint); font-style:italic;">로그인하면 계정 정보가 표시돼요</span>';
-        } else if (currentUser) {
-          const name = getUserDisplayName(currentUser);
-          const email = currentUser.email || '(이메일 미제공)';
-          const provider = currentUser.app_metadata?.provider || 'email';
-          const providerName = { kakao: '카카오', google: '구글', email: '이메일' }[provider] || provider;
-          acctEl.innerHTML = `<strong>${name}</strong> <span style="color:var(--ink-faint); font-size:12px;">· ${providerName}</span><br><span style="font-size:12px;">${email}</span>`;
-        }
+      if (acctEl && currentUser) {
+        const name = getUserDisplayName(currentUser);
+        const email = currentUser.email || '(이메일 미제공)';
+        const provider = currentUser.app_metadata?.provider || 'email';
+        const providerName = { kakao: '카카오', google: '구글', email: '이메일' }[provider] || provider;
+        acctEl.innerHTML = `<strong>${name}</strong> <span style="color:var(--ink-faint); font-size:12px;">· ${providerName}</span><br><span style="font-size:12px;">${email}</span>`;
       }
-
-      // 게스트 모드: 서버 호출 없이 안내만 표시
-      if (isGuestMode) {
-        applyGuestSettingsContent();
-      } else {
-        // 로그인 모드: 구독 정보 + 사용량 새로고침
-        await fetchSubscription();
-        updatePlanUI();
-        await fetchTodayUsage();
-      }
+      // 사용량 새로고침 (최신 값으로)
+      await fetchTodayUsage();
       settingsBg.classList.add('active');
     });
 
-    document.getElementById('btnLogout').addEventListener('click', () => {
-      // 게스트 모드: 로그인 모달 열기 / 로그인 상태: 로그아웃
-      if (isGuestMode) {
-        // 설정 모달 먼저 닫고 로그인 모달 열기
-        settingsBg.classList.remove('active');
-        openLoginModal();
-      } else {
-        signOut();
-      }
-    });
+    document.getElementById('btnLogout').addEventListener('click', signOut);
     document.getElementById('btnDeleteAccount').addEventListener('click', deleteAccount);
-
-    // ===== 유료 플랜 =====
-    document.getElementById('btnUpgrade').addEventListener('click', activatePremium);
-    document.getElementById('btnDowngrade').addEventListener('click', deactivatePremium);
-
-    // ===== 카톡 알림 설정 =====
-    document.getElementById('btnNotifyToggle').addEventListener('click', handleNotifyToggle);
-
-    // 온보딩 모달 이벤트
-    document.getElementById('btnOnboardingEnable').addEventListener('click', (e) => {
-      enableKakaoNotify(e.currentTarget);
-    });
-    document.getElementById('btnOnboardingLater').addEventListener('click', () => {
-      setNotifyStatus('disabled');
-      markOnboardingShown();
-      updateNotifyUI();
-      closeOnboarding();
-      showToast('나중에 설정 메뉴에서 켜실 수 있어요');
-    });
-    // 배경 클릭으로 닫기 = '나중에'와 동일 처리
-    document.getElementById('onboardingBg').addEventListener('click', (e) => {
-      if (e.target.id === 'onboardingBg') {
-        setNotifyStatus('disabled');
-        markOnboardingShown();
-        updateNotifyUI();
-        closeOnboarding();
-      }
-    });
 
     document.getElementById('settingsClose').addEventListener('click', () => {
       settingsBg.classList.remove('active');
@@ -1933,129 +2618,10 @@
   }
 
   function updateUserUI(user) {
-    const nameEl = document.getElementById('userName');
-    const avatarEl = document.getElementById('userAvatar');
-    if (!user) {
-      // 게스트 모드: 헤더에 둘러보기 안내 표시
-      if (nameEl) nameEl.textContent = '둘러보기';
-      if (avatarEl) avatarEl.textContent = '👤';
-      return;
-    }
+    if (!user) return;
     const name = getUserDisplayName(user);
-    if (nameEl) nameEl.textContent = name;
-    if (avatarEl) avatarEl.textContent = emailToInitial(user.email || name);
-  }
-
-  // 게스트 모드일 때 UI 요소 일부 조정 (안내 메시지 등)
-  // 부팅 시 + 로그인/로그아웃으로 모드 전환 시 호출됨
-  function applyGuestModeUI() {
-    // 1. 상단 배너 (게스트 모드에서만 표시)
-    const banner = document.getElementById('guestBanner');
-    if (banner) banner.style.display = isGuestMode ? '' : 'none';
-
-    // 2. 헤더: 게스트면 userInfo 숨기고 [로그인] 버튼 노출
-    const userInfo = document.getElementById('userInfo');
-    const headerLogin = document.getElementById('btnHeaderLogin');
-    if (userInfo) userInfo.style.display = isGuestMode ? 'none' : '';
-    if (headerLogin) headerLogin.style.display = isGuestMode ? '' : 'none';
-
-    // 3. 업로드 영역 안내 메시지
-    const uploadHint = document.querySelector('.upload-hint');
-    if (uploadHint) {
-      if (isGuestMode) {
-        uploadHint.innerHTML =
-          '🎭 <strong>둘러보기 모드</strong> · 어떤 이미지를 올려도 샘플 추출 결과가 나타나요' +
-          '<br><span style="font-size: 11px; opacity: 0.85;">샘플은 실제 업체가 아닌 임의 정보예요</span>';
-        uploadHint.style.color = 'var(--mustard)';
-      } else {
-        uploadHint.innerHTML =
-          '클릭 · 끌어다 놓기<span class="pc-only"> · <kbd>Ctrl</kbd>+<kbd>V</kbd>로 붙여넣기</span> · AI가 자동으로 정보를 추출해요';
-        uploadHint.style.color = '';
-      }
-    }
-
-    // 4. 지도 안내바: 로그인 모드로 전환되면 항상 숨김
-    // (게스트 모드에서 지도 탭에 있을 때만 보이게 — 표시는 switchView가 담당)
-    const mapNotice = document.getElementById('guestMapNotice');
-    if (mapNotice && !isGuestMode) {
-      mapNotice.style.display = 'none';
-    }
-
-    // 5. 설정 모달 — 계정 섹션 (로그아웃↔로그인, 회원탈퇴 숨김)
-    const btnLogout = document.getElementById('btnLogout');
-    const btnDeleteAccount = document.getElementById('btnDeleteAccount');
-    if (btnLogout) {
-      if (isGuestMode) {
-        btnLogout.innerHTML = '🔑 로그인';
-        btnLogout.classList.add('btn-primary');
-        btnLogout.classList.remove('btn-ghost');
-      } else {
-        btnLogout.innerHTML = '🚪 로그아웃';
-        btnLogout.classList.add('btn-ghost');
-        btnLogout.classList.remove('btn-primary');
-      }
-    }
-    if (btnDeleteAccount) {
-      btnDeleteAccount.style.display = isGuestMode ? 'none' : '';
-    }
-  }
-
-  // 게스트 모드용 설정 모달 콘텐츠 채우기
-  // 플랜/AI사용량/카톡알림 섹션을 "로그인 필요" 안내로 대체
-  function applyGuestSettingsContent() {
-    // 플랜 카드 → 무료 플랜 UI + 업그레이드 버튼 비활성화 안내
-    const planNameEl = document.getElementById('planName');
-    const planBadgeEl = document.getElementById('planBadge');
-    const planBenefitsEl = document.getElementById('planBenefits');
-    const upgradeArea = document.getElementById('planUpgradeArea');
-    const activeArea = document.getElementById('planActiveArea');
-    const planCard = document.getElementById('planCard');
-
-    if (planCard && planNameEl && planBadgeEl && planBenefitsEl) {
-      planCard.classList.remove('premium');
-      planNameEl.innerHTML = '🎭 둘러보기';
-      planBadgeEl.textContent = 'GUEST';
-      planBadgeEl.className = 'plan-badge free';
-      planBenefitsEl.innerHTML = `
-        <li><span class="lock">🔒</span><span style="opacity:0.8;">로그인하면 무료/프리미엄 플랜을 이용할 수 있어요</span></li>
-      `;
-      if (upgradeArea) {
-        upgradeArea.innerHTML = `
-          <button class="btn-upgrade" id="btnGuestSettingsLogin">🔑 카카오로 로그인하기</button>
-          <div class="beta-notice">
-            로그인 후 베타 프리미엄을 <strong>2026년 9월 30일까지 무료</strong>로 이용할 수 있어요
-          </div>
-        `;
-        upgradeArea.style.display = '';
-        // 새로 생성된 버튼에 이벤트 연결
-        const guestLoginBtn = document.getElementById('btnGuestSettingsLogin');
-        if (guestLoginBtn) {
-          guestLoginBtn.addEventListener('click', () => {
-            document.getElementById('settingsBg').classList.remove('active');
-            openLoginModal();
-          });
-        }
-      }
-      if (activeArea) activeArea.style.display = 'none';
-    }
-
-    // AI 사용량 표시 → 시뮬레이션 안내로
-    const aiUsageDisplay = document.getElementById('aiUsageDisplay');
-    if (aiUsageDisplay) {
-      aiUsageDisplay.innerHTML = '🎭 <strong>둘러보기 모드</strong> · AI 추출은 데모 결과로 시뮬레이션돼요';
-      aiUsageDisplay.className = 'ai-usage-display';
-    }
-
-    // 카톡 알림 섹션 → 로그인 필요 안내로
-    const notifyCard = document.querySelector('.notify-status-card');
-    if (notifyCard) {
-      notifyCard.innerHTML = `
-        <div class="notify-status-text">
-          <span>🔒 로그인 후 사용할 수 있어요</span>
-        </div>
-      `;
-      notifyCard.classList.remove('enabled');
-    }
+    document.getElementById('userName').textContent = name;
+    document.getElementById('userAvatar').textContent = emailToInitial(user.email || name);
   }
 
   function showLogin() {
@@ -2068,358 +2634,13 @@
     document.getElementById('mainApp').style.display = '';
   }
 
-  // ============== 유료 플랜 (Premium) ==============
-  // 구독 상태는 subscriptions 테이블에서 조회 (RLS로 본인 것만 읽기 가능)
-  // 활성화는 서버 API(/api/activate-premium)를 통해서만 — 클라이언트 직접 쓰기 차단
-
-  let currentSubscription = null; // { plan, status, expires_at, source }
-
-  // 구독이 유효한 프리미엄인지 판별
-  function isSubscriptionPremium(sub) {
-    if (!sub) return false;
-    if (sub.plan !== 'premium' || sub.status !== 'active') return false;
-    if (sub.expires_at && Date.now() > new Date(sub.expires_at).getTime()) return false;
-    return true;
-  }
-
-  // 구독 정보 조회
-  async function fetchSubscription() {
-    if (!currentUser) { currentSubscription = null; return; }
-    try {
-      const { data } = await sb.from('subscriptions')
-        .select('plan, status, expires_at, source')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
-      currentSubscription = data || null;
-    } catch (e) {
-      console.warn('구독 정보 조회 실패:', e);
-      currentSubscription = null;
-    }
-  }
-
-  // 만료일을 'YYYY년 M월 D일' 형식으로
-  function formatExpireDate(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
-  }
-
-  // 플랜 카드 UI 갱신
-  function updatePlanUI() {
-    const card = document.getElementById('planCard');
-    const nameEl = document.getElementById('planName');
-    const badgeEl = document.getElementById('planBadge');
-    const benefitsEl = document.getElementById('planBenefits');
-    const upgradeArea = document.getElementById('planUpgradeArea');
-    const activeArea = document.getElementById('planActiveArea');
-    const activeInfo = document.getElementById('planActiveInfo');
-    if (!card || !nameEl || !badgeEl || !benefitsEl) return;
-
-    // 버튼 상태 초기화 (전환 후 다시 활성화)
-    const upgradeBtn = document.getElementById('btnUpgrade');
-    const downgradeBtn = document.getElementById('btnDowngrade');
-    if (upgradeBtn) { upgradeBtn.disabled = false; upgradeBtn.textContent = '⚡ 프리미엄 시작하기'; }
-    if (downgradeBtn) { downgradeBtn.disabled = false; downgradeBtn.textContent = '무료 플랜으로 전환'; }
-
-    const isPremium = isSubscriptionPremium(currentSubscription);
-
-    if (isPremium) {
-      card.classList.add('premium');
-      nameEl.innerHTML = '💎 프리미엄';
-      badgeEl.textContent = 'PREMIUM';
-      badgeEl.className = 'plan-badge premium';
-      benefitsEl.innerHTML = `
-        <li><span class="check">✓</span><span>AI 자동 추출 <strong>무제한</strong></span></li>
-        <li><span class="check">✓</span><span>체험단 일정 무제한 등록</span></li>
-        <li><span class="check">✓</span><span>향후 추가되는 프리미엄 기능 우선 이용</span></li>
-      `;
-      if (upgradeArea) upgradeArea.style.display = 'none';
-      if (activeArea) activeArea.style.display = '';
-      if (activeInfo) {
-        const expStr = formatExpireDate(currentSubscription.expires_at);
-        const isBeta = currentSubscription.source === 'beta_free';
-        activeInfo.innerHTML = isBeta
-          ? `🎉 베타 프리미엄 이용 중<br><span class="expire-date">${expStr}</span>까지 무료로 이용할 수 있어요`
-          : `💎 프리미엄 이용 중<br>${expStr ? `<span class="expire-date">${expStr}</span>까지` : ''}`;
-      }
-    } else {
-      card.classList.remove('premium');
-      nameEl.innerHTML = '🆓 무료';
-      badgeEl.textContent = 'FREE';
-      badgeEl.className = 'plan-badge free';
-      benefitsEl.innerHTML = `
-        <li><span class="check">✓</span><span>AI 자동 추출 하루 3회</span></li>
-        <li><span class="check">✓</span><span>체험단 일정 무제한 등록</span></li>
-        <li><span class="lock">🔒</span><span style="opacity:0.7;">AI 무제한 추출 — 프리미엄</span></li>
-      `;
-      if (upgradeArea) upgradeArea.style.display = '';
-      if (activeArea) activeArea.style.display = 'none';
-    }
-  }
-
-  // 프리미엄 신청 (서버 API 호출)
-  async function activatePremium() {
-    const btn = document.getElementById('btnUpgrade');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = '신청 처리 중...';
-    }
-
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) {
-        showToast('세션이 만료되었습니다. 다시 로그인해주세요', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '⚡ 프리미엄 시작하기'; }
-        return;
-      }
-
-      const res = await fetch('/api/activate-premium', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const result = await res.json();
-
-      if (res.ok && result.success) {
-        // 구독 정보 새로고침 후 UI 갱신
-        await fetchSubscription();
-        updatePlanUI();
-        // AI 사용량 표시도 갱신 (프리미엄이면 무제한 표시)
-        await fetchTodayUsage();
-        if (result.alreadyPremium) {
-          showToast('이미 프리미엄 이용 중이에요 💎', 'success');
-        } else {
-          showToast('프리미엄이 활성화되었어요! 🎉', 'success');
-        }
-      } else {
-        throw new Error(result.error || '알 수 없는 오류');
-      }
-    } catch (err) {
-      console.error('프리미엄 활성화 오류:', err);
-      showToast(`프리미엄 신청 실패: ${err.message}`, 'error');
-      if (btn) { btn.disabled = false; btn.textContent = '⚡ 프리미엄 시작하기'; }
-    }
-  }
-
-  // 프리미엄 해제 (무료 플랜으로 전환) — 베타 기간 셀프 해제용
-  async function deactivatePremium() {
-    if (!confirm('무료 플랜으로 전환하시겠어요?\n\nAI 자동 추출이 하루 3회로 제한됩니다.\n언제든 다시 프리미엄으로 전환할 수 있어요.')) {
-      return;
-    }
-
-    const btn = document.getElementById('btnDowngrade');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = '처리 중...';
-    }
-
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) {
-        showToast('세션이 만료되었습니다. 다시 로그인해주세요', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '무료 플랜으로 전환'; }
-        return;
-      }
-
-      const res = await fetch('/api/deactivate-premium', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const result = await res.json();
-
-      if (res.ok && result.success) {
-        await fetchSubscription();
-        updatePlanUI();
-        await fetchTodayUsage();
-        if (result.alreadyFree) {
-          showToast('이미 무료 플랜이에요', 'success');
-        } else {
-          showToast('무료 플랜으로 전환되었어요', 'success');
-        }
-      } else {
-        throw new Error(result.error || result.message || '알 수 없는 오류');
-      }
-    } catch (err) {
-      console.error('프리미엄 해제 오류:', err);
-      showToast(`전환 실패: ${err.message}`, 'error');
-      if (btn) { btn.disabled = false; btn.textContent = '무료 플랜으로 전환'; }
-    }
-  }
-
-  // ============== 카톡 알림 설정 (Kakao Notify) ==============
-  // localStorage 기반 상태 관리 (v3.x에서 실제 발송 기능 추가 시 서버 검증으로 업그레이드 예정)
-  // 키: notify_kakao_status_{userId} = 'enabled' | 'disabled'
-  //     notify_onboarding_{userId} = '1' (온보딩 노출 완료 표시)
-
-  function getNotifyKey(suffix) {
-    if (!currentUser) return null;
-    return `notify_${suffix}_${currentUser.id}`;
-  }
-
-  function getNotifyStatus() {
-    const key = getNotifyKey('kakao_status');
-    if (!key) return null;
-    return localStorage.getItem(key) || null;
-  }
-
-  function setNotifyStatus(status) {
-    const key = getNotifyKey('kakao_status');
-    if (!key) return;
-    if (status) localStorage.setItem(key, status);
-    else localStorage.removeItem(key);
-  }
-
-  function hasShownOnboarding() {
-    const key = getNotifyKey('onboarding');
-    if (!key) return false;
-    return localStorage.getItem(key) === '1';
-  }
-
-  function markOnboardingShown() {
-    const key = getNotifyKey('onboarding');
-    if (!key) return;
-    localStorage.setItem(key, '1');
-  }
-
-  function updateNotifyUI() {
-    const status = getNotifyStatus();
-    const card = document.getElementById('notifyStatusCard');
-    const icon = document.getElementById('notifyStatusIcon');
-    const label = document.getElementById('notifyStatusLabel');
-    const badge = document.getElementById('notifyStatusBadge');
-    const btn = document.getElementById('btnNotifyToggle');
-
-    if (!card || !label || !badge || !btn) return;
-
-    // 부팅/페이지 복귀 시 disabled 상태 항상 초기화 (bfcache 대응)
-    btn.disabled = false;
-
-    if (status === 'enabled') {
-      card.classList.add('enabled');
-      icon.textContent = '💬';
-      label.textContent = '카카오톡 알림';
-      badge.textContent = '켜짐';
-      badge.className = 'badge on';
-      btn.textContent = '끄기';
-      btn.classList.add('off-mode');
-    } else {
-      card.classList.remove('enabled');
-      icon.textContent = '🔕';
-      label.textContent = '카카오톡 알림';
-      badge.textContent = '꺼짐';
-      badge.className = 'badge off';
-      btn.textContent = '켜기';
-      btn.classList.remove('off-mode');
-    }
-  }
-
-  // 카카오 OAuth 재인증으로 talk_message 동의 받기
-  async function enableKakaoNotify(buttonEl) {
-    if (buttonEl) {
-      buttonEl.disabled = true;
-      buttonEl.textContent = '카카오로 이동 중...';
-    }
-
-    // 동의 화면 강제 표시 (prompt=consent)
-    // 성공 시 localStorage를 'enabled'로 표시할 거라는 의도를 미리 기록
-    setNotifyStatus('pending_enable');
-
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'kakao',
-      options: {
-        redirectTo: window.location.origin,
-        scopes: 'profile_nickname,profile_image,account_email,talk_message',
-        queryParams: { prompt: 'consent' }
-      }
-    });
-
-    if (error) {
-      setNotifyStatus(null);
-      if (buttonEl) {
-        buttonEl.disabled = false;
-        buttonEl.textContent = '켜기';
-      }
-      showToast('카카오 동의 요청 실패: ' + error.message, 'error');
-    }
-    // 성공 시 페이지가 카카오로 리디렉트됨
-  }
-
-  function disableKakaoNotify() {
-    if (!confirm('카카오톡 알림을 끄시겠어요?\n\n카카오 계정 자체의 권한을 완전히 해제하려면\n카카오 계정 관리(accounts.kakao.com)에서 추가로 해제해주세요.')) {
-      return;
-    }
-    setNotifyStatus('disabled');
-    updateNotifyUI();
-    showToast('카카오톡 알림을 껐어요');
-  }
-
-  function handleNotifyToggle() {
-    const status = getNotifyStatus();
-    if (status === 'enabled') {
-      disableKakaoNotify();
-    } else {
-      enableKakaoNotify(document.getElementById('btnNotifyToggle'));
-    }
-  }
-
-  // 온보딩 모달 표시 여부 결정
-  function showOnboardingIfNeeded() {
-    if (!currentUser) return;
-
-    // 'pending_enable' 상태(OAuth 후 막 돌아온 상태)는 항상 'enabled'로 승격
-    // hasShownOnboarding 여부와 무관하게 처리되어야 함 (설정 메뉴에서 켜는 경우 포함)
-    if (getNotifyStatus() === 'pending_enable') {
-      setNotifyStatus('enabled');
-      markOnboardingShown();
-      updateNotifyUI();
-      showToast('카카오톡 알림이 켜졌어요 🔔', 'success');
-      return;
-    }
-
-    // 이미 온보딩을 본 적 있으면 모달 표시 X
-    if (hasShownOnboarding()) return;
-
-    // 첫 가입자에게 온보딩 모달 표시
-    setTimeout(() => {
-      const bg = document.getElementById('onboardingBg');
-      if (bg) bg.classList.add('active');
-    }, 800);
-  }
-
-  // bfcache로 돌아온 경우 (카카오에서 뒤로가기 등) 멈춰있는 상태 복구
-  window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-      // pending_enable이 남아있으면 취소로 간주하고 정리
-      if (getNotifyStatus() === 'pending_enable') {
-        setNotifyStatus(null);
-      }
-      updateNotifyUI();
-    }
-  });
-
-  function closeOnboarding() {
-    const bg = document.getElementById('onboardingBg');
-    if (bg) bg.classList.remove('active');
-  }
-
   async function signOut() {
     if (!confirm('로그아웃하시겠어요?')) return;
     await sb.auth.signOut();
     // 데이터 비우기
     entries = [];
     currentUser = null;
-    // 로그인 화면 대신 게스트 모드로 전환 (로그아웃 후에도 사이트는 계속 둘러볼 수 있음)
-    isGuestMode = true;
-    await loadAll();
-    renderActiveList();
-    renderStats();
-    updateUserUI(null);
-    applyGuestModeUI(); // 업로드 영역 안내 메시지 갱신
+    showLogin();
     showToast('로그아웃했어요');
   }
 
@@ -2495,115 +2716,85 @@
   }
 
   // ============== 로그인 화면 이벤트 ==============
-  // 카카오 로그인 단독 지원
-  // talk_message scope: 카카오톡 '나에게 메시지' 발송용 (체험단 마감/방문일 알림)
-  // 카카오 콘솔 > 카카오 로그인 > 동의항목 > 접근권한 > 카카오톡 메시지 전송 = 선택 동의
+  function initLogin() {
+    let isSignupMode = false;
 
-  // 카카오 OAuth 호출 (로그인 화면/모달 공통)
-  async function triggerKakaoLogin(buttonEl) {
-    if (buttonEl) {
-      buttonEl.disabled = true;
-      const original = buttonEl.dataset.originalText || buttonEl.textContent;
-      buttonEl.dataset.originalText = original;
-      buttonEl.textContent = '카카오로 이동 중...';
-    }
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'kakao',
-      options: {
-        redirectTo: window.location.origin,
-        scopes: 'profile_nickname,profile_image,account_email,talk_message'
+    const emailForm = document.getElementById('emailForm');
+    const emailSubmit = document.getElementById('emailSubmit');
+    const toggleText = document.getElementById('toggleText');
+    const toggleMode = document.getElementById('toggleMode');
+
+    toggleMode.addEventListener('click', () => {
+      isSignupMode = !isSignupMode;
+      if (isSignupMode) {
+        emailSubmit.textContent = '회원가입';
+        toggleText.textContent = '이미 계정이 있으신가요?';
+        toggleMode.textContent = '로그인';
+      } else {
+        emailSubmit.textContent = '로그인';
+        toggleText.textContent = '계정이 없으신가요?';
+        toggleMode.textContent = '회원가입';
       }
     });
-    if (error) {
-      showToast('카카오 로그인 실패: ' + error.message, 'error');
-      if (buttonEl) {
-        buttonEl.disabled = false;
-        buttonEl.textContent = buttonEl.dataset.originalText || buttonEl.textContent;
-      }
-    }
-    // 성공 시 카카오로 리디렉트
-  }
 
-  // 로그인 모달 열기/닫기
-  function openLoginModal() {
-    const bg = document.getElementById('loginModalBg');
-    if (bg) bg.classList.add('active');
-  }
-  function closeLoginModal() {
-    const bg = document.getElementById('loginModalBg');
-    if (bg) bg.classList.remove('active');
-  }
+    emailForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('emailInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+      if (!email || !password) return;
 
-  function initLogin() {
-    // 기존 로그인 화면(.login-screen)의 카카오 버튼
-    const loginKakao = document.getElementById('loginKakao');
-    if (loginKakao) {
-      loginKakao.addEventListener('click', (e) => triggerKakaoLogin(e.currentTarget));
-    }
+      emailSubmit.disabled = true;
+      emailSubmit.textContent = '처리 중...';
 
-    // 로그인 모달 (게스트 모드용)
-    const modalKakao = document.getElementById('btnModalLoginKakao');
-    if (modalKakao) {
-      modalKakao.addEventListener('click', (e) => triggerKakaoLogin(e.currentTarget));
-    }
-    const modalClose = document.getElementById('loginModalClose');
-    if (modalClose) {
-      modalClose.addEventListener('click', closeLoginModal);
-    }
-    // 배경 클릭으로 모달 닫기
-    const modalBg = document.getElementById('loginModalBg');
-    if (modalBg) {
-      modalBg.addEventListener('click', (e) => {
-        if (e.target === modalBg) closeLoginModal();
-      });
-    }
-
-    // 헤더의 [로그인] 버튼 → 모달 열기
-    const headerLogin = document.getElementById('btnHeaderLogin');
-    if (headerLogin) {
-      headerLogin.addEventListener('click', openLoginModal);
-    }
-    // 배너의 [카카오로 시작하기] 버튼 → 모달 열기
-    const bannerLogin = document.getElementById('btnGuestBannerLogin');
-    if (bannerLogin) {
-      bannerLogin.addEventListener('click', openLoginModal);
-    }
-
-    // 푸터 [문의] — 카카오 채널 준비 중이라 이메일 복사 + 안내 토스트
-    const footerContact = document.getElementById('footerContact');
-    if (footerContact) {
-      footerContact.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const email = 'cheheomdan.manager@gmail.com';
-        let copied = false;
-        // 모던 Clipboard API 시도
-        try {
-          if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(email);
-            copied = true;
+      try {
+        if (isSignupMode) {
+          const { data, error } = await sb.auth.signUp({ email, password });
+          if (error) throw error;
+          if (data.user && !data.session) {
+            alert('이메일로 인증 링크를 보냈어요. 메일 확인 후 로그인해주세요.');
+            emailSubmit.disabled = false;
+            emailSubmit.textContent = '회원가입';
+            return;
           }
-        } catch (_) { /* 폴백으로 진행 */ }
-        // 폴백: 임시 textarea + execCommand (iOS Safari 등)
-        if (!copied) {
-          try {
-            const ta = document.createElement('textarea');
-            ta.value = email;
-            ta.style.position = 'fixed';
-            ta.style.left = '-9999px';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-            copied = true;
-          } catch (_) { copied = false; }
-        }
-        if (copied) {
-          showToast(`📋 ${email} 복사됨 · 카카오 채널은 준비 중이에요`, 'success');
+          // 자동 로그인된 경우 onAuthStateChange가 처리
         } else {
-          showToast(`카카오 채널은 준비 중이에요 · ${email}로 문의해주세요`, 'success');
+          const { error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) throw error;
         }
+      } catch (err) {
+        let msg = err.message || '오류가 발생했어요';
+        if (msg.includes('Invalid login')) msg = '이메일 또는 비밀번호가 올바르지 않아요';
+        if (msg.includes('already registered')) msg = '이미 가입된 이메일이에요. 로그인해주세요';
+        if (msg.includes('Password should be at least')) msg = '비밀번호는 6자 이상이어야 해요';
+        alert(msg);
+        emailSubmit.disabled = false;
+        emailSubmit.textContent = isSignupMode ? '회원가입' : '로그인';
+      }
+    });
+
+    document.getElementById('loginKakao').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: 'kakao',
+        options: { redirectTo: window.location.origin }
       });
-    }
+      if (error) {
+        alert('카카오 로그인 실패: ' + error.message);
+        e.target.disabled = false;
+      }
+    });
+
+    document.getElementById('loginGoogle').addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) {
+        alert('구글 로그인 실패: ' + error.message);
+        e.target.disabled = false;
+      }
+    });
   }
 
   // ============== Boot ==============
@@ -2621,12 +2812,8 @@
       }
       bootInProgress = true;
       try {
-        // user가 null이면 게스트 모드로 부팅
         currentUser = user;
-        isGuestMode = !user;
-
         updateUserUI(currentUser);
-        applyGuestModeUI(); // 게스트 모드일 때 안내 텍스트/UI 조정
         showApp();
 
         if (!appInitialized) {
@@ -2647,17 +2834,8 @@
         renderActiveList();
         renderStats();
 
-        // 게스트 모드는 구독/사용량/알림 서버 호출 모두 스킵 (로그인 안 됨)
-        if (!isGuestMode) {
-          // 구독 정보 먼저 가져온 뒤 AI 사용량 표시 (프리미엄이면 무제한 표시)
-          await fetchSubscription();
-          updatePlanUI();
-          fetchTodayUsage().catch(e => console.warn('Usage fetch failed:', e));
-
-          // 카톡 알림 설정 UI 갱신 + 온보딩 모달 표시 여부 결정
-          updateNotifyUI();
-          showOnboardingIfNeeded();
-        }
+        // 오늘 AI 사용량 가져오기 (UI 표시용)
+        fetchTodayUsage().catch(e => console.warn('Usage fetch failed:', e));
       } finally {
         bootInProgress = false;
       }
@@ -2671,12 +2849,11 @@
       queueMicrotask(async () => {
         try {
           if (session?.user) {
-            // 로그인 상태: 본인 데이터로 부팅
             await bootApp(session.user);
           } else {
-            // 비로그인: 로그인 화면 대신 게스트 모드로 부팅
             currentUser = null;
-            await bootApp(null);
+            appInitialized = false;
+            showLogin();
           }
         } catch (e) {
           console.error('[BOOT] authStateChange handler failed:', e);
