@@ -2083,6 +2083,60 @@
     if (avatarEl) avatarEl.textContent = emailToInitial(user.email || name);
   }
 
+  // ============== 사용법 가이드 모달 (Help) ==============
+  // 6페이지 슬라이드 형식. Step 3에선 함수만 정의, 이벤트 연결은 Step 4에서.
+
+  const TOTAL_HELP_PAGES = 6;
+  let currentHelpPage = 1;
+
+  function openHelpModal() {
+    currentHelpPage = 1;
+    renderHelpPage();
+    const bg = document.getElementById('helpModalBg');
+    if (bg) bg.classList.add('active');
+  }
+
+  function closeHelpModal() {
+    const bg = document.getElementById('helpModalBg');
+    if (bg) bg.classList.remove('active');
+  }
+
+  function renderHelpPage() {
+    // 페이지 슬라이드 위치 이동
+    const pages = document.getElementById('helpPages');
+    if (pages) {
+      pages.style.transform = `translateX(-${(currentHelpPage - 1) * 100}%)`;
+    }
+    // 점 인디케이터 활성화
+    document.querySelectorAll('.help-dot').forEach(dot => {
+      dot.classList.toggle('active', parseInt(dot.dataset.page) === currentHelpPage);
+    });
+    // 이전/다음 버튼 활성화
+    const prev = document.getElementById('helpPrev');
+    const next = document.getElementById('helpNext');
+    if (prev) prev.style.visibility = currentHelpPage === 1 ? 'hidden' : 'visible';
+    if (next) next.style.visibility = currentHelpPage === TOTAL_HELP_PAGES ? 'hidden' : 'visible';
+    // 마지막 페이지에선 "시작하기" 버튼 강조, 아니면 "건너뛰기"
+    const skip = document.getElementById('helpSkip');
+    if (skip) {
+      skip.textContent = currentHelpPage === TOTAL_HELP_PAGES ? '시작하기 →' : '건너뛰기';
+    }
+  }
+
+  function helpNextPage() {
+    if (currentHelpPage < TOTAL_HELP_PAGES) {
+      currentHelpPage++;
+      renderHelpPage();
+    }
+  }
+
+  function helpPrevPage() {
+    if (currentHelpPage > 1) {
+      currentHelpPage--;
+      renderHelpPage();
+    }
+  }
+
   // 게스트 모드일 때 UI 요소 일부 조정 (안내 메시지 등)
   // 부팅 시 + 로그인/로그아웃으로 모드 전환 시 호출됨
   function applyGuestModeUI() {
