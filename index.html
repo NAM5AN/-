@@ -81,6 +81,7 @@
         <button class="btn-login-header" id="btnHeaderLogin" style="display:none;">
           🔑 로그인
         </button>
+        <button class="icon-btn" id="btnHelp" aria-label="사용법" title="사용법"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></button>
         <button class="icon-btn" id="btnSettings" aria-label="설정" title="설정"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
       </div>
     </div>
@@ -229,6 +230,142 @@
 <div class="loading" id="loading">
   <div class="spinner"></div>
   <div class="loading-text" id="loadingText">이미지에서 정보를 추출하는 중...</div>
+</div>
+
+<!-- Help Modal (사용법 가이드 - 6페이지) -->
+<div class="modal-bg" id="helpModalBg">
+  <div class="modal help-modal">
+    <button class="modal-close" id="helpModalClose">✕</button>
+
+    <div class="help-viewport">
+      <div class="help-pages" id="helpPages">
+        <!-- 페이지 1: 환영 -->
+        <div class="help-page" data-page="1">
+          <div class="help-icon">👋</div>
+          <h2 class="help-title">체험단 매니저에 오신 걸 환영해요</h2>
+          <div class="help-desc">
+            <p>체험단 일정을 <strong>AI로 자동 등록</strong>하고<br>마감일을 놓치지 않도록 도와드려요.</p>
+            <ul class="help-bullets">
+              <li>✨ 캡쳐 이미지에서 AI가 정보 자동 추출</li>
+              <li>📅 마감일 임박 카드는 자동 강조</li>
+              <li>🗺️ 지도에서 가게 위치 한눈에</li>
+              <li>📱 핸드폰 홈화면에 추가해서 앱처럼</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 페이지 2: AI 자동 등록 -->
+        <div class="help-page" data-page="2">
+          <div class="help-icon">📷</div>
+          <h2 class="help-title">AI로 자동 등록하기</h2>
+          <div class="help-desc">
+            <p>체험단 공고 캡쳐만 있으면 끝이에요.</p>
+            <ol class="help-steps">
+              <li><strong>캡쳐</strong> — 체험단 공고 페이지를 캡쳐</li>
+              <li><strong>업로드</strong> — 상단 박스에 클릭·드래그·Ctrl+V</li>
+              <li><strong>확인</strong> — AI가 상호명·지역·내용·마감일 자동 추출</li>
+              <li><strong>저장</strong> — 필요시 수정 후 저장</li>
+            </ol>
+            <div class="help-tip">💡 무료는 하루 3회, 프리미엄은 무제한이에요</div>
+          </div>
+        </div>
+
+        <!-- 페이지 3: 일정 관리 -->
+        <div class="help-page" data-page="3">
+          <div class="help-icon">🗂️</div>
+          <h2 class="help-title">일정 관리</h2>
+          <div class="help-desc">
+            <p>세 가지 탭으로 깔끔하게 관리해요.</p>
+            <ul class="help-bullets">
+              <li><strong>진행 중</strong> — 마감 전 체험단들</li>
+              <li><strong>지도</strong> — 가게 위치를 한눈에</li>
+              <li><strong>완료</strong> — 리뷰 작성 끝난 것들</li>
+            </ul>
+            <div class="help-tip">💡 마감일이 임박하면 카드 색이 자동으로 변해요</div>
+          </div>
+        </div>
+
+        <!-- 페이지 4: 지도와 위치 -->
+        <div class="help-page" data-page="4">
+          <div class="help-icon">🗺️</div>
+          <h2 class="help-title">지도와 위치</h2>
+          <div class="help-desc">
+            <p>가게 위치를 지도에서 확인할 수 있어요.</p>
+            <ul class="help-bullets">
+              <li>핀을 클릭하면 가게 정보가 떠요</li>
+              <li>핀 색깔은 진행 중·완료·임박에 따라 달라요</li>
+            </ul>
+            <div class="help-tip">
+              💡 <strong>지도 핀이 엉뚱한 곳에?</strong><br>
+              카드를 열고 <strong>실제 주소</strong> 옆 ✏️ 버튼을 누르면 직접 수정할 수 있어요.
+            </div>
+          </div>
+        </div>
+
+        <!-- 페이지 5: 앱처럼 쓰기 -->
+        <div class="help-page" data-page="5">
+          <div class="help-icon">📱</div>
+          <h2 class="help-title">앱처럼 쓰는 법</h2>
+          <div class="help-desc">
+            <p>홈 화면에 추가하면 앱처럼 빠르게 열 수 있어요.</p>
+            <div class="help-platform-box">
+              <div class="platform-title">📱 안드로이드 (크롬)</div>
+              <ol class="help-steps-compact">
+                <li>주소창 옆 <strong>⋮</strong> 메뉴</li>
+                <li><strong>홈 화면에 추가</strong> 선택</li>
+                <li>이름 확인 후 추가</li>
+              </ol>
+            </div>
+            <div class="help-platform-box">
+              <div class="platform-title">🍎 아이폰 (사파리)</div>
+              <ol class="help-steps-compact">
+                <li>하단 <strong>공유</strong> 버튼 (□↑)</li>
+                <li><strong>홈 화면에 추가</strong> 선택</li>
+                <li>추가 누르면 끝</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- 페이지 6: 프리미엄 + 더 보기 -->
+        <div class="help-page" data-page="6">
+          <div class="help-icon">💎</div>
+          <h2 class="help-title">프리미엄과 더 보기</h2>
+          <div class="help-desc">
+            <p><strong>💎 프리미엄 플랜</strong></p>
+            <ul class="help-bullets">
+              <li>AI 자동 추출 무제한</li>
+              <li>🎉 <strong>2026년 9월 30일까지 베타 무료!</strong></li>
+            </ul>
+            <p style="margin-top:18px;"><strong>🔔 곧 추가될 기능</strong></p>
+            <ul class="help-bullets">
+              <li>카카오톡으로 마감일/방문일 알림</li>
+              <li>달력 보기, 통계, 데이터 내보내기</li>
+            </ul>
+            <div class="help-tip" style="margin-top:18px;">
+              💬 문의는 푸터의 [문의] 클릭<br>
+              또는 cheheomdan.manager@gmail.com
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단: 인디케이터 + 페이지 넘김 -->
+    <div class="help-nav">
+      <button class="help-nav-btn" id="helpPrev" aria-label="이전">◀</button>
+      <div class="help-dots" id="helpDots">
+        <span class="help-dot active" data-page="1"></span>
+        <span class="help-dot" data-page="2"></span>
+        <span class="help-dot" data-page="3"></span>
+        <span class="help-dot" data-page="4"></span>
+        <span class="help-dot" data-page="5"></span>
+        <span class="help-dot" data-page="6"></span>
+      </div>
+      <button class="help-nav-btn" id="helpNext" aria-label="다음">▶</button>
+    </div>
+    <button class="help-skip" id="helpSkip">시작하기 →</button>
+  </div>
 </div>
 
 <!-- Login Modal (게스트 모드에서 [로그인] 버튼 클릭 시 표시) -->
