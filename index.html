@@ -202,11 +202,16 @@
 
   <!-- App Footer (약관/방침 링크) -->
   <footer class="app-footer">
-    <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>
-    <span class="footer-sep">·</span>
-    <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>
-    <span class="footer-sep">·</span>
-    <a href="#" id="footerContact">문의</a>
+    <div class="footer-links">
+      <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>
+      <span class="footer-sep">·</span>
+      <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>
+      <span class="footer-sep">·</span>
+      <a href="#" id="footerContact">문의</a>
+    </div>
+    <div class="footer-copyright">
+      © <span id="footerYear">2026</span> 체험단 매니저 · 운영자 김수정 · All rights reserved.
+    </div>
   </footer>
 </div>
 
@@ -2312,6 +2317,19 @@
     });
   }
 
+  // 푸터 카피라이트 연도 자동 갱신
+  // 시작 연도(START_YEAR)와 현재 연도가 같으면 "2026"
+  // 다음 해부터는 "2026 - 2027"처럼 범위로 표시
+  function updateFooterYear() {
+    const START_YEAR = 2026;
+    const nowYear = new Date().getFullYear();
+    const yearEl = document.getElementById('footerYear');
+    if (!yearEl) return;
+    yearEl.textContent = (nowYear > START_YEAR)
+      ? `${START_YEAR} - ${nowYear}`
+      : `${START_YEAR}`;
+  }
+
   // 게스트 모드일 때 UI 요소 일부 조정 (안내 메시지 등)
   // 부팅 시 + 로그인/로그아웃으로 모드 전환 시 호출됨
   function applyGuestModeUI() {
@@ -3004,6 +3022,7 @@
     initLogin();
     initHelp();
     initTools();
+    updateFooterYear();
 
     let appInitialized = false;
     let bootInProgress = false;
