@@ -2099,6 +2099,23 @@
   function closeHelpModal() {
     const bg = document.getElementById('helpModalBg');
     if (bg) bg.classList.remove('active');
+    // 본 적 있음을 기록 (다시 자동 표시 안 되게)
+    try {
+      const key = currentUser ? `help_seen_${currentUser.id}` : 'help_seen_guest';
+      localStorage.setItem(key, '1');
+    } catch (_) { /* localStorage 차단 시 무시 */ }
+  }
+
+  // 첫 진입자에게만 자동 표시 (이미 본 적 있으면 안 띄움)
+  // 부팅 완료 시점에 호출
+  function showHelpIfFirstTime() {
+    try {
+      const key = currentUser ? `help_seen_${currentUser.id}` : 'help_seen_guest';
+      if (!localStorage.getItem(key)) {
+        // 약간 지연 (다른 모달들과 겹침 방지)
+        setTimeout(() => openHelpModal(), 600);
+      }
+    } catch (_) { /* localStorage 차단 시 자동 표시 안 함 */ }
   }
 
   function renderHelpPage() {
@@ -2895,6 +2912,9 @@
           updateNotifyUI();
           showOnboardingIfNeeded();
         }
+
+        // 처음 보는 사용자에게 사용법 자동 표시 (로그인/게스트 모두)
+        showHelpIfFirstTime();
       } finally {
         bootInProgress = false;
       }
