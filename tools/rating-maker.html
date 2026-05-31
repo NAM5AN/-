@@ -485,12 +485,21 @@
     margin-bottom: 6px;
     word-break: keep-all;
   }
+  .rating-card-title.is-placeholder {
+    color: var(--ink-faint);
+    font-weight: 500;
+    font-style: italic;
+  }
   .rating-card-subtitle {
     font-size: 12px;
     color: var(--ink-soft);
     line-height: 1.6;
     margin-bottom: 18px;
     word-break: keep-all;
+  }
+  .rating-card-subtitle.is-placeholder {
+    color: var(--ink-faint);
+    font-style: italic;
   }
   .rating-card-items {
     margin-bottom: 18px;
@@ -890,13 +899,13 @@
     <!-- 제목 -->
     <div class="field-group">
       <label class="field-group-label" for="inputTitle">제목</label>
-      <input type="text" id="inputTitle" placeholder="예) 성수동 브런치 카페" value="성수동 브런치 카페">
+      <input type="text" id="inputTitle" placeholder="예) 성수동 브런치 카페">
     </div>
 
     <!-- 한줄평 -->
     <div class="field-group">
       <label class="field-group-label" for="inputSubtitle">한줄평</label>
-      <textarea id="inputSubtitle" placeholder="예) 디저트와 분위기가 특히 만족스러웠어요">디저트와 분위기가 특히 만족스러웠어요</textarea>
+      <textarea id="inputSubtitle" placeholder="예) 디저트와 분위기가 특히 만족스러웠어요"></textarea>
     </div>
 
     <!-- 평가 항목 (Step 3에서 인터랙션 추가) -->
@@ -961,30 +970,15 @@
       <div class="preview-card-wrap">
         <!-- 실제로 다운로드되는 카드 -->
         <div class="rating-card" id="previewCard">
-          <div class="rating-card-title" id="previewTitle">성수동 브런치 카페</div>
-          <div class="rating-card-subtitle" id="previewSubtitle">디저트와 분위기가 특히 만족스러웠어요</div>
+          <div class="rating-card-title" id="previewTitle"></div>
+          <div class="rating-card-subtitle" id="previewSubtitle"></div>
 
           <div class="rating-card-items" id="previewItems">
-            <!-- 더미 항목들 (Step 2에서 동적 생성) -->
-            <div class="rating-card-item">
-              <span class="rating-card-item-name">맛</span>
-              <span class="rating-card-item-stars">
-                <span class="rating-card-item-stars-text">★★★★★</span>
-                <span class="rating-card-item-score">5.0</span>
-              </span>
-            </div>
-            <div class="rating-card-item">
-              <span class="rating-card-item-name">분위기</span>
-              <span class="rating-card-item-stars">
-                <span class="rating-card-item-stars-text">★★★★☆</span>
-                <span class="rating-card-item-score">4.5</span>
-              </span>
-            </div>
+            <!-- JS render()에서 채움 -->
           </div>
 
           <div class="rating-card-total" id="previewTotal">
-            <span class="rating-card-total-label">총점</span>
-            <span class="rating-card-total-score">4.8 <span class="max">/ 5.0</span></span>
+            <!-- JS render()에서 채움 -->
           </div>
 
           <div class="rating-card-watermark" id="previewWatermark">made with 체험단 매니저</div>
@@ -1022,13 +1016,17 @@
   const state = {
     category: 'restaurant',
     template: 'minimal',  // minimal | beige | blog
-    title: '성수동 브런치 카페',
-    subtitle: '디저트와 분위기가 특히 만족스러웠어요',
+    title: '',
+    subtitle: '',
     // Step 3에서 별점 인터랙션 추가. 일단 기본 5.0
     items: CATEGORY_PRESETS.restaurant.map(name => ({ name, score: 5.0 })),
     showTotal: true,
     showWatermark: true
   };
+
+  // 빈 값일 때 미리보기에 표시할 placeholder 문구
+  const PLACEHOLDER_TITLE = '제목을 입력해주세요';
+  const PLACEHOLDER_SUBTITLE = '한줄평을 입력해주세요';
 
   // ============== 별 SVG ==============
   // score (0~5, 0.5 단위)를 받아 5개 별 SVG HTML을 반환.
@@ -1131,15 +1129,39 @@
     }
   }
 
+  // 미리보기의 제목/한줄평 텍스트 설정
+  // 빈 값이면 placeholder 텍스트 + is-placeholder 클래스로 회색 이탤릭 처리
+  function renderTitleAndSubtitle() {
+    const titleEl = document.getElementById('previewTitle');
+    const subEl = document.getElementById('previewSubtitle');
+    if (titleEl) {
+      if (state.title) {
+        titleEl.textContent = state.title;
+        titleEl.classList.remove('is-placeholder');
+      } else {
+        titleEl.textContent = PLACEHOLDER_TITLE;
+        titleEl.classList.add('is-placeholder');
+      }
+    }
+    if (subEl) {
+      if (state.subtitle) {
+        subEl.textContent = state.subtitle;
+        subEl.classList.remove('is-placeholder');
+        subEl.style.display = '';
+      } else {
+        subEl.textContent = PLACEHOLDER_SUBTITLE;
+        subEl.classList.add('is-placeholder');
+        subEl.style.display = '';
+      }
+    }
+  }
+
   // ============== 렌더링 ==============
   // 미리보기 카드 전체를 state 기반으로 다시 그림
   function render() {
     applyTemplate();
-    // 제목 / 한줄평
-    document.getElementById('previewTitle').textContent = state.title || ' ';
-    const subEl = document.getElementById('previewSubtitle');
-    subEl.textContent = state.subtitle || '';
-    subEl.style.display = state.subtitle ? '' : 'none';
+    // 제목 / 한줄평 (빈 값이면 placeholder 표시)
+    renderTitleAndSubtitle();
 
     // 평가 항목 목록
     const itemsEl = document.getElementById('previewItems');
@@ -1248,10 +1270,7 @@
   // 미리보기만 갱신 (입력 패널 재렌더 안 함 → 포커스 유지)
   function renderPreviewOnly() {
     applyTemplate();
-    document.getElementById('previewTitle').textContent = state.title || ' ';
-    const subEl = document.getElementById('previewSubtitle');
-    subEl.textContent = state.subtitle || '';
-    subEl.style.display = state.subtitle ? '' : 'none';
+    renderTitleAndSubtitle();
 
     const itemsEl = document.getElementById('previewItems');
     itemsEl.innerHTML = state.items.map(it => `
@@ -1294,6 +1313,13 @@
     const btn = document.getElementById('btnDownload');
     if (!btn || btn.disabled) return;
 
+    // 제목 비어있으면 안내 (placeholder가 그대로 캡쳐되면 안 좋음)
+    if (!state.title.trim()) {
+      alert('제목을 입력해주세요!');
+      document.getElementById('inputTitle')?.focus();
+      return;
+    }
+
     // html2canvas 로드 확인
     if (typeof html2canvas === 'undefined') {
       alert('다운로드 라이브러리를 불러오지 못했어요. 새로고침 후 다시 시도해주세요.');
@@ -1302,6 +1328,18 @@
 
     const card = document.getElementById('previewCard');
     if (!card) return;
+
+    // 캡쳐 직전: 한줄평이 비어있으면 placeholder 텍스트를 잠시 숨기고 캡쳐
+    const subEl = document.getElementById('previewSubtitle');
+    const subIsPlaceholder = subEl && subEl.classList.contains('is-placeholder');
+    let savedSubText = '';
+    let savedSubDisplay = '';
+    if (subIsPlaceholder) {
+      savedSubText = subEl.textContent;
+      savedSubDisplay = subEl.style.display;
+      subEl.textContent = '';
+      subEl.style.display = 'none';
+    }
 
     // 버튼 비활성화 + 텍스트 변경
     const originalText = btn.textContent;
@@ -1314,11 +1352,6 @@
         await document.fonts.ready;
       }
 
-      // html2canvas 옵션
-      // - scale: 2 → 레티나 고해상도 (블로그 업로드 시 선명함)
-      // - useCORS: true → 외부 폰트/이미지 캡쳐 시도
-      // - backgroundColor: null → 카드 자체 배경만 캡쳐 (투명 영역 제거)
-      // - logging: false → 콘솔 깔끔하게
       const canvas = await html2canvas(card, {
         scale: 2,
         useCORS: true,
@@ -1361,6 +1394,12 @@
       alert('저장 중 오류가 발생했어요. 다시 시도해주세요.');
       btn.textContent = originalText;
       btn.disabled = false;
+    } finally {
+      // 숨겼던 placeholder 복원
+      if (subIsPlaceholder && subEl) {
+        subEl.textContent = savedSubText;
+        subEl.style.display = savedSubDisplay;
+      }
     }
   }
 
