@@ -573,6 +573,17 @@
     font-size: 10px;
     color: var(--ink-faint);
     letter-spacing: 0.5px;
+    line-height: 1.5;
+  }
+  .rating-card-watermark .watermark-brand {
+    font-weight: 500;
+  }
+  .rating-card-watermark .watermark-url {
+    margin-top: 2px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 9px;
+    opacity: 0.75;
+    letter-spacing: 0;
   }
 
   /* ============================================
@@ -980,7 +991,10 @@
             <!-- JS render()에서 채움 -->
           </div>
 
-          <div class="rating-card-watermark" id="previewWatermark">made with 체험단 매니저</div>
+          <div class="rating-card-watermark" id="previewWatermark">
+            <div class="watermark-brand">made with 체험단 매니저</div>
+            <div class="watermark-url">cheheomdan-manager.com</div>
+          </div>
         </div>
       </div>
 
