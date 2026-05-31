@@ -213,7 +213,7 @@ header {
   font-weight: 500;
 }
 
-/* ---- App Footer (이용약관/개인정보처리방침 링크) ---- */
+/* ---- App Footer (이용약관/개인정보처리방침 링크 + 카피라이트) ---- */
 .app-footer {
   margin-top: 48px;
   padding-top: 24px;
@@ -223,18 +223,34 @@ header {
   color: var(--ink-faint);
   line-height: 1.8;
 }
-.app-footer a {
+.app-footer .footer-links a {
   color: var(--ink-soft);
   text-decoration: none;
   transition: color 0.15s;
 }
-.app-footer a:hover {
+.app-footer .footer-links a:hover {
   color: var(--terra);
   text-decoration: underline;
 }
 .app-footer .footer-sep {
   margin: 0 8px;
   opacity: 0.5;
+}
+
+/* 카피라이트 (한 줄 아래, 더 작게) */
+.footer-copyright {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+}
+
+/* 모바일 */
+@media (max-width: 600px) {
+  .app-footer { font-size: 11px; }
+  .app-footer .footer-sep { margin: 0 5px; }
+  .footer-copyright { font-size: 10px; }
 }
 
 /* ---- Responsive ---- */
