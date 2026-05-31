@@ -599,5 +599,229 @@
 
 </main>
 
+<script>
+(function() {
+  'use strict';
+
+  // ============== 카테고리별 기본 평가 항목 ==============
+  const CATEGORY_PRESETS = {
+    restaurant: ['맛', '양', '가격', '분위기', '친절도', '재방문 의사'],
+    cafe:       ['음료', '디저트', '분위기', '좌석 편안함', '사진 만족도', '재방문 의사'],
+    stay:       ['청결도', '위치', '침구', '시설', '뷰', '재방문 의사'],
+    beauty:     ['상담 만족도', '관리 만족도', '위생', '시설', '친절도', '재방문 의사'],
+    product:    ['디자인', '사용감', '가성비', '실용성', '만족도', '추천 의향'],
+    custom:     ['항목 1', '항목 2', '항목 3']
+  };
+
+  // ============== 상태 ==============
+  const state = {
+    category: 'restaurant',
+    title: '성수동 브런치 카페',
+    subtitle: '디저트와 분위기가 특히 만족스러웠어요',
+    // Step 3에서 별점 인터랙션 추가. 일단 기본 5.0
+    items: CATEGORY_PRESETS.restaurant.map(name => ({ name, score: 5.0 })),
+    showTotal: true,
+    showWatermark: true
+  };
+
+  // ============== 별 표시 (텍스트) ==============
+  // score는 0.5 단위 (0.5 ~ 5.0). 정수 부분은 ★, 0.5는 ⯨, 나머지는 ☆
+  // 폰트마다 반쪽 별 글리프가 다르게 보일 수 있어서 일단 ★/☆로 반올림 표시.
+  // (Step 3에서 SVG 별로 교체해 0.5 정확히 보이게 할 거임)
+  function starsText(score) {
+    const filled = Math.round(score); // 0.5는 일단 반올림
+    const empty = 5 - filled;
+    return '★'.repeat(filled) + '☆'.repeat(empty);
+  }
+
+  function formatScore(score) {
+    // 4.0 → "4.0", 4.5 → "4.5"
+    return score.toFixed(1);
+  }
+
+  // ============== 평균 점수 계산 ==============
+  function computeAverage(items) {
+    if (!items || items.length === 0) return 0;
+    const sum = items.reduce((acc, it) => acc + (it.score || 0), 0);
+    return sum / items.length;
+  }
+
+  // ============== 렌더링 ==============
+  // 미리보기 카드 전체를 state 기반으로 다시 그림
+  function render() {
+    // 제목 / 한줄평
+    document.getElementById('previewTitle').textContent = state.title || ' ';
+    const subEl = document.getElementById('previewSubtitle');
+    subEl.textContent = state.subtitle || '';
+    subEl.style.display = state.subtitle ? '' : 'none';
+
+    // 평가 항목 목록
+    const itemsEl = document.getElementById('previewItems');
+    itemsEl.innerHTML = state.items.map(it => `
+      <div class="rating-card-item">
+        <span class="rating-card-item-name">${escapeHtml(it.name)}</span>
+        <span class="rating-card-item-stars">
+          <span class="rating-card-item-stars-text">${starsText(it.score)}</span>
+          <span class="rating-card-item-score">${formatScore(it.score)}</span>
+        </span>
+      </div>
+    `).join('');
+
+    // 총점
+    const totalEl = document.getElementById('previewTotal');
+    if (state.showTotal && state.items.length > 0) {
+      const avg = computeAverage(state.items);
+      totalEl.style.display = '';
+      totalEl.innerHTML = `
+        <span class="rating-card-total-label">총점</span>
+        <span class="rating-card-total-score">${formatScore(avg)} <span class="max">/ 5.0</span></span>
+      `;
+    } else {
+      totalEl.style.display = 'none';
+    }
+
+    // 워터마크
+    const wmEl = document.getElementById('previewWatermark');
+    wmEl.style.display = state.showWatermark ? '' : 'none';
+
+    // 입력 패널의 평가 항목 리스트도 다시 그림 (Step 3~4에서 인터랙션 추가)
+    renderInputItems();
+  }
+
+  // 입력 패널의 평가 항목 행들 렌더링
+  function renderInputItems() {
+    const list = document.getElementById('ratingItemsList');
+    list.innerHTML = state.items.map((it, idx) => `
+      <div class="rating-item-row" data-idx="${idx}">
+        <input class="rating-item-name-input" type="text" value="${escapeAttr(it.name)}" data-idx="${idx}">
+        <span class="rating-item-stars-placeholder">${starsText(it.score)}</span>
+        <button class="rating-item-delete" title="삭제" data-idx="${idx}">✕</button>
+      </div>
+    `).join('');
+
+    // 항목 이름 수정 이벤트 (위임)
+    list.querySelectorAll('.rating-item-name-input').forEach(input => {
+      input.addEventListener('input', (e) => {
+        const idx = parseInt(e.target.dataset.idx);
+        if (state.items[idx]) {
+          state.items[idx].name = e.target.value;
+          // 미리보기 부분만 갱신 (입력 패널 재렌더 X — 포커스 유지 위해)
+          renderPreviewOnly();
+        }
+      });
+    });
+
+    // 삭제 이벤트 (Step 4에서 본격 구현, 일단 동작만)
+    list.querySelectorAll('.rating-item-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.currentTarget.dataset.idx);
+        state.items.splice(idx, 1);
+        render();
+      });
+    });
+  }
+
+  // 미리보기만 갱신 (입력 패널 재렌더 안 함 → 포커스 유지)
+  function renderPreviewOnly() {
+    document.getElementById('previewTitle').textContent = state.title || ' ';
+    const subEl = document.getElementById('previewSubtitle');
+    subEl.textContent = state.subtitle || '';
+    subEl.style.display = state.subtitle ? '' : 'none';
+
+    const itemsEl = document.getElementById('previewItems');
+    itemsEl.innerHTML = state.items.map(it => `
+      <div class="rating-card-item">
+        <span class="rating-card-item-name">${escapeHtml(it.name)}</span>
+        <span class="rating-card-item-stars">
+          <span class="rating-card-item-stars-text">${starsText(it.score)}</span>
+          <span class="rating-card-item-score">${formatScore(it.score)}</span>
+        </span>
+      </div>
+    `).join('');
+
+    const totalEl = document.getElementById('previewTotal');
+    if (state.showTotal && state.items.length > 0) {
+      const avg = computeAverage(state.items);
+      totalEl.style.display = '';
+      totalEl.innerHTML = `
+        <span class="rating-card-total-label">총점</span>
+        <span class="rating-card-total-score">${formatScore(avg)} <span class="max">/ 5.0</span></span>
+      `;
+    } else {
+      totalEl.style.display = 'none';
+    }
+
+    const wmEl = document.getElementById('previewWatermark');
+    wmEl.style.display = state.showWatermark ? '' : 'none';
+  }
+
+  // ============== 유틸 ==============
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    })[c]);
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  // ============== 이벤트 ==============
+  function init() {
+    // 카테고리 칩 클릭 — 항목 자동 교체
+    document.querySelectorAll('.category-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const cat = chip.dataset.category;
+        state.category = cat;
+        // 활성 칩 표시 갱신
+        document.querySelectorAll('.category-chip').forEach(c => {
+          c.classList.toggle('active', c.dataset.category === cat);
+        });
+        // 항목 교체 — 모두 5.0 기본값
+        state.items = CATEGORY_PRESETS[cat].map(name => ({ name, score: 5.0 }));
+        render();
+      });
+    });
+
+    // 제목 입력
+    document.getElementById('inputTitle').addEventListener('input', (e) => {
+      state.title = e.target.value;
+      renderPreviewOnly();
+    });
+
+    // 한줄평 입력
+    document.getElementById('inputSubtitle').addEventListener('input', (e) => {
+      state.subtitle = e.target.value;
+      renderPreviewOnly();
+    });
+
+    // 총점 표시 토글
+    document.getElementById('optShowTotal').addEventListener('change', (e) => {
+      state.showTotal = e.target.checked;
+      renderPreviewOnly();
+    });
+
+    // 워터마크 표시 토글
+    document.getElementById('optShowWatermark').addEventListener('change', (e) => {
+      state.showWatermark = e.target.checked;
+      renderPreviewOnly();
+    });
+
+    // 항목 추가 버튼 (Step 4에서 확장, 일단 동작만)
+    document.querySelector('.btn-add-item').addEventListener('click', () => {
+      state.items.push({ name: '새 항목', score: 5.0 });
+      render();
+    });
+
+    // 최초 렌더
+    render();
+  }
+
+  // DOM 준비되면 시작
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
 </body>
 </html>
