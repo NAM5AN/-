@@ -385,6 +385,48 @@
   </div>
 </div>
 
+<!-- Contact Modal (푸터 [문의] 클릭 시 표시) -->
+<div class="modal-bg" id="contactModalBg">
+  <div class="modal contact-modal">
+    <button class="modal-close" id="contactModalClose">✕</button>
+    <div class="contact-modal-content">
+      <div class="contact-modal-icon">💬</div>
+      <h2 class="contact-modal-title">문의하기</h2>
+      <div class="contact-modal-sub">
+        궁금한 점이나 건의사항이 있으신가요?<br>
+        아래 방법 중 편한 걸로 연락주세요.
+      </div>
+
+      <!-- 이메일 섹션 -->
+      <div class="contact-section">
+        <div class="contact-section-label">📧 이메일</div>
+        <div class="contact-email-row">
+          <span class="contact-email-text" id="contactEmailText">cheheomdan.manager@gmail.com</span>
+          <button class="contact-copy-btn" id="contactCopyBtn">복사</button>
+        </div>
+      </div>
+
+      <!-- 구글 폼 섹션 -->
+      <div class="contact-section">
+        <div class="contact-section-label">📝 문의 폼</div>
+        <a href="https://forms.gle/jFR4zEMQwzTxrDC58" target="_blank" rel="noopener" class="contact-form-link">
+          구글 폼으로 문의하기
+          <span class="contact-form-arrow">↗</span>
+        </a>
+        <div class="contact-form-hint">새 탭에서 폼이 열려요</div>
+      </div>
+
+      <!-- 카카오 채널 안내 (준비 중) -->
+      <div class="contact-section disabled">
+        <div class="contact-section-label">💬 카카오 채널 <span class="contact-soon">준비 중</span></div>
+        <div class="contact-soon-desc">카카오톡으로도 곧 문의할 수 있게 준비하고 있어요.</div>
+      </div>
+
+      <button class="contact-close-btn" id="contactCloseBtn">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- Login Modal (게스트 모드에서 [로그인] 버튼 클릭 시 표시) -->
 <div class="modal-bg" id="loginModalBg">
   <div class="modal login-modal">
@@ -2847,12 +2889,21 @@
       bannerLogin.addEventListener('click', openLoginModal);
     }
 
-    // 푸터 [문의] — 카카오 채널 준비 중이라 이메일 복사 + 안내 토스트
+    // 푸터 [문의] — 문의 모달 열기
     const footerContact = document.getElementById('footerContact');
     if (footerContact) {
-      footerContact.addEventListener('click', async (e) => {
+      footerContact.addEventListener('click', (e) => {
         e.preventDefault();
-        const email = 'cheheomdan.manager@gmail.com';
+        const bg = document.getElementById('contactModalBg');
+        if (bg) bg.classList.add('active');
+      });
+    }
+
+    // 문의 모달 — 이메일 복사 버튼
+    const contactCopyBtn = document.getElementById('contactCopyBtn');
+    if (contactCopyBtn) {
+      contactCopyBtn.addEventListener('click', async () => {
+        const email = document.getElementById('contactEmailText').textContent.trim();
         let copied = false;
         // 모던 Clipboard API 시도
         try {
@@ -2860,8 +2911,8 @@
             await navigator.clipboard.writeText(email);
             copied = true;
           }
-        } catch (_) { /* 폴백으로 진행 */ }
-        // 폴백: 임시 textarea + execCommand (iOS Safari 등)
+        } catch (_) { /* 폴백 */ }
+        // 폴백: 임시 textarea (iOS Safari 등)
         if (!copied) {
           try {
             const ta = document.createElement('textarea');
@@ -2876,12 +2927,30 @@
           } catch (_) { copied = false; }
         }
         if (copied) {
-          showToast(`📋 ${email} 복사됨 · 카카오 채널은 준비 중이에요`, 'success');
+          // 버튼 텍스트 일시 변경으로 시각 피드백
+          const original = contactCopyBtn.textContent;
+          contactCopyBtn.textContent = '✓ 복사됨';
+          contactCopyBtn.classList.add('copied');
+          setTimeout(() => {
+            contactCopyBtn.textContent = original;
+            contactCopyBtn.classList.remove('copied');
+          }, 1800);
         } else {
-          showToast(`카카오 채널은 준비 중이에요 · ${email}로 문의해주세요`, 'success');
+          showToast('복사에 실패했어요. 직접 복사해주세요', 'error');
         }
       });
     }
+
+    // 문의 모달 닫기 (✕ 버튼, [닫기] 버튼)
+    // 배경 클릭으로는 닫히지 않음 — 사용자가 명시적으로 닫아야 함
+    const contactClose = document.getElementById('contactModalClose');
+    const contactCloseBtn = document.getElementById('contactCloseBtn');
+    function closeContactModal() {
+      const bg = document.getElementById('contactModalBg');
+      if (bg) bg.classList.remove('active');
+    }
+    if (contactClose) contactClose.addEventListener('click', closeContactModal);
+    if (contactCloseBtn) contactCloseBtn.addEventListener('click', closeContactModal);
   }
 
   // ============== Boot ==============
