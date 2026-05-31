@@ -675,3 +675,166 @@
   color: var(--ink-soft);
   line-height: 1.7;
 }
+/* ============================================
+   Contact Modal (문의 모달)
+   ============================================ */
+.contact-modal {
+  max-width: 420px;
+  padding: 36px 28px 24px;
+}
+.contact-modal-content {
+  text-align: center;
+}
+.contact-modal-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+.contact-modal-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--ink);
+  margin-bottom: 8px;
+  padding-right: 0;
+}
+.contact-modal-sub {
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 24px;
+  word-break: keep-all;
+}
+
+/* 각 섹션 (이메일/폼/카카오) */
+.contact-section {
+  text-align: left;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.contact-section.disabled {
+  opacity: 0.7;
+}
+.contact-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* '준비 중' 뱃지 */
+.contact-soon {
+  display: inline-block;
+  padding: 1px 7px;
+  background: var(--line);
+  color: var(--ink-soft);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.contact-soon-desc {
+  font-size: 12px;
+  color: var(--ink-faint);
+  line-height: 1.6;
+}
+
+/* 이메일 행 */
+.contact-email-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.contact-email-text {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+  color: var(--ink);
+  user-select: all;
+  word-break: break-all;
+  display: flex;
+  align-items: center;
+}
+.contact-copy-btn {
+  padding: 0 14px;
+  background: var(--terra);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.contact-copy-btn:hover {
+  background: #A8431F;
+}
+.contact-copy-btn:active {
+  transform: scale(0.96);
+}
+.contact-copy-btn.copied {
+  background: var(--sage);
+}
+
+/* 구글 폼 링크 */
+.contact-form-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.contact-form-link:hover {
+  border-color: var(--terra);
+  color: var(--terra);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(194, 84, 43, 0.1);
+}
+.contact-form-arrow {
+  font-size: 14px;
+  opacity: 0.7;
+}
+.contact-form-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-faint);
+  padding-left: 2px;
+}
+
+/* 하단 닫기 버튼 */
+.contact-close-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.contact-close-btn:hover {
+  background: var(--card);
+  color: var(--ink);
+}
