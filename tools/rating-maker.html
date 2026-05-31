@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>별점 메이커 - 체험단 매니저</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="블로그 리뷰에 넣기 좋은 별점 평가 카드를 쉽게 만들어보세요">
+<link rel="stylesheet" href="/styles/base.css">
+<style>
+  /* ============================================
+     rating-maker.html (별점 메이커)
+     - 미니 헤더 + 히어로 + 좌우 2분할 (입력 + 미리보기)
+     ============================================ */
+
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+  }
+
+  /* ---- 미니 헤더 ---- */
+  .tool-header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 0;
+  }
+  .tool-header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .tool-header-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .tool-header-back:hover {
+    border-color: var(--terra);
+    color: var(--terra);
+    transform: translateX(-2px);
+  }
+  .tool-header-logo {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .tool-header-logo .mark {
+    color: var(--terra);
+    font-style: italic;
+  }
+
+  /* ---- 히어로 영역 ---- */
+  .tool-hero {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 20px 32px;
+    text-align: center;
+  }
+  .tool-hero-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 36px;
+    color: var(--ink);
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  .tool-hero-title .emoji {
+    margin-right: 8px;
+  }
+  .tool-hero-desc {
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+    margin-bottom: 8px;
+    word-break: keep-all;
+  }
+  .tool-hero-sub {
+    font-size: 13px;
+    color: var(--ink-faint);
+    line-height: 1.7;
+    margin-bottom: 24px;
+    word-break: keep-all;
+  }
+  .tool-hero-cta {
+    display: inline-block;
+    padding: 12px 28px;
+    background: var(--terra);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-decoration: none;
+  }
+  .tool-hero-cta:hover {
+    background: #A8431F;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(194, 84, 43, 0.25);
+  }
+
+  /* ---- 메인 작업 영역 (좌우 분할) ---- */
+  .tool-main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .tool-main {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* 입력 패널 */
+  .panel {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .panel-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--ink);
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* 입력 필드 그룹 */
+  .field-group {
+    margin-bottom: 18px;
+  }
+  .field-group-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field-group input[type="text"],
+  .field-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--ink);
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+  }
+  .field-group input[type="text"]:focus,
+  .field-group textarea:focus {
+    outline: none;
+    border-color: var(--terra);
+  }
+  .field-group textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+
+  /* 카테고리 칩 (선택 버튼) */
+  .category-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .category-chip {
+    padding: 7px 14px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .category-chip:hover {
+    border-color: var(--terra-soft);
+    color: var(--terra);
+  }
+  .category-chip.active {
+    background: var(--terra);
+    color: white;
+    border-color: var(--terra);
+  }
+
+  /* 평가 항목 행 (placeholder, Step 3에서 채움) */
+  .rating-item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .rating-item-name-input {
+    flex: 1;
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    transition: all 0.15s;
+  }
+  .rating-item-name-input:hover {
+    background: var(--card);
+  }
+  .rating-item-name-input:focus {
+    outline: none;
+    background: var(--card);
+    border-color: var(--terra-soft);
+  }
+  .rating-item-stars-placeholder {
+    color: var(--ink-faint);
+    font-size: 14px;
+    letter-spacing: 2px;
+  }
+  .rating-item-delete {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--ink-faint);
+    cursor: pointer;
+    border-radius: 50%;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .rating-item-delete:hover {
+    background: var(--rose);
+    color: white;
+  }
+
+  /* 항목 추가 버튼 */
+  .btn-add-item {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    background: transparent;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    color: var(--ink-soft);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-add-item:hover {
+    border-color: var(--terra);
+    color: var(--terra);
+    background: rgba(194, 84, 43, 0.04);
+  }
+
+  /* 옵션 토글 (총점 표시, 워터마크 등) */
+  .option-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+  }
+  .option-toggle-label {
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--line);
+    border-radius: 22px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .switch-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+  .switch input:checked + .switch-slider {
+    background: var(--terra);
+  }
+  .switch input:checked + .switch-slider::before {
+    transform: translateX(18px);
+  }
+
+  /* ---- 우측 미리보기 ---- */
+  .preview-panel {
+    position: sticky;
+    top: 20px;
+    align-self: start;
+  }
+  @media (max-width: 900px) {
+    .preview-panel { position: static; }
+  }
+
+  .preview-card-wrap {
+    background: linear-gradient(135deg, #F5EEE3 0%, #E8DCC8 100%);
+    border-radius: 16px;
+    padding: 32px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 360px;
+  }
+
+  /* 별점 카드 (실제 다운로드되는 부분) */
+  .rating-card {
+    background: white;
+    border-radius: 14px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 340px;
+    box-shadow: 0 12px 32px rgba(42, 37, 34, 0.12);
+  }
+  .rating-card-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 19px;
+    color: var(--ink);
+    margin-bottom: 6px;
+    word-break: keep-all;
+  }
+  .rating-card-subtitle {
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    margin-bottom: 18px;
+    word-break: keep-all;
+  }
+  .rating-card-items {
+    margin-bottom: 18px;
+  }
+  .rating-card-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .rating-card-item-name {
+    font-weight: 500;
+  }
+  .rating-card-item-stars {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rating-card-item-stars-text {
+    color: #E8B007;
+    letter-spacing: 1px;
+    font-size: 14px;
+  }
+  .rating-card-item-score {
+    color: var(--ink-soft);
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 26px;
+    text-align: right;
+  }
+  .rating-card-total {
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .rating-card-total-label {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .rating-card-total-score {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--terra);
+  }
+  .rating-card-total-score .max {
+    font-size: 13px;
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+  .rating-card-watermark {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.5px;
+  }
+
+  /* 다운로드 버튼 */
+  .download-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-download {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--terra);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 140px;
+  }
+  .btn-download:hover {
+    background: #A8431F;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(194, 84, 43, 0.25);
+  }
+
+  /* 모바일 미세 조정 */
+  @media (max-width: 600px) {
+    .tool-hero { padding: 32px 16px 24px; }
+    .tool-hero-title { font-size: 28px; }
+    .tool-hero-desc { font-size: 14px; }
+    .panel { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============== 미니 헤더 ============== -->
+<header class="tool-header">
+  <div class="tool-header-inner">
+    <a href="/" class="tool-header-back">← 돌아가기</a>
+    <div class="tool-header-logo">체험단 <span class="mark">매니저</span></div>
+  </div>
+</header>
+
+<!-- ============== 히어로 영역 ============== -->
+<section class="tool-hero">
+  <h1 class="tool-hero-title"><span class="emoji">⭐</span>별점 메이커</h1>
+  <p class="tool-hero-desc">블로그 리뷰글에 넣기 좋은 별점 평가 카드를 쉽게 만들어보세요.</p>
+  <p class="tool-hero-sub">맛집, 카페, 숙소, 뷰티 리뷰까지 항목별 만족도를 예쁘게 정리할 수 있어요.</p>
+  <a href="#editor" class="tool-hero-cta">별점 카드 만들기</a>
+</section>
+
+<!-- ============== 메인 작업 영역 ============== -->
+<main class="tool-main" id="editor">
+
+  <!-- 좌측: 입력 패널 -->
+  <div class="panel">
+    <div class="panel-title">📝 정보 입력</div>
+
+    <!-- 카테고리 선택 -->
+    <div class="field-group">
+      <label class="field-group-label">카테고리</label>
+      <div class="category-chips" id="categoryChips">
+        <button class="category-chip active" data-category="restaurant">🍴 맛집</button>
+        <button class="category-chip" data-category="cafe">☕ 카페</button>
+        <button class="category-chip" data-category="stay">🏨 숙소</button>
+        <button class="category-chip" data-category="beauty">💆 뷰티/피부관리</button>
+        <button class="category-chip" data-category="product">📦 제품</button>
+        <button class="category-chip" data-category="custom">✏️ 자유 설정</button>
+      </div>
+    </div>
+
+    <!-- 제목 -->
+    <div class="field-group">
+      <label class="field-group-label" for="inputTitle">제목</label>
+      <input type="text" id="inputTitle" placeholder="예) 성수동 브런치 카페" value="성수동 브런치 카페">
+    </div>
+
+    <!-- 한줄평 -->
+    <div class="field-group">
+      <label class="field-group-label" for="inputSubtitle">한줄평</label>
+      <textarea id="inputSubtitle" placeholder="예) 디저트와 분위기가 특히 만족스러웠어요">디저트와 분위기가 특히 만족스러웠어요</textarea>
+    </div>
+
+    <!-- 평가 항목 (Step 3에서 인터랙션 추가) -->
+    <div class="field-group">
+      <label class="field-group-label">평가 항목</label>
+      <div id="ratingItemsList">
+        <!-- 더미 항목 (Step 2에서 동적 생성으로 교체) -->
+        <div class="rating-item-row">
+          <input class="rating-item-name-input" type="text" value="맛">
+          <span class="rating-item-stars-placeholder">★ ★ ★ ★ ★</span>
+          <button class="rating-item-delete" title="삭제">✕</button>
+        </div>
+        <div class="rating-item-row">
+          <input class="rating-item-name-input" type="text" value="분위기">
+          <span class="rating-item-stars-placeholder">★ ★ ★ ★ ☆</span>
+          <button class="rating-item-delete" title="삭제">✕</button>
+        </div>
+      </div>
+      <button class="btn-add-item">+ 항목 추가</button>
+    </div>
+
+    <!-- 옵션 -->
+    <div class="field-group">
+      <label class="field-group-label">옵션</label>
+      <div class="option-toggle">
+        <span class="option-toggle-label">총점 표시</span>
+        <label class="switch">
+          <input type="checkbox" id="optShowTotal" checked>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+      <div class="option-toggle">
+        <span class="option-toggle-label">워터마크 표시</span>
+        <label class="switch">
+          <input type="checkbox" id="optShowWatermark" checked>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 우측: 미리보기 -->
+  <div class="preview-panel">
+    <div class="panel">
+      <div class="panel-title">👀 미리보기</div>
+
+      <div class="preview-card-wrap">
+        <!-- 실제로 다운로드되는 카드 -->
+        <div class="rating-card" id="previewCard">
+          <div class="rating-card-title" id="previewTitle">성수동 브런치 카페</div>
+          <div class="rating-card-subtitle" id="previewSubtitle">디저트와 분위기가 특히 만족스러웠어요</div>
+
+          <div class="rating-card-items" id="previewItems">
+            <!-- 더미 항목들 (Step 2에서 동적 생성) -->
+            <div class="rating-card-item">
+              <span class="rating-card-item-name">맛</span>
+              <span class="rating-card-item-stars">
+                <span class="rating-card-item-stars-text">★★★★★</span>
+                <span class="rating-card-item-score">5.0</span>
+              </span>
+            </div>
+            <div class="rating-card-item">
+              <span class="rating-card-item-name">분위기</span>
+              <span class="rating-card-item-stars">
+                <span class="rating-card-item-stars-text">★★★★☆</span>
+                <span class="rating-card-item-score">4.5</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="rating-card-total" id="previewTotal">
+            <span class="rating-card-total-label">총점</span>
+            <span class="rating-card-total-score">4.8 <span class="max">/ 5.0</span></span>
+          </div>
+
+          <div class="rating-card-watermark" id="previewWatermark">made with 체험단 매니저</div>
+        </div>
+      </div>
+
+      <div class="download-actions">
+        <button class="btn-download" id="btnDownload">⬇ PNG로 저장하기</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>
