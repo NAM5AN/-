@@ -226,6 +226,7 @@
     font-size: 13px;
     color: var(--ink);
     transition: all 0.15s;
+    min-width: 0;
   }
   .rating-item-name-input:hover {
     background: var(--card);
@@ -250,10 +251,50 @@
     border-radius: 50%;
     font-size: 14px;
     transition: all 0.15s;
+    flex-shrink: 0;
   }
   .rating-item-delete:hover {
     background: var(--rose);
     color: white;
+  }
+
+  /* ---- 별점 클릭 위젯 (입력 패널용, Step 3) ---- */
+  .star-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    user-select: none;
+  }
+  .star-cell {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+  }
+  .star-cell svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .star-hit {
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    z-index: 2;
+  }
+  .star-hit.left { left: 0; }
+  .star-hit.right { right: 0; }
+  .star-cell:hover svg .star-base { fill: #FFE082; }
+  .star-cell:active { transform: scale(0.92); }
+
+  .star-score-text {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    min-width: 26px;
+    text-align: right;
   }
 
   /* 항목 추가 버튼 */
@@ -388,6 +429,17 @@
     color: #E8B007;
     letter-spacing: 1px;
     font-size: 14px;
+  }
+  /* 미리보기 카드용 SVG 별 (작은 크기) */
+  .preview-stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+  }
+  .preview-stars svg {
+    width: 14px;
+    height: 14px;
+    display: block;
   }
   .rating-card-item-score {
     color: var(--ink-soft);
@@ -624,14 +676,78 @@
     showWatermark: true
   };
 
-  // ============== 별 표시 (텍스트) ==============
-  // score는 0.5 단위 (0.5 ~ 5.0). 정수 부분은 ★, 0.5는 ⯨, 나머지는 ☆
-  // 폰트마다 반쪽 별 글리프가 다르게 보일 수 있어서 일단 ★/☆로 반올림 표시.
-  // (Step 3에서 SVG 별로 교체해 0.5 정확히 보이게 할 거임)
-  function starsText(score) {
-    const filled = Math.round(score); // 0.5는 일단 반올림
-    const empty = 5 - filled;
-    return '★'.repeat(filled) + '☆'.repeat(empty);
+  // ============== 별 SVG ==============
+  // score (0~5, 0.5 단위)를 받아 5개 별 SVG HTML을 반환.
+  // 각 별은 linearGradient의 offset으로 채워진 비율 결정.
+  // full(1.0) / half(0.5) / empty(0)
+  // size: 미리보기는 14px, 입력 패널은 22px
+  const STAR_FILL = '#E8B007';
+  const STAR_EMPTY = '#E5E0D8';
+  const STAR_PATH = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
+
+  // 한 개의 별 SVG (고유한 gradient id 필요)
+  function starSvg(fillRatio, idPrefix) {
+    // fillRatio: 0, 0.5, 1
+    const gid = `g${idPrefix}_${Math.random().toString(36).slice(2, 8)}`;
+    if (fillRatio === 1) {
+      return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path class="star-base" d="${STAR_PATH}" fill="${STAR_FILL}"/>
+      </svg>`;
+    }
+    if (fillRatio === 0) {
+      return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path class="star-base" d="${STAR_PATH}" fill="${STAR_EMPTY}"/>
+      </svg>`;
+    }
+    // 반쪽 별 (왼쪽만 색칠)
+    return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="${gid}">
+          <stop offset="50%" stop-color="${STAR_FILL}"/>
+          <stop offset="50%" stop-color="${STAR_EMPTY}"/>
+        </linearGradient>
+      </defs>
+      <path class="star-base" d="${STAR_PATH}" fill="url(#${gid})"/>
+    </svg>`;
+  }
+
+  // 5개 별 SVG 묶음 반환 (미리보기용)
+  // score (0~5)를 0.5 단위로 처리
+  function previewStarsHtml(score) {
+    const safe = Math.max(0, Math.min(5, score));
+    let html = '<span class="preview-stars">';
+    for (let i = 1; i <= 5; i++) {
+      let fill;
+      if (safe >= i) fill = 1;
+      else if (safe >= i - 0.5) fill = 0.5;
+      else fill = 0;
+      html += starSvg(fill, 'p' + i);
+    }
+    html += '</span>';
+    return html;
+  }
+
+  // 입력 패널의 클릭 가능한 별점 위젯 HTML
+  // 각 별을 좌/우 절반으로 나눠 클릭 hit 영역 둠
+  function inputStarsHtml(itemIdx, score) {
+    const safe = Math.max(0, Math.min(5, score));
+    let html = '<div class="star-rating" data-idx="' + itemIdx + '">';
+    for (let i = 1; i <= 5; i++) {
+      let fill;
+      if (safe >= i) fill = 1;
+      else if (safe >= i - 0.5) fill = 0.5;
+      else fill = 0;
+      html += `
+        <div class="star-cell" data-star="${i}">
+          ${starSvg(fill, 'i' + itemIdx + '_' + i)}
+          <div class="star-hit left" data-value="${i - 0.5}"></div>
+          <div class="star-hit right" data-value="${i}"></div>
+        </div>
+      `;
+    }
+    html += `<span class="star-score-text">${formatScore(score)}</span>`;
+    html += '</div>';
+    return html;
   }
 
   function formatScore(score) {
@@ -661,7 +777,7 @@
       <div class="rating-card-item">
         <span class="rating-card-item-name">${escapeHtml(it.name)}</span>
         <span class="rating-card-item-stars">
-          <span class="rating-card-item-stars-text">${starsText(it.score)}</span>
+          ${previewStarsHtml(it.score)}
           <span class="rating-card-item-score">${formatScore(it.score)}</span>
         </span>
       </div>
@@ -694,24 +810,40 @@
     list.innerHTML = state.items.map((it, idx) => `
       <div class="rating-item-row" data-idx="${idx}">
         <input class="rating-item-name-input" type="text" value="${escapeAttr(it.name)}" data-idx="${idx}">
-        <span class="rating-item-stars-placeholder">${starsText(it.score)}</span>
+        ${inputStarsHtml(idx, it.score)}
         <button class="rating-item-delete" title="삭제" data-idx="${idx}">✕</button>
       </div>
     `).join('');
 
-    // 항목 이름 수정 이벤트 (위임)
+    // 항목 이름 수정 이벤트
     list.querySelectorAll('.rating-item-name-input').forEach(input => {
       input.addEventListener('input', (e) => {
         const idx = parseInt(e.target.dataset.idx);
         if (state.items[idx]) {
           state.items[idx].name = e.target.value;
-          // 미리보기 부분만 갱신 (입력 패널 재렌더 X — 포커스 유지 위해)
           renderPreviewOnly();
         }
       });
     });
 
-    // 삭제 이벤트 (Step 4에서 본격 구현, 일단 동작만)
+    // 별점 클릭 이벤트 (위임)
+    // .star-hit 클릭 → data-value(0.5/1.0/1.5...)로 점수 설정
+    list.querySelectorAll('.star-rating').forEach(widget => {
+      const itemIdx = parseInt(widget.dataset.idx);
+      widget.querySelectorAll('.star-hit').forEach(hit => {
+        hit.addEventListener('click', () => {
+          const newScore = parseFloat(hit.dataset.value);
+          if (state.items[itemIdx]) {
+            state.items[itemIdx].score = newScore;
+            // 입력 패널 + 미리보기 둘 다 다시 그림
+            // (별 모양 갱신 필요해서 전체 재렌더)
+            render();
+          }
+        });
+      });
+    });
+
+    // 삭제 이벤트
     list.querySelectorAll('.rating-item-delete').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const idx = parseInt(e.currentTarget.dataset.idx);
@@ -733,7 +865,7 @@
       <div class="rating-card-item">
         <span class="rating-card-item-name">${escapeHtml(it.name)}</span>
         <span class="rating-card-item-stars">
-          <span class="rating-card-item-stars-text">${starsText(it.score)}</span>
+          ${previewStarsHtml(it.score)}
           <span class="rating-card-item-score">${formatScore(it.score)}</span>
         </span>
       </div>
