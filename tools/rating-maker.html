@@ -6,6 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="블로그 리뷰에 넣기 좋은 별점 평가 카드를 쉽게 만들어보세요">
 <link rel="stylesheet" href="/styles/base.css">
+<!-- html2canvas: PNG 다운로드용 (Step 6) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   /* ============================================
      rating-maker.html (별점 메이커)
@@ -817,6 +819,26 @@
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(194, 84, 43, 0.25);
   }
+  .btn-download:disabled {
+    opacity: 0.6;
+    cursor: wait;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-download:disabled:hover {
+    background: var(--terra);
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* 다운로드 안내 (옵션) */
+  .download-hint {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-align: center;
+    line-height: 1.5;
+  }
 
   /* 모바일 미세 조정 */
   @media (max-width: 600px) {
@@ -972,6 +994,7 @@
       <div class="download-actions">
         <button class="btn-download" id="btnDownload">⬇ PNG로 저장하기</button>
       </div>
+      <div class="download-hint">고화질(2배) PNG로 저장돼요</div>
     </div>
   </div>
 
@@ -1265,6 +1288,82 @@
   }
   function escapeAttr(s) { return escapeHtml(s); }
 
+  // ============== PNG 다운로드 ==============
+  // 미리보기 카드를 html2canvas로 캡쳐 → PNG 다운로드
+  async function downloadAsPng() {
+    const btn = document.getElementById('btnDownload');
+    if (!btn || btn.disabled) return;
+
+    // html2canvas 로드 확인
+    if (typeof html2canvas === 'undefined') {
+      alert('다운로드 라이브러리를 불러오지 못했어요. 새로고침 후 다시 시도해주세요.');
+      return;
+    }
+
+    const card = document.getElementById('previewCard');
+    if (!card) return;
+
+    // 버튼 비활성화 + 텍스트 변경
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '🎨 저장 중...';
+
+    try {
+      // 폰트가 모두 로드될 때까지 대기 (첫 캡쳐 시 한글 폰트 깨짐 방지)
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+
+      // html2canvas 옵션
+      // - scale: 2 → 레티나 고해상도 (블로그 업로드 시 선명함)
+      // - useCORS: true → 외부 폰트/이미지 캡쳐 시도
+      // - backgroundColor: null → 카드 자체 배경만 캡쳐 (투명 영역 제거)
+      // - logging: false → 콘솔 깔끔하게
+      const canvas = await html2canvas(card, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+        logging: false
+      });
+
+      // 파일명: 제목 기반 (특수문자 제거, 길이 제한)
+      const safeTitle = (state.title || '별점카드')
+        .trim()
+        .replace(/[\\\/:*?"<>|]/g, '') // 파일명 금지문자 제거
+        .slice(0, 30) || '별점카드';
+      const filename = `${safeTitle}-별점카드.png`;
+
+      // Canvas → Blob → 다운로드
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          throw new Error('Blob 생성 실패');
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // 메모리 정리
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        // 성공 피드백
+        btn.textContent = '✓ 저장됨!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }, 1500);
+      }, 'image/png');
+
+    } catch (err) {
+      console.error('[PNG 다운로드 실패]', err);
+      alert('저장 중 오류가 발생했어요. 다시 시도해주세요.');
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  }
+
   // ============== 이벤트 ==============
   function init() {
     // 템플릿 카드 클릭
@@ -1343,6 +1442,9 @@
       state.items = preset.map(name => ({ name, score: 5.0 }));
       render();
     });
+
+    // 다운로드 버튼
+    document.getElementById('btnDownload').addEventListener('click', downloadAsPng);
 
     // 최초 렌더
     render();
