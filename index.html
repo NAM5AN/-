@@ -92,6 +92,7 @@
     <button class="tab active" data-view="active">진행 중 <span class="count" id="cntActive">0</span></button>
     <button class="tab" data-view="map">지도</button>
     <button class="tab" data-view="completed">완료 <span class="count" id="cntDone">0</span></button>
+    <button class="tab" data-view="tools">🛠️ 도구</button>
   </nav>
 
   <!-- 진행 중 뷰 -->
@@ -153,6 +154,22 @@
       <button class="sort-dir-btn" id="sortDirCompleted" title="정렬 방향 전환" aria-label="정렬 방향 전환">↓</button>
     </div>
     <div id="completedList"></div>
+  </section>
+
+  <!-- 도구 뷰 (블로그 작성 보조 도구 모음) -->
+  <section id="viewTools" style="display:none;">
+    <div class="tools-header">
+      <h2 class="tools-title">🛠️ 블로그 작성 도구</h2>
+      <p class="tools-sub">체험단 리뷰 작성에 유용한 도구들을 모아둘 공간이에요.</p>
+    </div>
+    <div class="tools-empty">
+      <div class="tools-empty-icon">🚧</div>
+      <div class="tools-empty-title">곧 도구들이 추가될 거예요</div>
+      <div class="tools-empty-desc">
+        글자 수 카운터, 해시태그 정리, 별점 만들기 등<br>
+        블로그 작성에 도움이 되는 도구를 차차 채울게요.
+      </div>
+    </div>
   </section>
 
   <!-- App Footer (약관/방침 링크) -->
@@ -1591,6 +1608,13 @@
 
   // ============== View Switching ==============
   function switchView(view) {
+    // 도구 탭: 게스트는 접근 차단 (로그인 안내)
+    if (view === 'tools' && isGuestMode) {
+      showToast('도구는 로그인 후 사용할 수 있어요', 'success');
+      openLoginModal();
+      return;
+    }
+
     currentView = view;
     document.querySelectorAll('.tab').forEach(t => {
       t.classList.toggle('active', t.dataset.view === view);
@@ -1598,6 +1622,7 @@
     document.getElementById('viewActive').style.display = view === 'active' ? '' : 'none';
     document.getElementById('viewMap').style.display = view === 'map' ? '' : 'none';
     document.getElementById('viewCompleted').style.display = view === 'completed' ? '' : 'none';
+    document.getElementById('viewTools').style.display = view === 'tools' ? '' : 'none';
 
     // 지도 탭 진입 시 게스트 모드라면 안내바 표시
     const mapNotice = document.getElementById('guestMapNotice');
