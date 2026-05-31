@@ -162,13 +162,41 @@
       <h2 class="tools-title">🛠️ 블로그 작성 도구</h2>
       <p class="tools-sub">체험단 리뷰 작성에 유용한 도구들을 모아둘 공간이에요.</p>
     </div>
-    <div class="tools-empty">
-      <div class="tools-empty-icon">🚧</div>
-      <div class="tools-empty-title">곧 도구들이 추가될 거예요</div>
-      <div class="tools-empty-desc">
-        글자 수 카운터, 해시태그 정리, 별점 만들기 등<br>
-        블로그 작성에 도움이 되는 도구를 차차 채울게요.
-      </div>
+    <div class="tools-grid">
+      <!-- 별점 텍스트 메이커 (준비 중) -->
+      <a href="#" class="tool-card disabled" data-tool="rating-maker" aria-disabled="true">
+        <div class="tool-card-icon">⭐</div>
+        <div class="tool-card-name">별점 메이커</div>
+        <div class="tool-card-desc">⭐⭐⭐⭐⭐ 텍스트로 별점을<br>쉽게 만들어요</div>
+        <div class="tool-card-badge">준비 중</div>
+      </a>
+
+      <!-- 글자 수 카운터 (준비 중) -->
+      <a href="#" class="tool-card disabled" data-tool="char-counter" aria-disabled="true">
+        <div class="tool-card-icon">📝</div>
+        <div class="tool-card-name">글자 수 카운터</div>
+        <div class="tool-card-desc">한글·공백 포함/제외<br>다양한 기준으로 카운트</div>
+        <div class="tool-card-badge">준비 중</div>
+      </a>
+
+      <!-- 해시태그 정리 (준비 중) -->
+      <a href="#" class="tool-card disabled" data-tool="hashtag-helper" aria-disabled="true">
+        <div class="tool-card-icon">#️⃣</div>
+        <div class="tool-card-name">해시태그 정리</div>
+        <div class="tool-card-desc">중복 제거, # 자동 추가<br>한 줄로 정리</div>
+        <div class="tool-card-badge">준비 중</div>
+      </a>
+
+      <!-- 이모지 모음 (준비 중) -->
+      <a href="#" class="tool-card disabled" data-tool="emoji-pack" aria-disabled="true">
+        <div class="tool-card-icon">😊</div>
+        <div class="tool-card-name">이모지 모음</div>
+        <div class="tool-card-desc">맛집·뷰티·일상별<br>자주 쓰는 이모지 모음</div>
+        <div class="tool-card-badge">준비 중</div>
+      </a>
+    </div>
+    <div class="tools-footer-note">
+      💡 어떤 도구가 더 필요한지 알려주세요. 푸터의 [문의]에서 의견 보내실 수 있어요.
     </div>
   </section>
 
@@ -2266,6 +2294,24 @@
     });
   }
 
+  // ============== 도구 탭 (블로그 작성 도구) ==============
+  // 현재는 모든 도구가 '준비 중' 상태. 클릭 시 안내 토스트만.
+  // 실제 도구 페이지가 만들어지면 .disabled 클래스를 제거하고
+  // href="/tools/xxx.html"로 바꾸면 그대로 이동 가능.
+  function initTools() {
+    document.querySelectorAll('.tool-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        // 비활성 카드: 클릭 무효 + 안내
+        if (card.classList.contains('disabled')) {
+          e.preventDefault();
+          const name = card.querySelector('.tool-card-name')?.textContent || '도구';
+          showToast(`${name}는 곧 추가될 예정이에요`, 'success');
+        }
+        // 활성 카드는 기본 동작(href 이동) 그대로 실행
+      });
+    });
+  }
+
   // 게스트 모드일 때 UI 요소 일부 조정 (안내 메시지 등)
   // 부팅 시 + 로그인/로그아웃으로 모드 전환 시 호출됨
   function applyGuestModeUI() {
@@ -2957,6 +3003,7 @@
   (async function() {
     initLogin();
     initHelp();
+    initTools();
 
     let appInitialized = false;
     let bootInProgress = false;
