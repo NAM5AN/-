@@ -564,6 +564,233 @@
     letter-spacing: 0.5px;
   }
 
+  /* ============================================
+     템플릿 변형 (Step 5)
+     기본 = minimal (위 .rating-card 그대로)
+     beige, blog는 modifier 클래스로 덮어쓰기
+     ============================================ */
+
+  /* --- beige: 감성 베이지형 --- */
+  .rating-card.tpl-beige {
+    background: #FAF6EE;
+    border: 1px solid #E8DCC8;
+    border-radius: 20px;
+    padding: 32px 26px;
+    box-shadow: 0 16px 40px rgba(124, 96, 60, 0.15);
+  }
+  .rating-card.tpl-beige .rating-card-title {
+    font-size: 21px;
+    color: #4A3F33;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .rating-card.tpl-beige .rating-card-subtitle {
+    text-align: center;
+    color: #7A6B5C;
+    font-style: italic;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px dashed #D8C8B0;
+  }
+  .rating-card.tpl-beige .rating-card-item {
+    padding: 8px 0;
+  }
+  .rating-card.tpl-beige .rating-card-total {
+    border-top: 1px dashed #D8C8B0;
+    padding-top: 16px;
+    margin-top: 4px;
+  }
+  .rating-card.tpl-beige .rating-card-total-score {
+    color: #C2542B;
+  }
+  .rating-card.tpl-beige .rating-card-watermark {
+    color: #B5A693;
+  }
+
+  /* --- blog: 블로그 본문형 --- */
+  .rating-card.tpl-blog {
+    background: white;
+    border: none;
+    border-left: 4px solid var(--terra);
+    border-radius: 4px;
+    padding: 22px 24px 22px 28px;
+    box-shadow: 0 4px 12px rgba(42, 37, 34, 0.06);
+    max-width: 360px;
+  }
+  .rating-card.tpl-blog .rating-card-title {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+  .rating-card.tpl-blog .rating-card-subtitle {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+    padding: 0;
+    border: none;
+  }
+  .rating-card.tpl-blog .rating-card-items {
+    margin-bottom: 14px;
+  }
+  .rating-card.tpl-blog .rating-card-item {
+    padding: 4px 0;
+    font-size: 12px;
+  }
+  .rating-card.tpl-blog .rating-card-item-name {
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  .rating-card.tpl-blog .rating-card-total {
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  .rating-card.tpl-blog .rating-card-total-label {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .rating-card.tpl-blog .rating-card-total-score {
+    font-family: var(--font-body);
+    font-size: 18px;
+  }
+  .rating-card.tpl-blog .rating-card-watermark {
+    margin-top: 12px;
+    text-align: right;
+    font-size: 9px;
+  }
+
+  /* --- 미리보기 배경도 템플릿에 따라 살짝 변화 --- */
+  .preview-card-wrap.bg-minimal {
+    background: linear-gradient(135deg, #F5F2EC 0%, #E8E2D6 100%);
+  }
+  .preview-card-wrap.bg-beige {
+    background: linear-gradient(135deg, #F5EEE3 0%, #E8DCC8 100%);
+  }
+  .preview-card-wrap.bg-blog {
+    background: linear-gradient(135deg, #F0EBE2 0%, #DDD4C2 100%);
+  }
+
+  /* ============================================
+     템플릿 선택 카드 (입력 패널)
+     ============================================ */
+  .template-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .template-card {
+    position: relative;
+    padding: 14px 8px 10px;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .template-card:hover {
+    border-color: var(--terra-soft);
+    transform: translateY(-1px);
+  }
+  .template-card.active {
+    border-color: var(--terra);
+    background: rgba(194, 84, 43, 0.04);
+  }
+  .template-card-preview {
+    width: 100%;
+    height: 60px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background-position: center;
+    background-size: cover;
+  }
+  /* 각 템플릿 미리보기 썸네일 (CSS로 간단히) */
+  .template-card[data-template="minimal"] .template-card-preview {
+    background: white;
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .template-card[data-template="minimal"] .template-card-preview::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 10px; right: 10px;
+    height: 4px;
+    background: var(--ink-faint);
+    border-radius: 2px;
+    opacity: 0.5;
+  }
+  .template-card[data-template="minimal"] .template-card-preview::after {
+    content: '★★★★★';
+    position: absolute;
+    bottom: 10px; left: 10px;
+    color: #E8B007;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  .template-card[data-template="beige"] .template-card-preview {
+    background: #FAF6EE;
+    border: 1px solid #E8DCC8;
+    border-radius: 8px;
+    position: relative;
+  }
+  .template-card[data-template="beige"] .template-card-preview::before {
+    content: '';
+    position: absolute;
+    top: 14px; left: 16px; right: 16px;
+    height: 3px;
+    background: #C2A88A;
+    border-radius: 2px;
+  }
+  .template-card[data-template="beige"] .template-card-preview::after {
+    content: '★★★★★';
+    position: absolute;
+    bottom: 10px; left: 0; right: 0;
+    text-align: center;
+    color: #E8B007;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  .template-card[data-template="blog"] .template-card-preview {
+    background: white;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--terra);
+    border-radius: 3px;
+    position: relative;
+  }
+  .template-card[data-template="blog"] .template-card-preview::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 12px; right: 10px;
+    height: 3px;
+    background: var(--ink-soft);
+    border-radius: 2px;
+  }
+  .template-card[data-template="blog"] .template-card-preview::after {
+    content: '★★★★★';
+    position: absolute;
+    bottom: 10px; left: 12px;
+    color: #E8B007;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  .template-card-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 1px;
+  }
+  .template-card.active .template-card-name {
+    color: var(--terra);
+  }
+  .template-card-desc {
+    font-size: 10px;
+    color: var(--ink-faint);
+    line-height: 1.4;
+  }
+
   /* 다운로드 버튼 */
   .download-actions {
     margin-top: 16px;
@@ -662,6 +889,28 @@
       </div>
     </div>
 
+    <!-- 디자인 템플릿 (Step 5) -->
+    <div class="field-group">
+      <label class="field-group-label">디자인 템플릿</label>
+      <div class="template-cards" id="templateCards">
+        <button class="template-card active" data-template="minimal">
+          <div class="template-card-preview"></div>
+          <div class="template-card-name">미니멀</div>
+          <div class="template-card-desc">깔끔한 카드형</div>
+        </button>
+        <button class="template-card" data-template="beige">
+          <div class="template-card-preview"></div>
+          <div class="template-card-name">감성 베이지</div>
+          <div class="template-card-desc">따뜻한 느낌</div>
+        </button>
+        <button class="template-card" data-template="blog">
+          <div class="template-card-preview"></div>
+          <div class="template-card-name">블로그</div>
+          <div class="template-card-desc">본문 인용구형</div>
+        </button>
+      </div>
+    </div>
+
     <!-- 옵션 -->
     <div class="field-group">
       <label class="field-group-label">옵션</label>
@@ -749,6 +998,7 @@
   // ============== 상태 ==============
   const state = {
     category: 'restaurant',
+    template: 'minimal',  // minimal | beige | blog
     title: '성수동 브런치 카페',
     subtitle: '디저트와 분위기가 특히 만족스러웠어요',
     // Step 3에서 별점 인터랙션 추가. 일단 기본 5.0
@@ -843,9 +1093,25 @@
     return sum / items.length;
   }
 
+  // 미리보기 카드에 템플릿 클래스 적용 (배경도 같이 전환)
+  function applyTemplate() {
+    const card = document.getElementById('previewCard');
+    const wrap = card?.parentElement; // .preview-card-wrap
+    if (!card) return;
+    // 카드: tpl-{name} 클래스만 유지
+    card.classList.remove('tpl-minimal', 'tpl-beige', 'tpl-blog');
+    card.classList.add('tpl-' + state.template);
+    // 배경: bg-{name}
+    if (wrap) {
+      wrap.classList.remove('bg-minimal', 'bg-beige', 'bg-blog');
+      wrap.classList.add('bg-' + state.template);
+    }
+  }
+
   // ============== 렌더링 ==============
   // 미리보기 카드 전체를 state 기반으로 다시 그림
   function render() {
+    applyTemplate();
     // 제목 / 한줄평
     document.getElementById('previewTitle').textContent = state.title || ' ';
     const subEl = document.getElementById('previewSubtitle');
@@ -958,6 +1224,7 @@
 
   // 미리보기만 갱신 (입력 패널 재렌더 안 함 → 포커스 유지)
   function renderPreviewOnly() {
+    applyTemplate();
     document.getElementById('previewTitle').textContent = state.title || ' ';
     const subEl = document.getElementById('previewSubtitle');
     subEl.textContent = state.subtitle || '';
@@ -1000,6 +1267,20 @@
 
   // ============== 이벤트 ==============
   function init() {
+    // 템플릿 카드 클릭
+    document.querySelectorAll('.template-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const tpl = card.dataset.template;
+        if (!tpl) return;
+        state.template = tpl;
+        // 활성 카드 갱신
+        document.querySelectorAll('.template-card').forEach(c => {
+          c.classList.toggle('active', c.dataset.template === tpl);
+        });
+        renderPreviewOnly();
+      });
+    });
+
     // 카테고리 칩 클릭 — 항목 자동 교체
     document.querySelectorAll('.category-chip').forEach(chip => {
       chip.addEventListener('click', () => {
