@@ -2137,6 +2137,51 @@
     }
   }
 
+  // 이벤트 리스너 등록 — 부팅 시 한 번 호출
+  function initHelp() {
+    // 헤더 [?] 버튼 클릭 → 모달 열기
+    const btn = document.getElementById('btnHelp');
+    if (btn) btn.addEventListener('click', openHelpModal);
+
+    // 모달 닫기 (✕ 버튼)
+    const closeBtn = document.getElementById('helpModalClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeHelpModal);
+
+    // 하단 [시작하기 →] / [건너뛰기] 버튼
+    const skip = document.getElementById('helpSkip');
+    if (skip) skip.addEventListener('click', closeHelpModal);
+
+    // 페이지 넘김 ◀ ▶ 버튼
+    const prev = document.getElementById('helpPrev');
+    const next = document.getElementById('helpNext');
+    if (prev) prev.addEventListener('click', helpPrevPage);
+    if (next) next.addEventListener('click', helpNextPage);
+
+    // 점 인디케이터 클릭으로 바로 이동
+    document.querySelectorAll('.help-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        currentHelpPage = parseInt(dot.dataset.page);
+        renderHelpPage();
+      });
+    });
+
+    // 배경 클릭으로 닫기
+    const bg = document.getElementById('helpModalBg');
+    if (bg) {
+      bg.addEventListener('click', (e) => {
+        if (e.target === bg) closeHelpModal();
+      });
+    }
+
+    // 키보드: 모달이 열려 있을 때만 ←/→/Esc 작동
+    document.addEventListener('keydown', (e) => {
+      if (!bg || !bg.classList.contains('active')) return;
+      if (e.key === 'ArrowLeft') helpPrevPage();
+      else if (e.key === 'ArrowRight') helpNextPage();
+      else if (e.key === 'Escape') closeHelpModal();
+    });
+  }
+
   // 게스트 모드일 때 UI 요소 일부 조정 (안내 메시지 등)
   // 부팅 시 + 로그인/로그아웃으로 모드 전환 시 호출됨
   function applyGuestModeUI() {
@@ -2800,6 +2845,7 @@
   // ============== Boot ==============
   (async function() {
     initLogin();
+    initHelp();
 
     let appInitialized = false;
     let bootInProgress = false;
