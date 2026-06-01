@@ -260,3 +260,24 @@ header {
   .app-footer { font-size: 11px; }
   .app-footer .footer-sep { margin: 0 5px; }
 }
+/* ---- Brand Logo (메인 헤더) ---- */
+.brand-logo {
+  margin: 0;
+  line-height: 0;
+}
+.brand-logo a {
+  display: inline-block;
+  text-decoration: none;
+}
+.brand-logo img {
+  height: 38px;
+  width: auto;
+  display: block;
+}
+
+/* 모바일에선 작게 */
+@media (max-width: 600px) {
+  .brand-logo img {
+    height: 30px;
+  }
+}
