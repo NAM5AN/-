@@ -925,3 +925,22 @@
   background: var(--card);
   color: var(--ink);
 }
+/* ---- Login Logo (로그인 화면) ---- */
+.login-logo {
+  text-align: center;
+  margin-bottom: 6px;
+  padding: 4px 0;
+}
+.login-logo img {
+  max-width: 280px;
+  width: 80%;
+  height: auto;
+  display: inline-block;
+}
+
+/* 모바일에서 살짝 작게 */
+@media (max-width: 600px) {
+  .login-logo img {
+    max-width: 220px;
+  }
+}
