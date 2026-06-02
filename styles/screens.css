@@ -944,3 +944,116 @@
     max-width: 220px;
   }
 }
+/* ============================================
+   News View (소식 탭)
+   ============================================ */
+.news-header {
+  margin-bottom: 24px;
+}
+.news-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.news-sub {
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 글 목록 */
+.news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 글 카드 (한 건) */
+.news-post {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: all 0.18s;
+}
+/* 일반 글 (제목만, 클릭하면 모달) — 향후 추가될 글 대비 */
+.news-post:not(.expanded) {
+  cursor: pointer;
+}
+.news-post:not(.expanded):hover {
+  border-color: var(--terra-soft);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(42, 37, 34, 0.06);
+}
+/* 펼침 글 (이번 광고주 모집 같이 항상 펼쳐진 글) */
+.news-post.expanded {
+  cursor: default;
+}
+
+/* 글 헤더 */
+.news-post-header {
+  padding: 18px 20px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+}
+.news-post-badge {
+  padding: 3px 10px;
+  background: var(--terra);
+  color: white;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.news-post-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--ink);
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  word-break: keep-all;
+}
+.news-post-date {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* 글 본문 */
+.news-post-content {
+  padding: 0;
+}
+/* 펼침 글일 때만 본문 padding (이미지가 카드 끝까지 안 가게) */
+.news-post.expanded .news-post-content {
+  padding: 16px 20px 20px;
+}
+
+/* 본문 이미지 — 어떤 비율이든 대응 */
+.news-post-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  background: var(--card); /* 이미지 로딩 전 placeholder 색 */
+}
+
+/* 모바일 */
+@media (max-width: 600px) {
+  .news-post-header {
+    padding: 14px 16px 12px;
+  }
+  .news-post-title {
+    font-size: 15px;
+  }
+  .news-post.expanded .news-post-content {
+    padding: 12px 14px 16px;
+  }
+}
