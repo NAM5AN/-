@@ -99,6 +99,7 @@
     <button class="tab" data-view="map">지도</button>
     <button class="tab" data-view="completed">완료 <span class="count" id="cntDone">0</span></button>
     <button class="tab" data-view="tools">🛠️ 도구</button>
+    <button class="tab" data-view="news">📢 소식</button>
   </nav>
 
   <!-- 진행 중 뷰 -->
@@ -203,6 +204,34 @@
     </div>
     <div class="tools-footer-note">
       💡 어떤 도구가 더 필요한지 알려주세요. 하단의 [문의]에서 의견 보내실 수 있어요.
+    </div>
+  </section>
+
+  <!-- 소식 뷰 (공지/이벤트/모집 등) -->
+  <section id="viewNews" style="display:none;">
+    <div class="news-header">
+      <h2 class="news-title">📢 소식</h2>
+      <p class="news-sub">체험단 매니저의 새로운 소식과 공지사항을 확인할 수 있어요.</p>
+    </div>
+
+    <!-- 글 목록 (정적 — 현재 1건. 글 추가 시 .news-post 블록 복사) -->
+    <div class="news-list">
+
+      <!-- 광고주 모집 (이미지 펼침형) -->
+      <article class="news-post expanded">
+        <header class="news-post-header">
+          <div class="news-post-badge">📣 모집</div>
+          <h3 class="news-post-title">광고주 모집</h3>
+          <time class="news-post-date" datetime="2026-06-02">2026.06.02</time>
+        </header>
+        <div class="news-post-content">
+          <picture>
+            <source media="(max-width: 768px)" srcset="/images/ads_mo.png">
+            <img src="/images/ads_pc.png" alt="광고주 모집 안내" class="news-post-image" />
+          </picture>
+        </div>
+      </article>
+
     </div>
   </section>
 
@@ -1704,6 +1733,7 @@
     document.getElementById('viewMap').style.display = view === 'map' ? '' : 'none';
     document.getElementById('viewCompleted').style.display = view === 'completed' ? '' : 'none';
     document.getElementById('viewTools').style.display = view === 'tools' ? '' : 'none';
+    document.getElementById('viewNews').style.display = view === 'news' ? '' : 'none';
 
     // 지도 탭 진입 시 게스트 모드라면 안내바 표시
     const mapNotice = document.getElementById('guestMapNotice');
