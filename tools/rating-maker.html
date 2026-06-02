@@ -54,14 +54,19 @@
     transform: translateX(-2px);
   }
   .tool-header-logo {
-    font-family: var(--font-serif);
-    font-weight: 700;
-    font-size: 16px;
-    color: var(--ink);
+    display: inline-block;
+    line-height: 0;
+    text-decoration: none;
   }
-  .tool-header-logo .mark {
-    color: var(--terra);
-    font-style: italic;
+  .tool-header-logo img {
+    height: 28px;
+    width: auto;
+    display: block;
+  }
+  @media (max-width: 600px) {
+    .tool-header-logo img {
+      height: 24px;
+    }
   }
 
   /* ---- 히어로 영역 ---- */
@@ -875,7 +880,9 @@
 <header class="tool-header">
   <div class="tool-header-inner">
     <a href="/" class="tool-header-back">← 돌아가기</a>
-    <div class="tool-header-logo">체험단 <span class="mark">매니저</span></div>
+    <a href="/" class="tool-header-logo" aria-label="체험단 매니저 홈">
+      <img src="/images/logo.png" alt="체험단 매니저" />
+    </a>
   </div>
 </header>
 
