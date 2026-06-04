@@ -29,17 +29,28 @@
     background: var(--bg);
     color:var(--ink);font-family:var(--sans);line-height:1.5;min-height:100vh;padding:0 0 80px;
   }
-  .wrap{max-width:880px;margin:0 auto;padding:32px 20px 0}
-  header{margin-bottom:24px}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px 0}
+  /* 히어로 (별점 메이커와 통일 — 중앙 정렬) */
+  .tool-hero{
+    max-width:880px;margin:0 auto;padding:48px 20px 32px;text-align:center;
+  }
+  .tool-hero-title{
+    font-family:var(--font-serif);font-weight:700;font-size:36px;color:var(--ink);
+    margin:0 0 10px;letter-spacing:-.01em;
+  }
+  .tool-hero-title .emoji{margin-right:8px;color:initial;font-style:normal;}
+  .tool-hero-title .accent{color:var(--terra);font-style:italic;}
+  .tool-hero-desc{
+    font-size:15px;color:var(--ink-soft);line-height:1.7;margin:0 0 8px;
+    max-width:600px;margin-left:auto;margin-right:auto;word-break:keep-all;
+  }
   .badge{
     display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;
     letter-spacing:.08em;text-transform:uppercase;color:var(--terra);border:1px solid var(--line);
     border-radius:999px;padding:5px 12px;background:var(--paper);
   }
   .dot{width:6px;height:6px;border-radius:50%;background:var(--terra)}
-  h1{font-family:var(--font-serif);font-size:30px;margin:16px 0 6px;letter-spacing:-.02em;font-weight:700;color:var(--ink)}
-  h1 span{color:var(--terra);font-style:italic}
-  .sub{color:var(--ink-soft);font-size:14px;max-width:680px;line-height:1.7;word-break:keep-all}
+  .sub{color:var(--ink-soft);font-size:14px;max-width:600px;line-height:1.7;word-break:keep-all}
 
   /* ---- 미니 헤더 (별점 메이커와 동일 패턴) ---- */
   .tool-header{
@@ -70,7 +81,7 @@
     color:var(--text);font-family:var(--mono);font-size:16px;padding:9px 11px;outline:none}
   .field input:focus{border-color:var(--accent)}
   .field .unit{font-family:var(--mono);color:var(--muted);font-size:13px}
-  .hint{font-size:11px;color:var(--muted);margin-left:auto;max-width:280px;text-align:right;line-height:1.4}
+  .hint{font-size:11px;color:var(--muted);margin-left:auto;max-width:300px;text-align:right;line-height:1.5;word-break:keep-all}
 
   .drop{border:1.5px dashed var(--line);border-radius:16px;background:var(--panel);
     padding:42px 24px;text-align:center;cursor:pointer;transition:.18s;position:relative;overflow:hidden}
@@ -221,7 +232,7 @@
 <!-- ============== 미니 헤더 ============== -->
 <header class="tool-header">
   <div class="tool-header-inner">
-    <a href="/" class="tool-header-back">← 돌아가기</a>
+    <a href="/?view=tools" class="tool-header-back">← 도구 목록</a>
     <a href="/" class="tool-header-logo" aria-label="체험단 매니저 홈">
       <img src="/images/logo.png" alt="체험단 매니저" />
     </a>
@@ -229,10 +240,10 @@
 </header>
 
 <div class="wrap">
-  <header>
-    <h1>GIF <span>스튜디오</span></h1>
-    <p class="sub">GIF와 MP4(동영상)를 함께 올릴 수 있어요. MP4는 자동으로 GIF로 변환되고, 모든 파일을 목표 용량에 맞춰 압축해요. 파일마다 크롭·부메랑·구간(트리밍)을 적용할 수 있어요.</p>
-  </header>
+  <section class="tool-hero">
+    <h1 class="tool-hero-title"><span class="emoji">🎞️</span>GIF <span class="accent">스튜디오</span></h1>
+    <p class="tool-hero-desc">GIF와 MP4(동영상)를 함께 올릴 수 있어요. MP4는 자동으로 GIF로 변환되고, 모든 파일을 목표 용량에 맞춰 압축해요. 파일마다 크롭·부메랑·구간(트리밍)을 적용할 수 있어요.</p>
+  </section>
 
   <div class="controls">
     <div class="field">
