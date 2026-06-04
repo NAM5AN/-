@@ -3119,6 +3119,27 @@
 
         // 처음 보는 사용자에게 사용법 자동 표시 (로그인/게스트 모두)
         showHelpIfFirstTime();
+
+        // URL ?view=tools 로 들어온 경우 (도구 페이지에서 '도구 목록'으로 돌아온 경우)
+        // 도구 탭을 열어줌. 게스트 차단 우회 위해 switchView 대신 직접 전환.
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const wantView = params.get('view');
+          if (wantView === 'tools') {
+            // 탭 활성화
+            document.querySelectorAll('.tab').forEach(t => {
+              t.classList.toggle('active', t.dataset.view === 'tools');
+            });
+            // 뷰 전환
+            ['active','map','completed','tools','news'].forEach(v => {
+              const el = document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1));
+              if (el) el.style.display = (v === 'tools') ? '' : 'none';
+            });
+            currentView = 'tools';
+            // 주소창에서 쿼리 제거 (새로고침/뒤로가기 시 깔끔)
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        } catch (e) { /* 파라미터 처리 실패 무시 */ }
       } finally {
         bootInProgress = false;
       }
