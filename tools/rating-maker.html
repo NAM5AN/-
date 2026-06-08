@@ -17,6 +17,7 @@
   body {
     background: var(--bg);
     min-height: 100vh;
+    overflow-x: hidden;
   }
 
   /* ---- 미니 헤더 ---- */
@@ -127,14 +128,15 @@
     margin: 0 auto;
     padding: 0 20px 60px;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 24px;
   }
   @media (max-width: 900px) {
     .tool-main {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
   }
+  .panel { min-width: 0; }
 
   /* 입력 패널 */
   .panel {
@@ -471,17 +473,36 @@
     align-items: center;
     justify-content: center;
     min-height: 360px;
+    overflow: hidden;
+    max-width: 100%;
+  }
+  /* 카드를 비율 그대로 축소하기 위한 스케일 래퍼.
+     JS가 화면 폭에 맞춰 transform: scale()을 적용함. */
+  .card-scaler {
+    transform-origin: top center;
+    transition: transform 0.15s ease;
+    max-width: 100%;
   }
 
-  /* 별점 카드 (실제 다운로드되는 부분) */
+  /* 별점 카드 (실제 다운로드되는 부분) — 고정 크기 */
   .rating-card {
     background: white;
     border-radius: 14px;
     padding: 28px 24px;
-    width: 100%;
-    max-width: 340px;
+    width: 340px;          /* 세로형 고정 폭 */
     box-shadow: 0 12px 32px rgba(42, 37, 34, 0.12);
+    box-sizing: border-box;
   }
+  /* 가로형: 넓은 고정 폭 + 항목 2열 그리드 (PC/모바일 동일) */
+  .rating-card.ratio-landscape {
+    width: 560px;          /* 가로형 고정 폭 */
+  }
+  .rating-card.ratio-landscape .rating-card-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+  }
+  /* 세로형은 기본값 (1열) — 별도 규칙 불필요 */
   .rating-card-title {
     font-family: var(--font-serif);
     font-weight: 700;
@@ -937,6 +958,15 @@
       </div>
     </div>
 
+    <!-- 카드 비율 -->
+    <div class="field-group">
+      <label class="field-group-label">카드 비율</label>
+      <div class="category-chips" id="ratioChips">
+        <button class="category-chip active" data-ratio="landscape">▭ 가로형</button>
+        <button class="category-chip" data-ratio="portrait">▯ 세로형</button>
+      </div>
+    </div>
+
     <!-- 디자인 템플릿 (Step 5) -->
     <div class="field-group">
       <label class="field-group-label">디자인 템플릿</label>
@@ -985,22 +1015,24 @@
       <div class="panel-title">👀 미리보기</div>
 
       <div class="preview-card-wrap">
-        <!-- 실제로 다운로드되는 카드 -->
-        <div class="rating-card" id="previewCard">
-          <div class="rating-card-title" id="previewTitle"></div>
-          <div class="rating-card-subtitle" id="previewSubtitle"></div>
+        <div class="card-scaler" id="cardScaler">
+          <!-- 실제로 다운로드되는 카드 -->
+          <div class="rating-card" id="previewCard">
+            <div class="rating-card-title" id="previewTitle"></div>
+            <div class="rating-card-subtitle" id="previewSubtitle"></div>
 
-          <div class="rating-card-items" id="previewItems">
-            <!-- JS render()에서 채움 -->
-          </div>
+            <div class="rating-card-items" id="previewItems">
+              <!-- JS render()에서 채움 -->
+            </div>
 
-          <div class="rating-card-total" id="previewTotal">
-            <!-- JS render()에서 채움 -->
-          </div>
+            <div class="rating-card-total" id="previewTotal">
+              <!-- JS render()에서 채움 -->
+            </div>
 
-          <div class="rating-card-watermark" id="previewWatermark">
-            <div class="watermark-brand">made with 체험단 매니저</div>
-            <div class="watermark-url">cheheomdan-manager.com</div>
+            <div class="rating-card-watermark" id="previewWatermark">
+              <div class="watermark-brand">made with 체험단 매니저</div>
+              <div class="watermark-url">cheheomdan-manager.com</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1008,7 +1040,6 @@
       <div class="download-actions">
         <button class="btn-download" id="btnDownload">⬇ PNG로 저장하기</button>
       </div>
-      <div class="download-hint">고화질(2배) PNG로 저장돼요</div>
     </div>
   </div>
 
@@ -1036,6 +1067,7 @@
   const state = {
     category: 'restaurant',
     template: 'minimal',  // minimal | beige | blog
+    ratio: 'landscape',   // landscape(가로형, 기본) | portrait(세로형)
     title: '',
     subtitle: '',
     // Step 3에서 별점 인터랙션 추가. 일단 기본 5.0
@@ -1137,16 +1169,52 @@
   // 미리보기 카드에 템플릿 클래스 적용 (배경도 같이 전환)
   function applyTemplate() {
     const card = document.getElementById('previewCard');
-    const wrap = card?.parentElement; // .preview-card-wrap
+    const wrap = card?.closest('.preview-card-wrap'); // 스케일 래퍼 건너뛰고 wrap 찾기
     if (!card) return;
     // 카드: tpl-{name} 클래스만 유지
     card.classList.remove('tpl-minimal', 'tpl-beige', 'tpl-blog');
     card.classList.add('tpl-' + state.template);
+    // 비율: ratio-{name}
+    card.classList.remove('ratio-landscape', 'ratio-portrait');
+    card.classList.add('ratio-' + state.ratio);
     // 배경: bg-{name}
     if (wrap) {
       wrap.classList.remove('bg-minimal', 'bg-beige', 'bg-blog');
       wrap.classList.add('bg-' + state.template);
     }
+    // 카드 크기가 바뀌었으니 스케일 다시 계산
+    fitCardToWrap();
+  }
+
+  // 카드를 미리보기 영역 폭에 맞게 비율 그대로 축소.
+  // 카드는 고정 px(세로 340 / 가로 560)이고, 영역이 좁으면 scale로 줄임.
+  // 영역이 충분히 넓으면 scale 1 (원본 크기, 확대는 안 함).
+  function fitCardToWrap() {
+    const card = document.getElementById('previewCard');
+    const scaler = document.getElementById('cardScaler');
+    const wrap = card?.closest('.preview-card-wrap');
+    if (!card || !scaler || !wrap) return;
+    // 레이아웃이 끝난 뒤 측정해야 정확함 (탭 전환/폰트로드 직후 0 방지)
+    requestAnimationFrame(() => {
+      scaler.style.transform = 'scale(1)';
+      scaler.style.height = '';
+      // 카드 고정 폭: 가로형 560 / 세로형 340 (실측 + 상수 폴백)
+      const isLandscape = card.classList.contains('ratio-landscape');
+      const baseWidth = isLandscape ? 560 : 340;
+      const cardWidth = card.offsetWidth || baseWidth;
+      const cardHeight = card.offsetHeight;
+      const avail = wrap.clientWidth - 40;   // 좌우 padding(20*2) 제외
+      let scale = 1;
+      if (avail > 0 && cardWidth > avail) {
+        scale = avail / cardWidth;
+      }
+      scaler.style.transform = `scale(${scale})`;
+      if (scale < 1 && cardHeight > 0) {
+        scaler.style.height = (cardHeight * scale) + 'px';
+      } else {
+        scaler.style.height = '';
+      }
+    });
   }
 
   // 미리보기의 제목/한줄평 텍스트 설정
@@ -1366,6 +1434,11 @@
     btn.disabled = true;
     btn.textContent = '🎨 저장 중...';
 
+    // 캡쳐 직전: 스케일 축소를 잠시 해제해 원본 크기(고해상도)로 캡쳐
+    const scaler = document.getElementById('cardScaler');
+    const savedTransform = scaler ? scaler.style.transform : '';
+    if (scaler) scaler.style.transform = 'scale(1)';
+
     try {
       // 폰트가 모두 로드될 때까지 대기 (첫 캡쳐 시 한글 폰트 깨짐 방지)
       if (document.fonts && document.fonts.ready) {
@@ -1420,6 +1493,11 @@
         subEl.textContent = savedSubText;
         subEl.style.display = savedSubDisplay;
       }
+      // 스케일 복원
+      if (scaler) {
+        scaler.style.transform = savedTransform;
+        fitCardToWrap();
+      }
     }
   }
 
@@ -1439,18 +1517,31 @@
       });
     });
 
-    // 카테고리 칩 클릭 — 항목 자동 교체
-    document.querySelectorAll('.category-chip').forEach(chip => {
+    // 카테고리 칩 클릭 — 항목 자동 교체 (#categoryChips 안으로 스코프 한정)
+    document.querySelectorAll('#categoryChips .category-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const cat = chip.dataset.category;
         state.category = cat;
         // 활성 칩 표시 갱신
-        document.querySelectorAll('.category-chip').forEach(c => {
+        document.querySelectorAll('#categoryChips .category-chip').forEach(c => {
           c.classList.toggle('active', c.dataset.category === cat);
         });
         // 항목 교체 — 모두 5.0 기본값
         state.items = CATEGORY_PRESETS[cat].map(name => ({ name, score: 5.0 }));
         render();
+      });
+    });
+
+    // 카드 비율 칩 클릭 (#ratioChips)
+    document.querySelectorAll('#ratioChips .category-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const r = chip.dataset.ratio;
+        if (!r) return;
+        state.ratio = r;
+        document.querySelectorAll('#ratioChips .category-chip').forEach(c => {
+          c.classList.toggle('active', c.dataset.ratio === r);
+        });
+        renderPreviewOnly();
       });
     });
 
@@ -1507,6 +1598,13 @@
 
     // 최초 렌더
     render();
+
+    // 창 크기 바뀌면 카드 스케일 다시 계산
+    window.addEventListener('resize', fitCardToWrap);
+    // 폰트 로드 후 폭이 바뀔 수 있으니 한 번 더
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(fitCardToWrap);
+    }
   }
 
   // DOM 준비되면 시작
