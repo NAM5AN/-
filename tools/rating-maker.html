@@ -470,8 +470,8 @@
     border-radius: 16px;
     padding: 32px 20px;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-start;
+    justify-content: flex-start;
     min-height: 360px;
     overflow: hidden;
     max-width: 100%;
@@ -479,7 +479,7 @@
   /* 카드를 비율 그대로 축소하기 위한 스케일 래퍼.
      JS가 화면 폭에 맞춰 transform: scale()을 적용함. */
   .card-scaler {
-    transform-origin: top center;
+    transform-origin: top left;
     transition: transform 0.15s ease;
     max-width: 100%;
   }
@@ -1194,25 +1194,29 @@
     const scaler = document.getElementById('cardScaler');
     const wrap = card?.closest('.preview-card-wrap');
     if (!card || !scaler || !wrap) return;
-    // 레이아웃이 끝난 뒤 측정해야 정확함 (탭 전환/폰트로드 직후 0 방지)
     requestAnimationFrame(() => {
       scaler.style.transform = 'scale(1)';
       scaler.style.height = '';
-      // 카드 고정 폭: 가로형 560 / 세로형 340 (실측 + 상수 폴백)
       const isLandscape = card.classList.contains('ratio-landscape');
       const baseWidth = isLandscape ? 560 : 340;
       const cardWidth = card.offsetWidth || baseWidth;
       const cardHeight = card.offsetHeight;
-      const avail = wrap.clientWidth - 40;   // 좌우 padding(20*2) 제외
+      // wrap 안쪽 실제 가용 폭 (getComputedStyle로 padding 정확히 빼기)
+      const cs = getComputedStyle(wrap);
+      const padL = parseFloat(cs.paddingLeft) || 0;
+      const padR = parseFloat(cs.paddingRight) || 0;
+      const avail = wrap.clientWidth - padL - padR - 2; // -2 안전 여유
       let scale = 1;
       if (avail > 0 && cardWidth > avail) {
         scale = avail / cardWidth;
       }
       scaler.style.transform = `scale(${scale})`;
       if (scale < 1 && cardHeight > 0) {
-        scaler.style.height = (cardHeight * scale) + 'px';
+        scaler.style.height = Math.ceil(cardHeight * scale) + 'px';
+        wrap.style.justifyContent = 'flex-start';
       } else {
         scaler.style.height = '';
+        wrap.style.justifyContent = 'center';
       }
     });
   }
