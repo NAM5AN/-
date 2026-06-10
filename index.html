@@ -117,6 +117,31 @@
       <button class="btn btn-ghost" id="btnManualAdd" style="font-size: 12px;">✏️ 직접 입력하기</button>
     </div>
 
+    <!-- 캘린더 (토글 — 기본 접힘) -->
+    <div class="calendar-section">
+      <button class="calendar-toggle" id="calendarToggle" aria-expanded="false">
+        <span class="calendar-toggle-label">📅 캘린더로 보기</span>
+        <span class="calendar-toggle-arrow" id="calendarToggleArrow">▾</span>
+      </button>
+      <div class="calendar-body" id="calendarBody" style="display:none;">
+        <div class="calendar-nav">
+          <button class="calendar-nav-btn" id="calPrev" aria-label="이전 달">◀</button>
+          <div class="calendar-month" id="calMonth">2026년 6월</div>
+          <button class="calendar-nav-btn" id="calNext" aria-label="다음 달">▶</button>
+        </div>
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-dot deadline"></span>리뷰 마감</span>
+          <span class="legend-item"><span class="legend-dot visit"></span>방문 예정</span>
+        </div>
+        <div class="calendar-weekdays">
+          <span class="wd sun">일</span><span class="wd">월</span><span class="wd">화</span><span class="wd">수</span><span class="wd">목</span><span class="wd">금</span><span class="wd sat">토</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid">
+          <!-- JS가 채움 -->
+        </div>
+      </div>
+    </div>
+
     <div class="sort-bar" id="sortBarActive">
       <span class="sort-label">정렬</span>
       <select class="sort-select" id="sortFieldActive">
@@ -1412,6 +1437,8 @@
   }
 
   function renderActiveList() {
+    // 일정 변경 반영: 캘린더가 펼쳐져 있으면 같이 갱신
+    refreshCalendarIfOpen();
     const container = document.getElementById('activeList');
     const sortBar = document.getElementById('sortBarActive');
     let list = entries.filter(e => !e.completed);
@@ -1619,6 +1646,140 @@
   window.__openModalFromMap = function(id) {
     openModal(id);
   };
+
+  // ============== 캘린더 (진행 중 탭) ==============
+  // 마감일/방문일을 월 그리드에 표시. 토글로 접기/펼치기.
+  let calYear, calMonth;       // 현재 보고 있는 연/월
+  let calendarInited = false;
+
+  // 'YYYY-MM-DD' 문자열 → {y, m, d} (로컬, 타임존 안전)
+  function parseDateStr(s) {
+    if (!s) return null;
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    return { y: +m[1], mo: +m[2], d: +m[3] };
+  }
+
+  // 캘린더 그리기
+  function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    const monthLabel = document.getElementById('calMonth');
+    if (!grid || !monthLabel) return;
+
+    monthLabel.textContent = `${calYear}년 ${calMonth + 1}월`;
+
+    // 이번 달 정보
+    const first = new Date(calYear, calMonth, 1);
+    const startDow = first.getDay();              // 0(일)~6(토)
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+    // 오늘
+    const now = new Date();
+    const isThisMonth = (now.getFullYear() === calYear && now.getMonth() === calMonth);
+    const todayDate = now.getDate();
+
+    // 이번 달 일정 매핑: { 날짜(d): [ {id, name, type} ] }
+    const byDay = {};
+    function addEvent(dateStr, entry, type) {
+      const p = parseDateStr(dateStr);
+      if (!p) return;
+      if (p.y !== calYear || (p.mo - 1) !== calMonth) return;
+      (byDay[p.d] = byDay[p.d] || []).push({
+        id: entry.id,
+        name: entry.storeName || '(이름 없음)',
+        type
+      });
+    }
+    entries.forEach(e => {
+      if (e.completed) return;          // 진행 중만
+      addEvent(e.deadline, e, 'deadline');
+      addEvent(e.visitDate, e, 'visit');
+    });
+
+    // 셀 생성
+    let html = '';
+    // 앞 빈 칸
+    for (let i = 0; i < startDow; i++) {
+      html += '<div class="cal-cell empty"></div>';
+    }
+    // 날짜 칸
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dow = (startDow + d - 1) % 7;
+      const isToday = isThisMonth && d === todayDate;
+      const dateCls = dow === 0 ? 'sun' : (dow === 6 ? 'sat' : '');
+      const evs = byDay[d] || [];
+
+      let evHtml = '';
+      const shown = evs.slice(0, 2);    // 최대 2개 표시
+      shown.forEach(ev => {
+        evHtml += `<div class="cal-event ${ev.type}" data-id="${ev.id}" title="${escapeHtml(ev.name)}">${escapeHtml(ev.name)}</div>`;
+      });
+      if (evs.length > 2) {
+        evHtml += `<div class="cal-more">+${evs.length - 2}</div>`;
+      }
+
+      html += `
+        <div class="cal-cell${isToday ? ' today' : ''}">
+          <div class="cal-date ${dateCls}">${d}</div>
+          ${evHtml}
+        </div>`;
+    }
+    grid.innerHTML = html;
+
+    // 일정 칩 클릭 → 상세 모달
+    grid.querySelectorAll('.cal-event').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.id;
+        if (id) openModal(id);
+      });
+    });
+  }
+
+  function initCalendar() {
+    const toggle = document.getElementById('calendarToggle');
+    const body = document.getElementById('calendarBody');
+    if (!toggle || !body) return;
+
+    // 토글
+    toggle.addEventListener('click', () => {
+      const isOpen = body.style.display !== 'none';
+      if (isOpen) {
+        body.style.display = 'none';
+        toggle.setAttribute('aria-expanded', 'false');
+      } else {
+        // 처음 펼칠 때 현재 달로 초기화
+        if (!calendarInited) {
+          const now = new Date();
+          calYear = now.getFullYear();
+          calMonth = now.getMonth();
+          calendarInited = true;
+        }
+        body.style.display = '';
+        toggle.setAttribute('aria-expanded', 'true');
+        renderCalendar();
+      }
+    });
+
+    // 이전/다음 달
+    document.getElementById('calPrev')?.addEventListener('click', () => {
+      calMonth--;
+      if (calMonth < 0) { calMonth = 11; calYear--; }
+      renderCalendar();
+    });
+    document.getElementById('calNext')?.addEventListener('click', () => {
+      calMonth++;
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      renderCalendar();
+    });
+  }
+
+  // 일정이 바뀌면 캘린더도 갱신 (펼쳐져 있을 때만)
+  function refreshCalendarIfOpen() {
+    const body = document.getElementById('calendarBody');
+    if (body && body.style.display !== 'none' && calendarInited) {
+      renderCalendar();
+    }
+  }
 
   // ============== Modal ==============
   function openModal(id) {
@@ -3066,6 +3227,7 @@
     initLogin();
     initHelp();
     initTools();
+    initCalendar();
     updateFooterYear();
 
     let appInitialized = false;
