@@ -752,19 +752,41 @@ async function encode(decoded, scale, colors, step, onProg){
 }
 
 /* ====================== 목표 용량 탐색 ====================== */
+// 표본 프레임 몇 장만 작은 배율로 인코딩해 전체 GIF 용량을 빠르게 추정 (보정용)
+async function probeFullSize(decoded, scale, colors){
+  const n = decoded.frames.length;
+  const sample = Math.min(n, 12);
+  const set = new Set();
+  for(let i=0;i<sample;i++) set.add(Math.round(i*(n-1)/Math.max(1,sample-1)));
+  const idxs = [...set];
+  const sub = Object.assign({}, decoded, { frames: idxs.map(i=>decoded.frames[i]) });
+  const res = await encode(sub, scale, colors, 1);
+  return Math.max(1, (res.size/idxs.length) * n); // 표본 → 전체 (프레임 수에 비례)
+}
+
 async function compressToTarget(decoded, targetBytes, maxColors, item, estBytes){
-  decoded._lastSize = estBytes || decoded._lastSize || item.origSize;
+  // 보정: 이 영상의 실제 용량 밀도(K, 배율 1.0 환산)를 표본으로 한 번만 측정 → 첫 추정 정확도↑
+  setStatus(item, '최적 화질 계산 중…');
+  try{
+    const probe = await probeFullSize(decoded, 0.5, maxColors);
+    decoded._lastSize = probe / 0.25;             // 용량 ∝ 배율² → ÷0.5²로 배율 1.0 환산
+  }catch(_){
+    decoded._lastSize = estBytes || decoded._lastSize || item.origSize;
+  }
+
   async function search(colors, stp){
     let lo=0.04, hi=1.0, best=null;
-    let guess = Math.sqrt(targetBytes / Math.max(decoded._lastSize, targetBytes));
-    guess = clamp(guess*0.98, lo, hi);
-    for(let i=0;i<6;i++){
+    let guess = clamp(Math.sqrt(targetBytes / Math.max(decoded._lastSize, targetBytes))*0.97, lo, hi);
+    for(let i=0;i<3;i++){
       const scale = (i===0)?guess:(lo+hi)/2;
-      setStatus(item, `용량 맞추는 중… (${Math.round(scale*100)}%, ${colors}색${stp>1?', 1/'+stp+'f':''})`);
       const res = await encode(decoded, scale, colors, stp, p=>setProgress(item, 0.5+p*0.5));
-      decoded._lastSize = res.size;
-      if(res.size <= targetBytes){ best={...res,scale}; lo=scale; } else hi=scale;
-      if(hi-lo < 0.02) break;
+      decoded._lastSize = res.size/(scale*scale);  // 항상 배율 1.0 환산으로 갱신
+      if(res.size <= targetBytes){
+        best={...res,scale};
+        if(res.size >= targetBytes*0.85) break;    // 목표의 85% 이상 채우면 충분 → 조기 종료
+        lo=scale;
+      } else hi=scale;
+      if(hi-lo < 0.04) break;
     }
     return best;
   }
