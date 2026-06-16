@@ -132,6 +132,11 @@
     border:1px solid var(--accent);border-radius:9px;padding:9px 15px;background:rgba(194,84,43,.10);color:var(--accent);transition:.15s}
   button.runone:enabled:hover{background:var(--accent);color:#fff}
   button.runone:disabled{opacity:.35;cursor:not-allowed}
+  button.retry{font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+    border:1px solid var(--accent);border-radius:9px;padding:9px 15px;background:var(--accent);color:#fff;
+    transition:.15s;display:inline-flex;align-items:center;gap:5px}
+  button.retry:enabled:hover{filter:brightness(1.08)}
+  button.retry:disabled{opacity:.35;cursor:not-allowed}
   button.rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px}
   button.rm:hover{color:var(--danger)}
   button.tool{font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;
@@ -406,7 +411,7 @@ function addFiles(files){
       natW:null, natH:null, duration:null,
       crop:null, reverse:false, trim:null,
       src:null, preview:null,
-      resultBlob:null, resultSize:null, resultDims:null,
+      resultBlob:null, resultSize:null, resultDims:null, error:false,
     };
     items.push(item);
     renderItem(item);
@@ -434,6 +439,7 @@ function renderItem(item){
       </div>
       <div class="toolrow">
         <button class="runone" type="button">${isV?'변환':'압축'}</button>
+        <button class="retry" type="button" style="display:none">↻ 재시도</button>
         <button class="dl" disabled>다운로드</button>
         <button class="rm">제거</button>
       </div>
@@ -444,7 +450,7 @@ function renderItem(item){
     stats:card.querySelector('.stats'), bar:card.querySelector('.bar > i'),
     status:card.querySelector('.status'), dl:card.querySelector('.dl'), rm:card.querySelector('.rm'),
     crop:card.querySelector('.crop'), trim:card.querySelector('.trim'), boom:card.querySelector('.boom'),
-    run:card.querySelector('.runone'),
+    run:card.querySelector('.runone'), retry:card.querySelector('.retry'),
   };
   item.refs = refs;
   refs.name.textContent = item.name;
@@ -452,6 +458,7 @@ function renderItem(item){
   refs.rm.onclick = () => { items = items.filter(x=>x!==item); freeItem(item); card.remove(); syncUI(); };
   refs.dl.onclick = () => download(item);
   refs.run.onclick = () => runOne(item);
+  refs.retry.onclick = () => retryItem(item);
   refs.crop.onclick = () => openCropModal(item);
   refs.trim.onclick = () => openTrimModal(item);
   refs.boom.onclick = () => {
@@ -509,14 +516,25 @@ function freeItem(item){
   item.preview = null;
 }
 function resetItemResult(item){
-  item.resultBlob=null; item.resultSize=null; item.resultDims=null;
+  item.resultBlob=null; item.resultSize=null; item.resultDims=null; item.error=false;
   if(item.refs){
     item.refs.stats.innerHTML = baseStats(item);
     setStatus(item, '대기 · 시작 버튼을 누르세요'); setProgress(item, 0);
     item.refs.dl.disabled = true;
+    item.refs.retry.style.display='none'; item.refs.run.style.display='';
     item.refs.run.disabled = busy; item.refs.run.textContent = item.kind==='video'?'변환':'압축';
   }
   syncUI();
+}
+
+// 오류 상태: 실행 버튼을 숨기고 재시도 버튼을 노출 (크롭·구간·부메랑 설정은 item에 그대로 유지됨)
+function markError(item){
+  item.error = true;
+  if(!item.refs) return;
+  item.refs.run.style.display = 'none';
+  item.refs.retry.style.display = '';
+  item.refs.retry.disabled = busy;
+  item.refs.dl.disabled = true;
 }
 
 /* ====================== 소스 디코딩 (GIF / 동영상 공통) ====================== */
@@ -762,6 +780,14 @@ async function compressToTarget(decoded, targetBytes, maxColors, item, estBytes)
 async function processItem(item, prep){
   if(item.resultBlob) return;
   const { targetBytes, maxColors, fps, maxWidth } = prep;
+  // 처리 시작: 직전 상태 정리 (재시도 버튼 숨기고 실행 버튼 복원, 다운로드 잠금)
+  item.error = false;
+  if(item.refs){
+    item.refs.retry.style.display='none';
+    item.refs.run.style.display='';
+    item.refs.run.textContent = item.kind==='video'?'변환':'압축';
+    item.refs.dl.disabled = true;
+  }
   try{
     setProgress(item, 0);
     await ensureSource(item);
@@ -793,8 +819,9 @@ async function processItem(item, prep){
     finishItem(item, { withinTarget: result.size <= targetBytes, frames: result.frames, fps, reversed: decoded.reversed, cropped: !!item.crop });
   }catch(e){
     console.error(e);
-    setStatus(item, '오류: '+e.message, 'err');
+    setStatus(item, '처리 중 오류가 발생했어요. 재시도 버튼을 눌러 다시 시도해 주세요.', 'err');
     setProgress(item, 0);
+    markError(item);
   }
 }
 
@@ -818,8 +845,12 @@ function finishItem(item, o){
   else if(o.withinTarget) setStatus(item, `완료 · ${pct>=0?pct+'% 감소':'용량 증가'}`, 'ok');
   else setStatus(item, '목표 용량까지 줄이지 못했습니다 (최소 설정 결과)', 'err');
 
+  // 완료 → 재시도 버튼으로 전환 (결과가 마음에 안 들면 다시 변환 가능)
+  item.error = false;
+  item.refs.run.style.display = 'none';
+  item.refs.retry.style.display = '';
+  item.refs.retry.disabled = busy;
   item.refs.dl.disabled = false;
-  item.refs.run.disabled = true; item.refs.run.textContent = '완료';
   syncUI();
 }
 
@@ -848,11 +879,20 @@ async function prep(){
 function setBusy(b){
   busy = b;
   runBtn.disabled=b; clearBtn.disabled=b;
-  items.forEach(it=>{ if(it.refs) it.refs.run.disabled = b || !!it.resultBlob; });
+  items.forEach(it=>{ if(it.refs){ it.refs.run.disabled = b || !!it.resultBlob; it.refs.retry.disabled = b; } });
 }
 async function runOne(item){
   if(busy || item.resultBlob) return;
   const p = await prep(); if(!p) return;
+  setBusy(true);
+  await processItem(item, p);
+  setBusy(false);
+}
+// 재시도: 기존 결과를 비우고 같은 설정(크롭·구간·부메랑 유지)으로 다시 처리
+async function retryItem(item){
+  if(busy) return;
+  const p = await prep(); if(!p) return;
+  item.resultBlob=null; item.resultSize=null; item.resultDims=null;
   setBusy(true);
   await processItem(item, p);
   setBusy(false);
