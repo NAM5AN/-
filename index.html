@@ -31,6 +31,117 @@
 <link rel="stylesheet" href="styles/layout.css">
 <link rel="stylesheet" href="styles/components.css">
 <link rel="stylesheet" href="styles/screens.css">
+
+<!-- 소식 탭: 공지/업데이트 글(클릭형) + 소식 모달 전용 스타일 -->
+<style>
+  /* ===== 공지/업데이트 글 (목록, 클릭하면 모달) ===== */
+  #newsList { display: flex; flex-direction: column; gap: 12px; }
+  .notice-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .notice-item:hover {
+    border-color: var(--terra-soft);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(42, 37, 34, .07);
+  }
+  .notice-item:focus-visible {
+    outline: 2px solid var(--terra);
+    outline-offset: 2px;
+  }
+  .notice-main { flex: 1; min-width: 0; }
+  .notice-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--terra);
+    background: rgba(194, 84, 43, .08);
+    padding: 3px 9px;
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
+  .notice-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    margin: 0 0 4px;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
+  .notice-date {
+    font-size: 12px;
+    color: var(--ink-faint);
+    font-family: ui-monospace, Menlo, monospace;
+  }
+  .notice-arrow {
+    font-size: 22px;
+    color: var(--ink-faint);
+    flex-shrink: 0;
+    transition: color .15s, transform .15s;
+  }
+  .notice-item:hover .notice-arrow { color: var(--terra); transform: translateX(2px); }
+
+  /* ===== 소식 모달 본문 ===== */
+  .news-modal-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--terra);
+    background: rgba(194, 84, 43, .08);
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  .news-modal-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--ink);
+    margin: 0 0 6px;
+    line-height: 1.35;
+    word-break: keep-all;
+  }
+  .news-modal-date {
+    display: block;
+    font-size: 12px;
+    color: var(--ink-faint);
+    font-family: ui-monospace, Menlo, monospace;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .news-modal-body {
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.75;
+    word-break: keep-all;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  .news-modal-body p { margin: 0 0 14px; }
+  .news-modal-body p:last-child { margin-bottom: 0; }
+  .news-modal-body strong { font-weight: 700; color: var(--ink); }
+  .news-modal-body ul, .news-modal-body ol { margin: 0 0 14px; padding-left: 20px; }
+  .news-modal-body li { margin-bottom: 6px; }
+  .news-modal-body a { color: var(--terra); text-decoration: underline; }
+  .news-modal-body a:hover { color: #A8431F; }
+  .news-modal-body img { max-width: 100%; border-radius: 10px; margin: 8px 0; display: block; }
+  .news-modal-body h4 {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 18px 0 8px;
+  }
+</style>
 </head>
 <body>
 
@@ -247,10 +358,47 @@
       <p class="news-sub">체험단 매니저의 새로운 소식과 공지사항을 확인할 수 있어요.</p>
     </div>
 
-    <!-- 글 목록 (정적 — 현재 1건. 글 추가 시 .news-post 블록 복사) -->
-    <div class="news-list">
+    <!-- 글 목록 -->
+    <div class="news-list" id="newsList">
 
-      <!-- 광고주 모집 (이미지 펼침형) -->
+      <!-- ════════════════════════════════════════════════════
+           공지/업데이트 글 (클릭하면 모달로 내용이 열려요)
+           ▸ 새 글을 추가하려면 아래 <article class="notice-item"> ... </article>
+             블록을 통째로 복사해서 맨 위에 붙여넣고, 제목·날짜·배지·본문만 바꾸세요.
+           ▸ .notice-body 안에는 <p> <ul><li> <strong> <a href> <img> <h4> 등을
+             자유롭게 쓸 수 있어요. (목록에는 안 보이고 모달에서만 보여요)
+           ════════════════════════════════════════════════════ -->
+
+      <article class="notice-item" tabindex="0" role="button" aria-haspopup="dialog">
+        <div class="notice-main">
+          <span class="notice-badge">🆕 업데이트</span>
+          <h3 class="notice-title">별점 메이커, 나만의 디자인을 저장하세요</h3>
+          <time class="notice-date" datetime="2026-06-18">2026.06.18</time>
+        </div>
+        <span class="notice-arrow" aria-hidden="true">›</span>
+
+        <!-- 모달 본문 (목록에선 숨김) -->
+        <div class="notice-body" hidden>
+          <p>별점 메이커에 <strong>사용자 설정 디자인</strong> 기능이 추가됐어요. 기본 템플릿 3종 외에, 카드를 내 블로그 분위기에 맞게 직접 꾸밀 수 있어요.</p>
+
+          <h4>이런 걸 바꿀 수 있어요</h4>
+          <ul>
+            <li><strong>글씨 정렬</strong> · 왼쪽 / 가운데 / 오른쪽</li>
+            <li><strong>카드 색</strong> · 추천 색 또는 직접 선택 (어두운 색을 골라도 글씨가 자동으로 잘 보여요)</li>
+            <li><strong>별 색</strong> · 골드 외에 원하는 색으로</li>
+            <li><strong>폰트</strong> · 고딕 · 명조 · 손글씨 등 6종</li>
+          </ul>
+
+          <h4>자주 쓰는 디자인은 저장해두세요</h4>
+          <p>마음에 드는 설정을 <strong>'내 카페용', '맛집용'</strong>처럼 이름을 붙여 저장하면, 다음에 한 번에 불러와 쓸 수 있어요. 카테고리별로 미리 만들어두면 편해요.</p>
+
+          <p>지금 <strong>도구 탭의 별점 메이커</strong>에서 사용해보세요!</p>
+        </div>
+      </article>
+
+      <!-- 새 글은 위 블록을 복사해서 여기보다 위에 붙여넣으세요 -->
+
+      <!-- 광고주 모집 (이미지 펼침형) — 항상 목록 맨 아래에 유지 -->
       <article class="news-post expanded">
         <header class="news-post-header">
           <div class="news-post-badge">📣 모집</div>
@@ -342,6 +490,17 @@
       <button class="btn btn-ghost" id="btnRestore" style="display:none;">↩ 진행 중으로</button>
       <button class="btn btn-danger" id="btnDelete">🗑 삭제</button>
     </div>
+  </div>
+</div>
+
+<!-- 소식 모달 (공지/업데이트 글 내용 표시) -->
+<div class="modal-bg" id="newsModalBg">
+  <div class="modal" id="newsModal">
+    <button class="modal-close" id="newsModalClose">✕</button>
+    <span class="news-modal-badge" id="newsModalBadge"></span>
+    <h2 class="news-modal-title" id="newsModalTitle"></h2>
+    <time class="news-modal-date" id="newsModalDate"></time>
+    <div class="news-modal-body" id="newsModalBody"></div>
   </div>
 </div>
 
@@ -1858,6 +2017,73 @@
     isNewEntry = false;
   }
 
+  // ============== 소식 모달 (공지/업데이트 글) ==============
+  // .notice-item 을 클릭하면 그 안의 제목·날짜·배지·본문(.notice-body)을
+  // 모달에 채워 보여줌. 글 추가는 HTML만 복사하면 되고 JS는 손댈 필요 없음.
+  function openNewsModal(item) {
+    if (!item) return;
+    const titleEl = item.querySelector('.notice-title');
+    const dateEl = item.querySelector('.notice-date');
+    const badgeEl = item.querySelector('.notice-badge');
+    const bodyEl = item.querySelector('.notice-body');
+
+    document.getElementById('newsModalTitle').textContent = titleEl ? titleEl.textContent : '';
+
+    const mBadge = document.getElementById('newsModalBadge');
+    if (badgeEl && badgeEl.textContent.trim()) {
+      mBadge.textContent = badgeEl.textContent;
+      mBadge.style.display = '';
+    } else {
+      mBadge.style.display = 'none';
+    }
+
+    const mDate = document.getElementById('newsModalDate');
+    if (dateEl && dateEl.textContent.trim()) {
+      mDate.textContent = dateEl.textContent;
+      mDate.setAttribute('datetime', dateEl.getAttribute('datetime') || '');
+      mDate.style.display = '';
+    } else {
+      mDate.style.display = 'none';
+    }
+
+    document.getElementById('newsModalBody').innerHTML = bodyEl ? bodyEl.innerHTML : '';
+    document.getElementById('newsModalBody').scrollTop = 0;
+    document.getElementById('newsModalBg').classList.add('active');
+  }
+
+  function closeNewsModal() {
+    document.getElementById('newsModalBg').classList.remove('active');
+  }
+
+  // 소식 모달 이벤트 연결 (목록은 이벤트 위임 → 글이 늘어나도 자동 동작)
+  function setupNewsModal() {
+    const list = document.getElementById('newsList');
+    if (list) {
+      list.addEventListener('click', (e) => {
+        const item = e.target.closest('.notice-item');
+        if (item) openNewsModal(item);
+      });
+      // 키보드 접근성: 포커스된 글에서 Enter/Space로 열기
+      list.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          const item = e.target.closest('.notice-item');
+          if (item) { e.preventDefault(); openNewsModal(item); }
+        }
+      });
+    }
+    const closeBtn = document.getElementById('newsModalClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeNewsModal);
+    const bg = document.getElementById('newsModalBg');
+    if (bg) {
+      bg.addEventListener('click', (e) => {
+        if (e.target.id === 'newsModalBg') closeNewsModal();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (bg && bg.classList.contains('active') && e.key === 'Escape') closeNewsModal();
+    });
+  }
+
   // 실제 주소 필드의 읽기/편집 모드 전환
   // editing=true → input 활성화, 확인/취소 버튼 표시
   // editing=false → 읽기 모드 (초록 hint + 연필 버튼)
@@ -2058,6 +2284,9 @@
     document.getElementById('modalBg').addEventListener('click', (e) => {
       if (e.target.id === 'modalBg') closeModal();
     });
+
+    // 소식 모달 (공지/업데이트 글)
+    setupNewsModal();
 
     // 직접 입력 버튼
     document.getElementById('btnManualAdd').addEventListener('click', () => {
