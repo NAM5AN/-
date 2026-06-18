@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="/styles/base.css">
 <!-- html2canvas: PNG 다운로드용 (Step 6) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- 사용자 설정 디자인용 웹폰트 (필요할 때만 다운로드됨) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@400;700&family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <style>
   /* ============================================
      rating-maker.html (별점 메이커)
@@ -721,12 +725,61 @@
     background: linear-gradient(135deg, #F0EBE2 0%, #DDD4C2 100%);
   }
 
+  /* --- custom: 사용자 설정형 (색·폰트·정렬을 CSS 변수로 주입) --- */
+  .preview-card-wrap.bg-custom {
+    background: linear-gradient(135deg, #ECE7DF 0%, #DBD4C8 100%);
+  }
+  .rating-card.tpl-custom {
+    background: var(--c-card-bg, #FFFFFF);
+    font-family: var(--c-font, var(--font-body));
+    color: var(--c-ink, var(--ink));
+    border: none;
+    border-radius: 16px;
+    padding: 28px 24px;
+    box-shadow: 0 12px 32px rgba(42, 37, 34, 0.12);
+  }
+  .rating-card.tpl-custom .rating-card-title {
+    color: var(--c-ink, var(--ink));
+    font-family: inherit;
+    text-align: var(--c-align, left);
+  }
+  .rating-card.tpl-custom .rating-card-subtitle {
+    color: var(--c-ink-soft, var(--ink-soft));
+    text-align: var(--c-align, left);
+  }
+  .rating-card.tpl-custom .rating-card-item,
+  .rating-card.tpl-custom .rating-card-item-name {
+    color: var(--c-ink, var(--ink));
+  }
+  .rating-card.tpl-custom .rating-card-item-score {
+    color: var(--c-ink-soft, var(--ink-soft));
+  }
+  .rating-card.tpl-custom .rating-card-total {
+    border-top: 1px solid var(--c-line, var(--line));
+    justify-content: var(--c-total-justify, space-between);
+    gap: 10px;
+  }
+  .rating-card.tpl-custom .rating-card-total-label {
+    color: var(--c-ink, var(--ink));
+    font-family: inherit;
+  }
+  .rating-card.tpl-custom .rating-card-total-score {
+    color: var(--c-accent, var(--terra));
+    font-family: inherit;
+  }
+  .rating-card.tpl-custom .rating-card-total-score .max {
+    color: var(--c-ink-faint, var(--ink-faint));
+  }
+  .rating-card.tpl-custom .rating-card-watermark {
+    color: var(--c-ink-faint, var(--ink-faint));
+  }
+
   /* ============================================
      템플릿 선택 카드 (입력 패널)
      ============================================ */
   .template-cards {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
   .template-card {
@@ -837,6 +890,118 @@
     font-size: 10px;
     color: var(--ink-faint);
     line-height: 1.4;
+  }
+
+  /* custom 템플릿 썸네일 (다채로운 느낌으로 '커스텀' 표시) */
+  .template-card[data-template="custom"] .template-card-preview {
+    background: linear-gradient(135deg, #FFF4F4 0%, #F0F7F4 50%, #FFF9E8 100%);
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .template-card[data-template="custom"] .template-card-preview::before {
+    content: '';
+    position: absolute;
+    top: 13px; left: 14px; right: 14px;
+    height: 3px;
+    background: linear-gradient(90deg, #C2542B, #E07A9B, #3B7FC4);
+    border-radius: 2px;
+  }
+  .template-card[data-template="custom"] .template-card-preview::after {
+    content: '★★★★★';
+    position: absolute;
+    bottom: 10px; left: 0; right: 0;
+    text-align: center;
+    background: linear-gradient(90deg, #E5484D, #E8B007, #4A9D6E);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+
+  /* ============================================
+     사용자 설정 컨트롤 패널
+     ============================================ */
+  .custom-controls {
+    margin-top: 12px;
+    padding: 14px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .custom-row {
+    margin-bottom: 14px;
+  }
+  .custom-row:last-of-type {
+    margin-bottom: 8px;
+  }
+  .custom-row-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .swatch-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .color-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--line);
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+  }
+  .color-swatch:hover {
+    transform: scale(1.08);
+  }
+  .color-swatch.active {
+    border-color: var(--terra);
+    box-shadow: 0 0 0 2px rgba(194, 84, 43, 0.25);
+  }
+  .color-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .color-pick input[type="color"] {
+    width: 32px;
+    height: 26px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .custom-select {
+    width: 100%;
+    padding: 9px 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+  .custom-select:focus {
+    outline: none;
+    border-color: var(--terra);
+  }
+  .custom-save-note {
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin: 4px 0 0;
+    line-height: 1.5;
   }
 
   /* 다운로드 버튼 */
@@ -986,6 +1151,51 @@
           <div class="template-card-name">블로그</div>
           <div class="template-card-desc">본문 인용구형</div>
         </button>
+        <button class="template-card" data-template="custom">
+          <div class="template-card-preview"></div>
+          <div class="template-card-name">사용자 설정</div>
+          <div class="template-card-desc">색·폰트 직접 설정</div>
+        </button>
+      </div>
+
+      <!-- 사용자 설정 컨트롤 (사용자 설정 템플릿 선택 시에만 표시) -->
+      <div class="custom-controls" id="customControls" style="display:none;">
+        <div class="custom-row">
+          <label class="custom-row-label">글씨 정렬</label>
+          <div class="category-chips" id="alignChips">
+            <button class="category-chip active" data-align="left">⬅ 왼쪽</button>
+            <button class="category-chip" data-align="center">↔ 가운데</button>
+            <button class="category-chip" data-align="right">➡ 오른쪽</button>
+          </div>
+        </div>
+        <div class="custom-row">
+          <label class="custom-row-label">카드 색</label>
+          <div class="swatch-row" id="cardColorSwatches"></div>
+          <label class="color-pick">
+            <input type="color" id="cardColorInput" value="#FFFFFF">
+            <span>직접 선택</span>
+          </label>
+        </div>
+        <div class="custom-row">
+          <label class="custom-row-label">별 색</label>
+          <div class="swatch-row" id="starColorSwatches"></div>
+          <label class="color-pick">
+            <input type="color" id="starColorInput" value="#E8B007">
+            <span>직접 선택</span>
+          </label>
+        </div>
+        <div class="custom-row">
+          <label class="custom-row-label">폰트</label>
+          <select id="fontSelect" class="custom-select">
+            <option value="var(--font-body)">기본 고딕 (프리텐다드)</option>
+            <option value="var(--font-serif)">명조 (고운바탕)</option>
+            <option value="'Noto Sans KR', sans-serif">노토 산스 (깔끔한 고딕)</option>
+            <option value="'Nanum Myeongjo', serif">나눔 명조 (우아한 명조)</option>
+            <option value="'Gaegu', cursive">개구 (손글씨)</option>
+            <option value="'Black Han Sans', sans-serif">블랙 한 산스 (굵은 제목용)</option>
+          </select>
+        </div>
+        <p class="custom-save-note">✓ 설정은 자동으로 저장돼 다음에 와도 그대로 사용할 수 있어요</p>
       </div>
     </div>
 
@@ -1063,17 +1273,30 @@
   const MIN_ITEMS = 1;   // 최소 1개 (그 이하면 삭제 비활성화)
   const MAX_ITEMS = 10;  // 최대 10개 (그 이상은 추가 비활성화)
 
+  // ============== 사용자 설정(custom) 기본값 & 프리셋 ==============
+  const DEFAULT_CUSTOM = {
+    align: 'left',          // left | center | right
+    cardColor: '#FFFFFF',   // 카드 배경색
+    starColor: '#E8B007',   // 별(채워진) 색
+    font: 'var(--font-body)' // 폰트 (기본 = 프리텐다드)
+  };
+  // 카드 색 빠른 선택용 프리셋
+  const CARD_COLOR_PRESETS = ['#FFFFFF', '#FAF6EE', '#FFF4F4', '#F0F7F4', '#1E2A3A', '#2A2522'];
+  // 별 색 빠른 선택용 프리셋
+  const STAR_COLOR_PRESETS = ['#E8B007', '#C2542B', '#E5484D', '#E07A9B', '#3B7FC4', '#4A9D6E', '#2A2522'];
+
   // ============== 상태 ==============
   const state = {
     category: 'restaurant',
-    template: 'minimal',  // minimal | beige | blog
+    template: 'minimal',  // minimal | beige | blog | custom
     ratio: 'landscape',   // landscape(가로형, 기본) | portrait(세로형)
     title: '',
     subtitle: '',
     // Step 3에서 별점 인터랙션 추가. 일단 기본 5.0
     items: CATEGORY_PRESETS.restaurant.map(name => ({ name, score: 5.0 })),
     showTotal: true,
-    showWatermark: true
+    showWatermark: true,
+    custom: Object.assign({}, DEFAULT_CUSTOM)
   };
 
   // 빈 값일 때 미리보기에 표시할 placeholder 문구
@@ -1090,12 +1313,13 @@
   const STAR_PATH = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
 
   // 한 개의 별 SVG (고유한 gradient id 필요)
-  function starSvg(fillRatio, idPrefix) {
-    // fillRatio: 0, 0.5, 1
+  function starSvg(fillRatio, idPrefix, fillColor) {
+    // fillRatio: 0, 0.5, 1 / fillColor: 채워진 별 색 (없으면 기본 골드)
+    const fill = fillColor || STAR_FILL;
     const gid = `g${idPrefix}_${Math.random().toString(36).slice(2, 8)}`;
     if (fillRatio === 1) {
       return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path class="star-base" d="${STAR_PATH}" fill="${STAR_FILL}"/>
+        <path class="star-base" d="${STAR_PATH}" fill="${fill}"/>
       </svg>`;
     }
     if (fillRatio === 0) {
@@ -1107,7 +1331,7 @@
     return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="${gid}">
-          <stop offset="50%" stop-color="${STAR_FILL}"/>
+          <stop offset="50%" stop-color="${fill}"/>
           <stop offset="50%" stop-color="${STAR_EMPTY}"/>
         </linearGradient>
       </defs>
@@ -1117,7 +1341,15 @@
 
   // 5개 별 SVG 묶음 반환 (미리보기용)
   // score (0~5)를 0.5 단위로 처리
+  // 채워진 별 색 (사용자 설정 모드면 사용자 색, 아니면 기본 골드)
+  function activeStarFill() {
+    return (state.template === 'custom' && state.custom && state.custom.starColor)
+      ? state.custom.starColor
+      : STAR_FILL;
+  }
+
   function previewStarsHtml(score) {
+    const fillColor = activeStarFill();
     const safe = Math.max(0, Math.min(5, score));
     let html = '<span class="preview-stars">';
     for (let i = 1; i <= 5; i++) {
@@ -1125,7 +1357,7 @@
       if (safe >= i) fill = 1;
       else if (safe >= i - 0.5) fill = 0.5;
       else fill = 0;
-      html += starSvg(fill, 'p' + i);
+      html += starSvg(fill, 'p' + i, fillColor);
     }
     html += '</span>';
     return html;
@@ -1172,18 +1404,119 @@
     const wrap = card?.closest('.preview-card-wrap'); // 스케일 래퍼 건너뛰고 wrap 찾기
     if (!card) return;
     // 카드: tpl-{name} 클래스만 유지
-    card.classList.remove('tpl-minimal', 'tpl-beige', 'tpl-blog');
+    card.classList.remove('tpl-minimal', 'tpl-beige', 'tpl-blog', 'tpl-custom');
     card.classList.add('tpl-' + state.template);
     // 비율: ratio-{name}
     card.classList.remove('ratio-landscape', 'ratio-portrait');
     card.classList.add('ratio-' + state.ratio);
     // 배경: bg-{name}
     if (wrap) {
-      wrap.classList.remove('bg-minimal', 'bg-beige', 'bg-blog');
+      wrap.classList.remove('bg-minimal', 'bg-beige', 'bg-blog', 'bg-custom');
       wrap.classList.add('bg-' + state.template);
     }
+    // 사용자 설정 모드면 색·폰트·정렬 CSS 변수 주입 (아니면 제거)
+    applyCustomVars(card);
     // 카드 크기가 바뀌었으니 스케일 다시 계산
     fitCardToWrap();
+  }
+
+  // ============== 사용자 설정(custom) 디자인 ==============
+  const CUSTOM_KEY = 'rating-maker-custom-v1';
+  const CUSTOM_VARS = [
+    '--c-card-bg', '--c-font', '--c-ink', '--c-ink-soft',
+    '--c-ink-faint', '--c-line', '--c-accent', '--c-align', '--c-total-justify'
+  ];
+
+  // #RGB / #RRGGBB → {r,g,b}
+  function hexToRgb(hex) {
+    let h = String(hex || '').replace('#', '').trim();
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h, 16);
+    if (isNaN(n)) return { r: 255, g: 255, b: 255 };
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+
+  // 배경색 밝기에 따라 읽기 좋은 글자색(어두운/밝은) 자동 선택
+  function readableInk(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.6 ? '#2A2522' : '#FFFFFF';
+  }
+
+  // 사용자 설정 모드일 때 카드에 CSS 변수 주입 (아니면 제거)
+  function applyCustomVars(card) {
+    if (!card) return;
+    if (state.template !== 'custom') {
+      CUSTOM_VARS.forEach(p => card.style.removeProperty(p));
+      return;
+    }
+    const c = state.custom;
+    const ink = readableInk(c.cardColor);
+    const { r, g, b } = hexToRgb(ink);
+    const rgba = a => `rgba(${r},${g},${b},${a})`;
+    card.style.setProperty('--c-card-bg', c.cardColor);
+    card.style.setProperty('--c-font', c.font);
+    card.style.setProperty('--c-ink', ink);
+    card.style.setProperty('--c-ink-soft', rgba(0.72));
+    card.style.setProperty('--c-ink-faint', rgba(0.5));
+    card.style.setProperty('--c-line', rgba(0.18));
+    card.style.setProperty('--c-accent', c.starColor);
+    card.style.setProperty('--c-align', c.align);
+    card.style.setProperty('--c-total-justify',
+      c.align === 'center' ? 'center' : c.align === 'right' ? 'flex-end' : 'space-between');
+  }
+
+  // 설정 컨트롤 패널 표시/숨김 (사용자 설정 템플릿일 때만 표시)
+  function toggleCustomControls() {
+    const el = document.getElementById('customControls');
+    if (el) el.style.display = (state.template === 'custom') ? '' : 'none';
+  }
+
+  // localStorage 저장 / 불러오기
+  function saveCustom() {
+    try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(state.custom)); } catch (e) {}
+  }
+  function loadCustom() {
+    try {
+      const raw = localStorage.getItem(CUSTOM_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved && typeof saved === 'object') {
+        state.custom = Object.assign({}, DEFAULT_CUSTOM, saved);
+      }
+    } catch (e) {}
+  }
+
+  // 색상 스와치 버튼 렌더링
+  function renderSwatches(containerId, colors, type) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = colors.map(col =>
+      `<button type="button" class="color-swatch" data-color="${col}" data-type="${type}" style="background:${col}" title="${col}" aria-label="색상 ${col}"></button>`
+    ).join('');
+  }
+
+  // 선택된 스와치에 active 표시 (대소문자 무시)
+  function markActiveSwatch(containerId, color) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const target = String(color || '').toLowerCase();
+    el.querySelectorAll('.color-swatch').forEach(b => {
+      b.classList.toggle('active', String(b.dataset.color || '').toLowerCase() === target);
+    });
+  }
+
+  // 현재 state.custom 값을 컨트롤 UI에 반영
+  function syncCustomControlsUI() {
+    const c = state.custom;
+    document.querySelectorAll('#alignChips .category-chip').forEach(ch => {
+      ch.classList.toggle('active', ch.dataset.align === c.align);
+    });
+    const cc = document.getElementById('cardColorInput'); if (cc) cc.value = c.cardColor;
+    const sc = document.getElementById('starColorInput'); if (sc) sc.value = c.starColor;
+    markActiveSwatch('cardColorSwatches', c.cardColor);
+    markActiveSwatch('starColorSwatches', c.starColor);
+    const fs = document.getElementById('fontSelect'); if (fs) fs.value = c.font;
   }
 
   // 카드를 미리보기 영역 폭에 맞게 비율 그대로 축소.
@@ -1517,6 +1850,7 @@
         document.querySelectorAll('.template-card').forEach(c => {
           c.classList.toggle('active', c.dataset.template === tpl);
         });
+        toggleCustomControls();
         renderPreviewOnly();
       });
     });
@@ -1599,6 +1933,81 @@
 
     // 다운로드 버튼
     document.getElementById('btnDownload').addEventListener('click', downloadAsPng);
+
+    // ===== 사용자 설정(custom) 컨트롤 =====
+    // 저장된 설정 불러오기 (있으면 state.custom에 반영)
+    loadCustom();
+    // 색상 스와치 버튼 그리기
+    renderSwatches('cardColorSwatches', CARD_COLOR_PRESETS, 'card');
+    renderSwatches('starColorSwatches', STAR_COLOR_PRESETS, 'star');
+
+    // 글씨 정렬 칩
+    document.querySelectorAll('#alignChips .category-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const a = chip.dataset.align;
+        if (!a) return;
+        state.custom.align = a;
+        document.querySelectorAll('#alignChips .category-chip').forEach(c => {
+          c.classList.toggle('active', c.dataset.align === a);
+        });
+        saveCustom();
+        renderPreviewOnly();
+      });
+    });
+
+    // 색상 스와치 클릭 (카드색 / 별색 공통)
+    document.querySelectorAll('.color-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        const col = sw.dataset.color;
+        const type = sw.dataset.type;
+        if (!col) return;
+        if (type === 'card') {
+          state.custom.cardColor = col;
+          const inp = document.getElementById('cardColorInput'); if (inp) inp.value = col;
+          markActiveSwatch('cardColorSwatches', col);
+        } else {
+          state.custom.starColor = col;
+          const inp = document.getElementById('starColorInput'); if (inp) inp.value = col;
+          markActiveSwatch('starColorSwatches', col);
+        }
+        saveCustom();
+        renderPreviewOnly();
+      });
+    });
+
+    // 카드색 직접 선택
+    const cardColorInput = document.getElementById('cardColorInput');
+    if (cardColorInput) {
+      cardColorInput.addEventListener('input', (e) => {
+        state.custom.cardColor = e.target.value;
+        markActiveSwatch('cardColorSwatches', e.target.value);
+        saveCustom();
+        renderPreviewOnly();
+      });
+    }
+    // 별색 직접 선택
+    const starColorInput = document.getElementById('starColorInput');
+    if (starColorInput) {
+      starColorInput.addEventListener('input', (e) => {
+        state.custom.starColor = e.target.value;
+        markActiveSwatch('starColorSwatches', e.target.value);
+        saveCustom();
+        renderPreviewOnly();
+      });
+    }
+    // 폰트 선택
+    const fontSelect = document.getElementById('fontSelect');
+    if (fontSelect) {
+      fontSelect.addEventListener('change', (e) => {
+        state.custom.font = e.target.value;
+        saveCustom();
+        renderPreviewOnly();
+      });
+    }
+
+    // 불러온 값으로 컨트롤 UI 동기화 + 패널 표시 상태 반영
+    syncCustomControlsUI();
+    toggleCustomControls();
 
     // 최초 렌더
     render();
