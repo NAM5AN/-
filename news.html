@@ -1,0 +1,52 @@
+<!-- ════════════════════════════════════════════════════════════════
+     체험단 매니저 — 소식 글 목록
+     ────────────────────────────────────────────────────────────────
+     ▸ 이 파일은 index.html의 소식 탭에서 자동으로 불러와 표시됩니다.
+     ▸ 새 글을 쓰려면 아래 <article class="notice-item"> ... </article>
+       블록을 통째로 복사해서 "맨 위"에 붙여넣은 뒤,
+       배지 · 제목 · 날짜 · 본문만 바꾸면 됩니다.
+       (index.html은 건드릴 필요 없어요. 클릭 동작은 자동으로 됩니다.)
+     ▸ 위에 있는 글일수록 목록 위쪽(최신)에 표시됩니다.
+
+     ── 배지(왼쪽 작은 라벨) 예시 ──
+       🆕 업데이트   /   🎉 이벤트   /   📢 공지   /   🛠 점검 안내
+
+     ── 본문(.notice-body)에 쓸 수 있는 것 ──
+       <p>문단</p>
+       <h4>소제목</h4>
+       <ul><li>목록 항목</li></ul>
+       <strong>굵게</strong>
+       <a href="링크주소" target="_blank" rel="noopener">링크 글자</a>
+       <img src="/images/파일명.png" alt="설명">
+     ════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ▼▼▼ 여기에 새 글을 복사해서 추가하세요 (위쪽이 최신) ▼▼▼ -->
+
+
+<article class="notice-item" tabindex="0" role="button" aria-haspopup="dialog">
+  <div class="notice-main">
+    <span class="notice-badge">🆕 업데이트</span>
+    <h3 class="notice-title">별점 메이커, 나만의 디자인을 저장하세요</h3>
+    <time class="notice-date" datetime="2026-06-18">2026.06.18</time>
+  </div>
+  <span class="notice-arrow" aria-hidden="true">›</span>
+
+  <!-- 모달 본문 (목록에선 숨김, 글 클릭 시 모달에 표시) -->
+  <div class="notice-body" hidden>
+    <p>별점 메이커에 <strong>사용자 설정 디자인</strong> 기능이 추가됐어요. 기본 템플릿 3종 외에, 카드를 내 블로그 분위기에 맞게 직접 꾸밀 수 있어요.</p>
+
+    <h4>이런 걸 바꿀 수 있어요</h4>
+    <ul>
+      <li><strong>글씨 정렬</strong> · 왼쪽 / 가운데 / 오른쪽</li>
+      <li><strong>카드 색</strong> · 추천 색 또는 직접 선택 (어두운 색을 골라도 글씨가 자동으로 잘 보여요)</li>
+      <li><strong>별 색</strong> · 골드 외에 원하는 색으로</li>
+      <li><strong>폰트</strong> · 고딕 · 명조 · 손글씨 등 6종</li>
+    </ul>
+
+    <h4>자주 쓰는 디자인은 저장해두세요</h4>
+    <p>마음에 드는 설정을 <strong>'내 카페용', '맛집용'</strong>처럼 이름을 붙여 저장하면, 다음에 한 번에 불러와 쓸 수 있어요. 카테고리별로 미리 만들어두면 편해요.</p>
+
+    <p>지금 <strong>도구 탭의 별점 메이커</strong>에서 사용해보세요!</p>
+  </div>
+</article>
