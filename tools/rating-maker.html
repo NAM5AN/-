@@ -1004,6 +1004,103 @@
     line-height: 1.5;
   }
 
+  /* 저장된 디자인 (이름 붙인 프리셋) */
+  .preset-section {
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .preset-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .preset-chip {
+    display: inline-flex;
+    align-items: center;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.12s;
+  }
+  .preset-chip:hover {
+    border-color: var(--terra-soft);
+  }
+  .preset-chip-load {
+    padding: 6px 4px 6px 12px;
+    background: transparent;
+    border: none;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .preset-chip-load:hover {
+    color: var(--terra);
+  }
+  .preset-chip-del {
+    padding: 6px 10px 6px 6px;
+    background: transparent;
+    border: none;
+    color: var(--ink-faint);
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    transition: color 0.12s;
+  }
+  .preset-chip-del:hover {
+    color: var(--rose);
+  }
+  .preset-empty {
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin: 4px 0 0;
+    line-height: 1.5;
+  }
+  .preset-save-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .preset-name-input {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--ink);
+    box-sizing: border-box;
+  }
+  .preset-name-input:focus {
+    outline: none;
+    border-color: var(--terra);
+  }
+  .preset-save-btn {
+    padding: 9px 14px;
+    background: var(--terra);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .preset-save-btn:hover {
+    background: #A8431F;
+  }
+
   /* 다운로드 버튼 */
   .download-actions {
     margin-top: 16px;
@@ -1160,6 +1257,11 @@
 
       <!-- 사용자 설정 컨트롤 (사용자 설정 템플릿 선택 시에만 표시) -->
       <div class="custom-controls" id="customControls" style="display:none;">
+        <div class="preset-section">
+          <label class="custom-row-label">저장된 디자인</label>
+          <div class="preset-chips" id="presetChips"></div>
+          <p class="preset-empty" id="presetEmpty">저장된 디자인이 없어요. 아래에서 설정한 뒤 이름을 붙여 저장해보세요.</p>
+        </div>
         <div class="custom-row">
           <label class="custom-row-label">글씨 정렬</label>
           <div class="category-chips" id="alignChips">
@@ -1195,7 +1297,11 @@
             <option value="'Black Han Sans', sans-serif">블랙 한 산스 (굵은 제목용)</option>
           </select>
         </div>
-        <p class="custom-save-note">✓ 설정은 자동으로 저장돼 다음에 와도 그대로 사용할 수 있어요</p>
+        <div class="preset-save-row">
+          <input type="text" id="presetNameInput" class="preset-name-input" placeholder="예) 내 카페용" maxlength="20">
+          <button type="button" id="savePresetBtn" class="preset-save-btn">💾 저장</button>
+        </div>
+        <p class="custom-save-note">✓ 현재 설정은 자동 저장돼요. 이름을 붙여 저장하면 여러 디자인을 보관해두고 골라 쓸 수 있어요.</p>
       </div>
     </div>
 
@@ -1517,6 +1623,85 @@
     markActiveSwatch('cardColorSwatches', c.cardColor);
     markActiveSwatch('starColorSwatches', c.starColor);
     const fs = document.getElementById('fontSelect'); if (fs) fs.value = c.font;
+  }
+
+  // ============== 이름 붙인 디자인 프리셋 (여러 개 저장) ==============
+  const PRESETS_KEY = 'rating-maker-custom-presets-v1';
+  const MAX_PRESETS = 12;
+  let customPresets = [];
+
+  function loadPresets() {
+    try {
+      const raw = localStorage.getItem(PRESETS_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      customPresets = Array.isArray(arr) ? arr.filter(p => p && p.name) : [];
+    } catch (e) { customPresets = []; }
+  }
+  function savePresets() {
+    try { localStorage.setItem(PRESETS_KEY, JSON.stringify(customPresets)); } catch (e) {}
+  }
+  function makePresetId() {
+    return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  // 현재 설정을 이름 붙여 저장 (같은 이름이면 덮어쓰기)
+  function saveCurrentAsPreset(name) {
+    const nm = String(name || '').trim();
+    if (!nm) return { ok: false, reason: 'empty' };
+    const c = state.custom;
+    const existing = customPresets.find(p => p.name === nm);
+    if (existing) {
+      existing.align = c.align;
+      existing.cardColor = c.cardColor;
+      existing.starColor = c.starColor;
+      existing.font = c.font;
+    } else {
+      if (customPresets.length >= MAX_PRESETS) return { ok: false, reason: 'max' };
+      customPresets.push({
+        id: makePresetId(),
+        name: nm,
+        align: c.align, cardColor: c.cardColor, starColor: c.starColor, font: c.font
+      });
+    }
+    savePresets();
+    return { ok: true, overwrite: !!existing };
+  }
+
+  function deletePreset(id) {
+    customPresets = customPresets.filter(p => p.id !== id);
+    savePresets();
+  }
+
+  // 저장된 프리셋을 현재 설정으로 불러오기
+  function loadPresetIntoCustom(id) {
+    const p = customPresets.find(x => x.id === id);
+    if (!p) return;
+    state.custom = {
+      align: p.align || DEFAULT_CUSTOM.align,
+      cardColor: p.cardColor || DEFAULT_CUSTOM.cardColor,
+      starColor: p.starColor || DEFAULT_CUSTOM.starColor,
+      font: p.font || DEFAULT_CUSTOM.font
+    };
+    saveCustom(); // 작업 중인 설정(자동저장)도 같이 갱신
+  }
+
+  // 프리셋 칩 목록 렌더링
+  function renderPresetChips() {
+    const el = document.getElementById('presetChips');
+    const empty = document.getElementById('presetEmpty');
+    if (!el) return;
+    if (!customPresets.length) {
+      el.innerHTML = '';
+      if (empty) empty.style.display = '';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    el.innerHTML = customPresets.map(p => `
+      <span class="preset-chip" data-id="${p.id}">
+        <button type="button" class="preset-chip-load" data-id="${p.id}" title="${escapeAttr(p.name)} 불러오기">${escapeHtml(p.name)}</button>
+        <button type="button" class="preset-chip-del" data-id="${p.id}" title="삭제" aria-label="${escapeAttr(p.name)} 삭제">✕</button>
+      </span>
+    `).join('');
   }
 
   // 카드를 미리보기 영역 폭에 맞게 비율 그대로 축소.
@@ -2008,6 +2193,62 @@
     // 불러온 값으로 컨트롤 UI 동기화 + 패널 표시 상태 반영
     syncCustomControlsUI();
     toggleCustomControls();
+
+    // ===== 이름 붙인 디자인 프리셋 =====
+    loadPresets();
+    renderPresetChips();
+
+    // 프리셋 칩 클릭 (불러오기 / 삭제) — 이벤트 위임
+    const presetChipsEl = document.getElementById('presetChips');
+    if (presetChipsEl) {
+      presetChipsEl.addEventListener('click', (e) => {
+        const loadBtn = e.target.closest('.preset-chip-load');
+        const delBtn = e.target.closest('.preset-chip-del');
+        if (loadBtn) {
+          loadPresetIntoCustom(loadBtn.dataset.id);
+          syncCustomControlsUI();
+          renderPreviewOnly();
+        } else if (delBtn) {
+          const p = customPresets.find(x => x.id === delBtn.dataset.id);
+          const nm = p ? p.name : '';
+          if (confirm(`'${nm}' 디자인을 삭제할까요?`)) {
+            deletePreset(delBtn.dataset.id);
+            renderPresetChips();
+          }
+        }
+      });
+    }
+
+    // 현재 설정 저장 버튼 + 이름 입력
+    const savePresetBtn = document.getElementById('savePresetBtn');
+    const presetNameInput = document.getElementById('presetNameInput');
+    if (savePresetBtn && presetNameInput) {
+      const doSavePreset = () => {
+        const res = saveCurrentAsPreset(presetNameInput.value);
+        if (!res.ok) {
+          if (res.reason === 'empty') {
+            alert('저장할 디자인 이름을 입력해주세요!');
+            presetNameInput.focus();
+          } else if (res.reason === 'max') {
+            alert(`디자인은 최대 ${MAX_PRESETS}개까지 저장할 수 있어요. 기존 디자인을 삭제한 뒤 다시 시도해주세요.`);
+          }
+          return;
+        }
+        presetNameInput.value = '';
+        renderPresetChips();
+        const orig = savePresetBtn.textContent;
+        savePresetBtn.textContent = res.overwrite ? '✓ 덮어썼어요' : '✓ 저장됨';
+        savePresetBtn.disabled = true;
+        setTimeout(() => {
+          savePresetBtn.textContent = orig;
+          savePresetBtn.disabled = false;
+        }, 1400);
+      };
+      savePresetBtn.addEventListener('click', doSavePreset);
+      presetNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); doSavePreset(); }
+      });
+    }
 
     // 최초 렌더
     render();
