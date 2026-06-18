@@ -43,28 +43,32 @@
     padding: 24px 0;
     margin: 0;
   }
+  /* ── 기본 = 얇은 목록형 (이전에 게시된 글들) ── */
   .notice-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px 18px;
+    gap: 10px;
+    padding: 12px 16px;
     background: var(--paper);
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: 12px;
     cursor: pointer;
-    transition: border-color .15s, transform .15s, box-shadow .15s;
+    transition: border-color .15s, background .15s;
   }
-  .notice-item:hover {
-    border-color: var(--terra-soft);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(42, 37, 34, .07);
-  }
+  .notice-item:hover { border-color: var(--terra-soft); }
   .notice-item:focus-visible {
     outline: 2px solid var(--terra);
     outline-offset: 2px;
   }
-  .notice-main { flex: 1; min-width: 0; }
+  .notice-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
   .notice-badge {
+    flex-shrink: 0;
     display: inline-block;
     font-size: 11px;
     font-weight: 700;
@@ -72,29 +76,89 @@
     background: rgba(194, 84, 43, .08);
     padding: 3px 9px;
     border-radius: 12px;
-    margin-bottom: 6px;
+    white-space: nowrap;
   }
   .notice-title {
-    font-family: var(--font-serif);
-    font-weight: 700;
-    font-size: 16px;
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14px;
     color: var(--ink);
-    margin: 0 0 4px;
+    margin: 0;
     line-height: 1.4;
-    word-break: keep-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .notice-date {
+    flex-shrink: 0;
+    margin-left: auto;
     font-size: 12px;
     color: var(--ink-faint);
     font-family: ui-monospace, Menlo, monospace;
+    white-space: nowrap;
   }
-  .notice-arrow {
+  .notice-arrow { display: none; }
+
+  /* ── 가장 최신 글(맨 위) = 두꺼운 카드로 강조 ── */
+  .notice-item:first-of-type {
+    gap: 12px;
+    padding: 18px 20px;
+    border-radius: 14px;
+  }
+  .notice-item:first-of-type:hover {
+    border-color: var(--terra-soft);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(42, 37, 34, .07);
+  }
+  .notice-item:first-of-type .notice-main {
+    display: block;
+  }
+  .notice-item:first-of-type .notice-badge {
+    margin-bottom: 8px;
+  }
+  .notice-item:first-of-type .notice-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 17px;
+    margin: 0 0 5px;
+    white-space: normal;
+    word-break: keep-all;
+  }
+  .notice-item:first-of-type .notice-date {
+    display: block;
+    margin-left: 0;
+  }
+  .notice-item:first-of-type .notice-arrow {
+    display: block;
     font-size: 22px;
     color: var(--ink-faint);
     flex-shrink: 0;
     transition: color .15s, transform .15s;
   }
-  .notice-item:hover .notice-arrow { color: var(--terra); transform: translateX(2px); }
+  .notice-item:first-of-type:hover .notice-arrow {
+    color: var(--terra);
+    transform: translateX(2px);
+  }
+
+  /* ── 소식 탭 NEW 표시 (일주일 이내 새 글) ── */
+  .tab-new-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #E5484D;
+    margin-left: 5px;
+    vertical-align: top;
+    animation: newDotPop .25s ease;
+  }
+  .tab-new-dot[hidden] { display: none; }
+  @keyframes newDotPop {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+  }
+
 
   /* ===== 소식 모달 본문 ===== */
   .news-modal-badge {
@@ -217,7 +281,7 @@
     <button class="tab" data-view="map">지도</button>
     <button class="tab" data-view="completed">완료 <span class="count" id="cntDone">0</span></button>
     <button class="tab" data-view="tools">🛠️ 도구</button>
-    <button class="tab" data-view="news">📢 소식</button>
+    <button class="tab" data-view="news">📢 소식<span class="tab-new-dot" id="newsNewDot" hidden></span></button>
   </nav>
 
   <!-- 진행 중 뷰 -->
@@ -2064,7 +2128,8 @@
   }
 
   // 공지/업데이트 글을 /news.html 에서 불러와 #noticeFeed 에 채움.
-  // 소식 탭을 처음 열 때 한 번만 실행. 글 클릭은 이벤트 위임이라 추가 작업 불필요.
+  // 앱 시작 시 한 번만 실행(탭에서도 NEW 표시를 계산하려고 미리 불러옴).
+  // 글 클릭은 이벤트 위임이라 추가 작업 불필요.
   let newsLoaded = false;
   async function loadNewsPosts() {
     if (newsLoaded) return;
@@ -2076,10 +2141,51 @@
       const html = await res.text();
       feed.innerHTML = html;
       newsLoaded = true;
+      updateNewsBadge();
+      // 불러온 시점에 이미 소식 탭을 보고 있으면 '읽음' 처리
+      if (currentView === 'news') markNewsSeen();
     } catch (e) {
       console.error('[소식 불러오기 실패]', e);
       feed.innerHTML = '<p class="notice-loading">소식을 불러오지 못했어요. 잠시 후 새로고침 해주세요.</p>';
     }
+  }
+
+  // ── 소식 NEW 표시 (일주일 이내 + 아직 안 본 글) ──
+  const NEWS_SEEN_KEY = 'news-last-seen-v1';
+  const NEWS_NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7일
+
+  // 불러온 글들 중 가장 최신 날짜(datetime)의 timestamp 반환 (없으면 null)
+  function getLatestPostTime() {
+    const dates = Array.from(document.querySelectorAll('#noticeFeed .notice-item .notice-date'))
+      .map(t => t.getAttribute('datetime'))
+      .filter(Boolean)
+      .sort(); // ISO 날짜 문자열은 사전순 = 날짜순
+    if (!dates.length) return null;
+    const latest = dates[dates.length - 1];
+    const ts = new Date(latest + 'T00:00:00').getTime();
+    return isNaN(ts) ? null : ts;
+  }
+
+  function updateNewsBadge() {
+    const dot = document.getElementById('newsNewDot');
+    if (!dot) return;
+    const latest = getLatestPostTime();
+    if (latest === null) { dot.hidden = true; return; }
+    let lastSeen = 0;
+    try { lastSeen = parseInt(localStorage.getItem(NEWS_SEEN_KEY) || '0', 10) || 0; } catch (e) {}
+    const isRecent = latest >= (Date.now() - NEWS_NEW_WINDOW_MS);
+    const isUnseen = latest > lastSeen;
+    dot.hidden = !(isRecent && isUnseen);
+  }
+
+  // 소식 탭을 열면 '읽음'으로 기록하고 NEW 점을 숨김
+  function markNewsSeen() {
+    const latest = getLatestPostTime();
+    if (latest !== null) {
+      try { localStorage.setItem(NEWS_SEEN_KEY, String(latest)); } catch (e) {}
+    }
+    const dot = document.getElementById('newsNewDot');
+    if (dot) dot.hidden = true;
   }
 
   // 실제 주소 필드의 읽기/편집 모드 전환
@@ -2136,7 +2242,7 @@
 
     if (view === 'map') renderMap();
     if (view === 'completed') renderCompletedList();
-    if (view === 'news') loadNewsPosts();
+    if (view === 'news') { loadNewsPosts(); markNewsSeen(); }
   }
 
   // ============== Image Upload Handler ==============
@@ -2286,6 +2392,8 @@
 
     // 소식 모달 (공지/업데이트 글)
     setupNewsModal();
+    // 소식 글 미리 불러오기 (탭에서도 NEW 표시가 보이도록)
+    loadNewsPosts();
 
     // 직접 입력 버튼
     document.getElementById('btnManualAdd').addEventListener('click', () => {
