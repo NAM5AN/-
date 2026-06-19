@@ -106,7 +106,10 @@
     background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px 15px}
   .thumb{width:64px;height:64px;border-radius:9px;background:var(--bg) center/cover no-repeat;
     border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
-    font-size:22px;color:var(--muted);overflow:hidden;position:relative}
+    font-size:22px;color:var(--muted);overflow:hidden;position:relative;cursor:pointer}
+  .thumb .pvhint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:20px;color:#fff;background:rgba(0,0,0,.32);opacity:0;transition:.15s;pointer-events:none}
+  .thumb:hover .pvhint{opacity:1}
   .kind{position:absolute;left:3px;bottom:3px;font-family:var(--mono);font-size:9px;font-weight:700;
     padding:1px 5px;border-radius:5px;background:rgba(0,0,0,.6);color:#fff;letter-spacing:.04em}
   .meta{min-width:0}
@@ -205,6 +208,15 @@
   .trimstage{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#000;margin-bottom:12px;
     display:flex;align-items:center;justify-content:center;min-height:120px}
   .trimstage canvas{display:block;max-width:100%;max-height:46vh;width:auto;height:auto}
+  /* 결과 미리보기 모달 */
+  .previewstage{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px;
+    background:repeating-conic-gradient(#EDE6DA 0% 25%, #F5F0E8 0% 50%) 50%/18px 18px;
+    display:flex;align-items:center;justify-content:center;min-height:140px}
+  .previewstage canvas{display:block;max-width:100%;max-height:52vh;width:auto;height:auto}
+  .pvbadges{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+  .pvbadge{font-family:var(--mono);font-size:11.5px;color:var(--accent);background:rgba(194,84,43,.10);
+    border:1px solid var(--accent);border-radius:7px;padding:4px 9px}
+  .pvbadge.muted{color:var(--muted);background:var(--bg);border-color:var(--line)}
   .trimctrls{display:flex;align-items:center;gap:12px;margin-bottom:18px}
   .timeline{position:relative;height:46px;margin:6px 2px 4px;user-select:none;touch-action:none}
   .tl-track{position:absolute;left:0;right:0;top:50%;height:10px;transform:translateY(-50%);
@@ -365,6 +377,20 @@
   </div>
 </div>
 
+<!-- 결과 미리보기 모달 -->
+<div class="modal" id="previewModal">
+  <div class="sheet">
+    <h3>결과 미리보기</h3>
+    <div class="fname" id="pvFname"></div>
+    <div class="pvbadges" id="pvBadges"></div>
+    <div class="previewstage"><canvas id="previewCanvas"></canvas></div>
+    <div class="cropinfo" id="pvInfo"></div>
+    <div class="sheet-actions">
+      <button class="btn" id="pvClose">닫기</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const $ = s => document.querySelector(s);
 const MB = 1048576;
@@ -424,7 +450,7 @@ function renderItem(item){
   card.className = 'card';
   const isV = item.kind === 'video';
   card.innerHTML = `
-    <div class="thumb">${isV?'🎬':'🎞️'}<span class="kind">${isV?'MP4':'GIF'}</span></div>
+    <div class="thumb">${isV?'🎬':'🎞️'}<span class="kind">${isV?'MP4':'GIF'}</span><span class="pvhint">▶</span></div>
     <div class="meta">
       <div class="name"></div>
       <div class="stats"></div>
@@ -466,6 +492,7 @@ function renderItem(item){
     refs.boom.classList.toggle('on', item.reverse);
     resetItemResult(item);
   };
+  refs.thumb.onclick = () => openPreviewModal(item);
 
   // 썸네일 (가벼운 단일 프레임)
   ensureThumb(item).then(url => {
@@ -1139,6 +1166,85 @@ $('#trimApply').onclick = ()=>{
 };
 trimModal.addEventListener('click', e=>{ if(e.target===trimModal) closeTrimModal(); });
 
+/* ====================== 결과 미리보기 모달 (크롭·구간·부메랑 적용 움짤) ====================== */
+const previewModal=$('#previewModal'), previewCanvas=$('#previewCanvas'), previewCtx2d=previewCanvas.getContext('2d');
+const pvFname=$('#pvFname'), pvBadges=$('#pvBadges'), pvInfo=$('#pvInfo');
+let pvCtx=null, pvPlay=null;
+
+async function openPreviewModal(item){
+  let preview;
+  try{ preview = await ensurePreview(item); }
+  catch(e){ showBanner('미리보기를 불러오지 못했습니다. (배포/로컬 환경에서 실행해 주세요.)'); return; }
+  const frames = preview.frames;
+  const dur = preview.duration || (frames.length ? frames[frames.length-1].t : 0) || 0;
+
+  // 구간(트림) 적용 → 재생 구간
+  const segStart = clamp(item.trim?.start ?? 0, 0, dur || 1e9);
+  const segEnd   = clamp(item.trim?.end ?? (dur || 0), segStart, dur || 1e9);
+  const boomer = !!(item.reverse && (segEnd - segStart) > 0.001);
+
+  // 크롭 영역(미리보기 캔버스 픽셀 기준 — crop은 정규화 분수라 그대로 적용)
+  const cw0 = frames[0].canvas.width, ch0 = frames[0].canvas.height;
+  const cr = item.crop
+    ? { sx:item.crop.fx*cw0, sy:item.crop.fy*ch0, sw:Math.max(1,item.crop.fw*cw0), sh:Math.max(1,item.crop.fh*ch0) }
+    : { sx:0, sy:0, sw:cw0, sh:ch0 };
+  previewCanvas.width = Math.max(1,Math.round(cr.sw)); previewCanvas.height = Math.max(1,Math.round(cr.sh));
+
+  // 실제 변환 기준 최종 출력 크기 (캡션용)
+  const maxWidth = Math.max(80, parseInt($('#maxw').value)||640);
+  const fps = clamp(parseInt($('#fps').value)||15,1,50);
+  const capScale = Math.min(1, maxWidth/preview.natW);
+  const capW = Math.max(2, Math.round(preview.natW*capScale/2)*2);
+  const capH = Math.max(2, Math.round(preview.natH*capScale/2)*2);
+  const outW = item.crop ? Math.max(1, Math.round(item.crop.fw*capW)) : capW;
+  const outH = item.crop ? Math.max(1, Math.round(item.crop.fh*capH)) : capH;
+
+  pvCtx = { frames, segStart, segEnd, boomer, cr };
+  pvFname.textContent = item.name;
+
+  const badges=[];
+  badges.push(item.crop ? `<span class="pvbadge">✂ 크롭 ${outW}×${outH}</span>` : `<span class="pvbadge muted">크롭 없음</span>`);
+  badges.push((item.trim && dur) ? `<span class="pvbadge">⌖ ${segStart.toFixed(1)}–${segEnd.toFixed(1)}s</span>` : `<span class="pvbadge muted">전체 구간</span>`);
+  badges.push(boomer ? `<span class="pvbadge">↺ 부메랑</span>` : `<span class="pvbadge muted">부메랑 없음</span>`);
+  pvBadges.innerHTML = badges.join('');
+  pvInfo.textContent = `결과 ${outW}×${outH}px · ${fps}fps · 실제 변환과 유사한 근사 미리보기예요`;
+
+  previewModal.classList.add('open');
+  startPreviewPlay();
+}
+function startPreviewPlay(){
+  stopPreviewPlay();
+  if(!pvCtx) return;
+  const { segStart, segEnd, boomer } = pvCtx;
+  let t=segStart, dir=1, last=performance.now();
+  renderPreviewAt(t);
+  if((segEnd - segStart) <= 0.001) return; // 사실상 단일 프레임 → 정지
+  const loop=(now)=>{
+    if(!pvCtx) return;
+    const d=(now-last)/1000; last=now;
+    t += dir*d;
+    if(boomer){
+      if(t>=segEnd){ t=segEnd; dir=-1; }
+      else if(t<=segStart){ t=segStart; dir=1; }
+    } else if(t>=segEnd){ t=segStart; }
+    renderPreviewAt(t);
+    pvPlay = requestAnimationFrame(loop);
+  };
+  pvPlay = requestAnimationFrame(loop);
+}
+function renderPreviewAt(t){
+  if(!pvCtx) return;
+  const { frames, cr } = pvCtx;
+  const idx = previewIndexAt({frames}, t);
+  const fr = frames[Math.max(0,Math.min(idx,frames.length-1))]; if(!fr) return;
+  previewCtx2d.clearRect(0,0,previewCanvas.width,previewCanvas.height);
+  previewCtx2d.drawImage(fr.canvas, cr.sx, cr.sy, cr.sw, cr.sh, 0,0,previewCanvas.width,previewCanvas.height);
+}
+function stopPreviewPlay(){ if(pvPlay) cancelAnimationFrame(pvPlay); pvPlay=null; }
+function closePreviewModal(){ stopPreviewPlay(); previewModal.classList.remove('open'); pvCtx=null; }
+$('#pvClose').onclick = closePreviewModal;
+previewModal.addEventListener('click', e=>{ if(e.target===previewModal) closePreviewModal(); });
+
 /* ====================== 이벤트 ====================== */
 drop.onclick = ()=>picker.click();
 picker.onchange = e=>{ addFiles(e.target.files); picker.value=''; };
@@ -1152,6 +1258,7 @@ window.addEventListener('keydown', e=>{
   if(e.key!=='Escape') return;
   if(cropModal.classList.contains('open')) closeCropModal();
   if(trimModal.classList.contains('open')) closeTrimModal();
+  if(previewModal.classList.contains('open')) closePreviewModal();
 });
 window.addEventListener('resize', ()=>{ if(cropCtx) drawSel(); });
 window.addEventListener('dragover', e=>e.preventDefault());
