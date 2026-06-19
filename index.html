@@ -212,6 +212,24 @@
     color: var(--ink);
     margin: 18px 0 8px;
   }
+  /* 소식 모달 하단 버튼 (바로가기/문의 폼 등) — 기본 링크 스타일보다 우선 */
+  .news-modal-body a.news-modal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 18px;
+    padding: 11px 20px;
+    background: var(--terra);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 10px;
+    transition: background .15s, transform .15s;
+  }
+  .news-modal-body a.news-modal-btn:hover {
+    background: #A8431F;
+    transform: translateY(-1px);
+  }
 </style>
 </head>
 <body>
