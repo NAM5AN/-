@@ -641,27 +641,32 @@ let ffmpegInst = null, ffmpegLoadP = null;
 function loadFfmpeg(){
   if(ffmpegInst) return Promise.resolve(ffmpegInst);
   if(ffmpegLoadP) return ffmpegLoadP;
-  const FF   = 'https://cdn.jsdelivr.net/npm/@ffmpeg/[email protected]/dist/umd';
-  const UTIL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/[email protected]/dist/umd';
-  const CORE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/[email protected]/dist/esm'; // 모듈 워커가 import()로 코어를 읽으므로 ESM 코어 사용
+  // 기존 GIF 라이브러리처럼 import()로 로드(일부 차단기/추적방지는 <script src=CDN>만 막음). jsdelivr 실패 시 unpkg도 시도.
+  const CDNS = ['https://cdn.jsdelivr.net/npm', 'https://unpkg.com'];
   ffmpegLoadP = (async () => {
-    try{ await loadScript(`${FF}/ffmpeg.js`); await loadScript(`${UTIL}/index.js`); }
-    catch(e){ console.error('[ffmpeg] 스크립트 로드 실패', e); throw new Error('ffmpeg 스크립트를 받지 못했어요 (CDN 차단/네트워크)'); }
-    if(!self.FFmpegWASM || !self.FFmpegUtil) throw new Error('ffmpeg 전역 객체 없음');
-    const { FFmpeg } = self.FFmpegWASM;
-    const { toBlobURL } = self.FFmpegUtil;
-    const ff = new FFmpeg();
-    ff.on('log', ({ message }) => console.log('[ffmpeg]', message));
-    let classWorkerURL, coreURL, wasmURL;
-    try{
-      classWorkerURL = await toBlobURL(`${FF}/814.ffmpeg.js`, 'text/javascript');
-      coreURL = await toBlobURL(`${CORE}/ffmpeg-core.js`, 'text/javascript');
-      wasmURL = await toBlobURL(`${CORE}/ffmpeg-core.wasm`, 'application/wasm');
-    }catch(e){ console.error('[ffmpeg] 코어 다운로드 실패', e); throw new Error('ffmpeg 코어 다운로드 실패 (네트워크/CORS, 약 32MB)'); }
-    try{ await ff.load({ classWorkerURL, coreURL, wasmURL }); }
-    catch(e){ console.error('[ffmpeg] load() 실패', e); throw new Error('ffmpeg 초기화 실패: ' + (e?.message || e)); }
-    ffmpegInst = ff;
-    return ff;
+    let lastErr = null;
+    for(const base of CDNS){
+      try{
+        const FF   = `${base}/@ffmpeg/[email protected]/dist/umd`;
+        const UTIL = `${base}/@ffmpeg/[email protected]/dist/umd`;
+        const CORE = `${base}/@ffmpeg/[email protected]/dist/esm`; // 모듈 워커가 import()로 읽으므로 ESM 코어
+        await import(`${FF}/ffmpeg.js`);   // UMD가 self.FFmpegWASM 설정
+        await import(`${UTIL}/index.js`);  // UMD가 self.FFmpegUtil 설정
+        if(!self.FFmpegWASM || !self.FFmpegUtil) throw new Error('전역 객체 없음');
+        const { FFmpeg } = self.FFmpegWASM;
+        const { toBlobURL } = self.FFmpegUtil;
+        const classWorkerURL = await toBlobURL(`${FF}/814.ffmpeg.js`, 'text/javascript');
+        const coreURL = await toBlobURL(`${CORE}/ffmpeg-core.js`, 'text/javascript');
+        const wasmURL = await toBlobURL(`${CORE}/ffmpeg-core.wasm`, 'application/wasm');
+        const ff = new FFmpeg();
+        ff.on('log', ({ message }) => console.log('[ffmpeg]', message));
+        await ff.load({ classWorkerURL, coreURL, wasmURL });
+        ffmpegInst = ff;
+        console.log('[ffmpeg] 로드 성공:', base);
+        return ff;
+      }catch(e){ console.error('[ffmpeg] CDN 실패:', base, e); lastErr = e; }
+    }
+    throw new Error('ffmpeg를 불러오지 못했어요 (' + ((lastErr && lastErr.message) || lastErr) + '). 이 네트워크/브라우저가 외부 CDN(jsdelivr·unpkg)을 막고 있을 수 있어요.');
   })();
   ffmpegLoadP.catch(() => { ffmpegLoadP = null; });
   return ffmpegLoadP;
