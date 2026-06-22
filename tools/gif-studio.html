@@ -418,7 +418,26 @@ async function loadLibs(){
 
 /* ---------- 유틸 ---------- */
 const fmt = b => b >= MB ? (b/MB).toFixed(2)+' MB' : (b/1024).toFixed(1)+' KB';
-const tick = () => new Promise(r => setTimeout(r, 0));
+// 백그라운드 탭에서도 setTimeout(최소 1초로 throttle됨)보다 덜 느려지는 양보 스케줄러
+const tick = (() => {
+  try{
+    const ch = new MessageChannel(); const cbs=[];
+    ch.port1.onmessage = () => { const fn=cbs.shift(); if(fn) fn(); };
+    return () => new Promise(r => { cbs.push(r); ch.port2.postMessage(0); });
+  }catch(_){ return () => new Promise(r => setTimeout(r, 0)); }
+})();
+// 변환 중 화면이 꺼지지 않도록 (포그라운드일 때만 유효; 다른 앱으로 전환하면 OS가 자동 해제함)
+let wakeLock = null;
+async function acquireWakeLock(){
+  try{
+    if('wakeLock' in navigator && !wakeLock && document.visibilityState==='visible'){
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', ()=>{ wakeLock=null; });
+    }
+  }catch(_){ wakeLock=null; }
+}
+async function releaseWakeLock(){ try{ if(wakeLock) await wakeLock.release(); }catch(_){} wakeLock=null; }
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && busy) acquireWakeLock(); });
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 function showBanner(m){ banner.textContent=m; banner.style.display='block'; }
 function clearBanner(){ banner.style.display='none'; }
@@ -437,7 +456,7 @@ function addFiles(files){
       natW:null, natH:null, duration:null,
       crop:null, reverse:false, trim:null,
       src:null, preview:null,
-      resultBlob:null, resultSize:null, resultDims:null, error:false,
+      resultBlob:null, resultSize:null, resultDims:null, error:false, transcoded:null,
     };
     items.push(item);
     renderItem(item);
@@ -503,7 +522,7 @@ function renderItem(item){
 // 카드용 단일 프레임 썸네일 (full 미리보기 빌드 없이)
 async function ensureThumb(item){
   if(item.thumbUrl) return item.thumbUrl;
-  const src = await ensureSource(item);
+  const src = await ensureSource(item, false); // 썸네일 때문에 무거운 코덱 변환을 돌리지 않음
   const sc = Math.min(1, 128/src.natW);
   const c = document.createElement('canvas');
   c.width = Math.max(1,Math.round(src.natW*sc)); c.height = Math.max(1,Math.round(src.natH*sc));
@@ -541,6 +560,7 @@ function freeItem(item){
     item.src = null;
   }
   item.preview = null;
+  item.transcoded = null;
 }
 function resetItemResult(item){
   item.resultBlob=null; item.resultSize=null; item.resultDims=null; item.error=false;
@@ -566,10 +586,10 @@ function markError(item){
 
 /* ====================== 소스 디코딩 (GIF / 동영상 공통) ====================== */
 // GIF: 합성 프레임 + 타임스탬프, 동영상: <video> 보관 → 통합 src
-async function ensureSource(item){
+async function ensureSource(item, allowTranscode=true){
   if(item.src) return item.src;
   if(item.kind === 'gif') item.src = await decodeGifSource(item);
-  else item.src = await loadVideoSource(item);
+  else item.src = await loadVideoSource(item, allowTranscode);
   item.natW = item.src.natW; item.natH = item.src.natH; item.duration = item.src.duration;
   return item.src;
 }
@@ -607,23 +627,111 @@ async function decodeGifSource(item){
   return { kind:'gif', natW:W, natH:H, duration:t, hasAlpha, gifFrames:out, video:null, url:null };
 }
 
-function loadVideoSource(item){
+/* ====================== 코덱 폴백: ffmpeg.wasm (HEVC 등 → H.264) ====================== */
+// 시스템 코덱이 없어도 브라우저 안에서 직접 디코딩하기 위한 폴백.
+// 단일 스레드 코어라 COOP/COEP 헤더가 필요 없고, 코덱 미지원 영상에서만 최초 1회 로드됨(약 31MB).
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('스크립트 로드 실패'));
+    document.head.appendChild(s);
+  });
+}
+let ffmpegInst = null, ffmpegLoadP = null;
+function loadFfmpeg(){
+  if(ffmpegInst) return Promise.resolve(ffmpegInst);
+  if(ffmpegLoadP) return ffmpegLoadP;
+  const FF   = 'https://cdn.jsdelivr.net/npm/@ffmpeg/[email protected]/dist/umd';
+  const UTIL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/[email protected]/dist/umd';
+  const CORE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/[email protected]/dist/umd';
+  ffmpegLoadP = (async () => {
+    await loadScript(`${FF}/ffmpeg.js`);
+    await loadScript(`${UTIL}/index.js`);
+    if(!self.FFmpegWASM || !self.FFmpegUtil) throw new Error('ffmpeg 로드 실패');
+    const { FFmpeg } = self.FFmpegWASM;
+    const { toBlobURL } = self.FFmpegUtil;
+    const ff = new FFmpeg();
+    await ff.load({
+      classWorkerURL: await toBlobURL(`${FF}/814.ffmpeg.js`, 'text/javascript'),
+      coreURL: await toBlobURL(`${CORE}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${CORE}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+    ffmpegInst = ff;
+    return ff;
+  })();
+  ffmpegLoadP.catch(() => { ffmpegLoadP = null; });
+  return ffmpegLoadP;
+}
+// 코덱 미지원 영상을 H.264 mp4로 변환 (item별 1회만 실행되도록 캐시)
+function transcodeToH264(item){
+  if(item.transcodeP) return item.transcodeP;
+  item.transcodeP = (async () => {
+    setStatus(item, '코덱 호환 변환 준비 중… (최초 1회 디코더 다운로드, 조금 걸려요)');
+    setProgress(item, 0.02);
+    let ff;
+    try{ ff = await loadFfmpeg(); }
+    catch(_){ throw new Error('코덱 변환기를 불러오지 못했어요. 네트워크를 확인하거나, 영상을 H.264 mp4로 변환해 올려 주세요.'); }
+    const { fetchFile } = self.FFmpegUtil;
+    const inName = 'in_'+item.id+'.bin', outName = 'out_'+item.id+'.mp4';
+    const onProg = ({ progress }) => { if(progress>0 && progress<=1) setProgress(item, 0.05 + progress*0.9); };
+    ff.on('progress', onProg);
+    setStatus(item, '코덱 호환 변환 중… (HEVC 등 → H.264, 길면 오래 걸려요)');
+    try{
+      await ff.writeFile(inName, await fetchFile(item.file));
+      await ff.exec(['-i', inName, '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', outName]);
+      const data = await ff.readFile(outName);
+      const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+      if(!bytes || bytes.length < 1) throw new Error('빈 출력');
+      return new Blob([bytes], { type:'video/mp4' });
+    }catch(e){
+      console.error(e);
+      throw new Error('코덱 변환에 실패했어요. 영상이 너무 크거나 지원되지 않는 형식일 수 있어요 — H.264 mp4로 변환해 올려 주세요.');
+    }finally{
+      ff.off('progress', onProg);
+      try{ await ff.deleteFile(inName); }catch(_){}
+      try{ await ff.deleteFile(outName); }catch(_){}
+      setProgress(item, 0);
+    }
+  })();
+  item.transcodeP.catch(() => { item.transcodeP = null; });
+  return item.transcodeP;
+}
+
+// blob/File을 <video>로 로드 시도 (성공 시 src 객체 반환, 실패 시 reject)
+function tryLoadVideo(fileOrBlob){
   return new Promise((res, rej) => {
     const video = document.createElement('video');
     video.muted=true; video.playsInline=true; video.preload='auto';
-    const url = URL.createObjectURL(item.file);
+    const url = URL.createObjectURL(fileOrBlob);
     let settled=false;
-    const fail = (m) => { if(settled) return; settled=true; URL.revokeObjectURL(url); rej(new Error(m)); };
+    const fail = (code) => { if(settled) return; settled=true; URL.revokeObjectURL(url); const e=new Error('video load fail'); e.code=code; rej(e); };
     video.onloadedmetadata = () => {
       const W=video.videoWidth, H=video.videoHeight;
-      if(!W || !H) return fail('동영상 크기를 읽을 수 없습니다.');
+      if(!W || !H) return fail('nosize');
       settled=true;
       res({ kind:'video', natW:W, natH:H, duration:video.duration||0, hasAlpha:false, gifFrames:null, video, url });
     };
-    video.onerror = () => fail('동영상을 불러올 수 없습니다.');
-    setTimeout(()=>fail('동영상 로딩 시간 초과'), 15000);
+    video.onerror = () => fail(video.error && video.error.code);
+    setTimeout(()=>fail('timeout'), 15000);
     video.src = url;
   });
+}
+
+async function loadVideoSource(item, allowTranscode=true){
+  // 1) 파일 자체를 읽을 수 있는지 먼저 확인 (클라우드 전용·이동·삭제된 파일 감지)
+  try{ await item.file.slice(0, 1).arrayBuffer(); }
+  catch(_){ throw new Error('파일을 읽을 수 없어요. USB·외장 드라이브에 있거나, 클라우드 전용 파일(OneDrive 등)이거나, 이동·삭제됐을 수 있어요 — 파일을 기기 내부(바탕화면·다운로드 등)로 복사한 뒤 다시 올려 주세요.'); }
+  // 2) 이미 코덱 변환해둔 파일이 있으면 그걸로 로드
+  if(item.transcoded){ return await tryLoadVideo(item.transcoded); }
+  // 3) 네이티브 디코딩 시도 → 실패하면(코덱 미지원) ffmpeg.wasm으로 H.264 변환 후 재시도
+  try{
+    return await tryLoadVideo(item.file);
+  }catch(e){
+    // 썸네일 등 가벼운 호출에서는 변환하지 않고 그냥 실패 처리 (placeholder 유지)
+    if(!allowTranscode) throw new Error('이 브라우저가 이 동영상 코덱을 지원하지 않을 수 있어요 (HEVC 등).');
+    item.transcoded = await transcodeToH264(item);
+    return await tryLoadVideo(item.transcoded);
+  }
 }
 
 // 특정 시각 t(초)의 프레임을 캔버스(dst)에 그림. 동영상은 seek 필요(비동기).
@@ -868,7 +976,8 @@ async function processItem(item, prep){
     finishItem(item, { withinTarget: result.size <= targetBytes, frames: result.frames, fps, reversed: decoded.reversed, cropped: !!item.crop });
   }catch(e){
     console.error(e);
-    setStatus(item, '처리 중 오류가 발생했어요. 재시도 버튼을 눌러 다시 시도해 주세요.', 'err');
+    const info = /코덱|HEVC|라이브러리|동영상|파일|클라우드/i.test(e?.message||'');
+    setStatus(item, info ? e.message : '처리 중 오류가 발생했어요. 재시도 버튼을 눌러 다시 시도해 주세요.', 'err');
     setProgress(item, 0);
     markError(item);
   }
@@ -927,6 +1036,7 @@ async function prep(){
 }
 function setBusy(b){
   busy = b;
+  if(b) acquireWakeLock(); else releaseWakeLock();
   runBtn.disabled=b; clearBtn.disabled=b;
   items.forEach(it=>{ if(it.refs){ it.refs.run.disabled = b || !!it.resultBlob; it.refs.retry.disabled = b; } });
 }
@@ -965,7 +1075,7 @@ let cropCtx=null, cropPlay=null;
 async function openCropModal(item){
   let preview;
   try{ preview = await ensurePreview(item); }
-  catch(e){ showBanner('크롭용 미리보기를 불러오지 못했습니다. (배포/로컬 환경에서 실행해 주세요.)'); return; }
+  catch(e){ showBanner(e?.message || '크롭용 미리보기를 불러오지 못했습니다.'); return; }
   const natW=preview.natW, natH=preview.natH;
   // 저장된 분수 crop → 픽셀 sel
   const sel = item.crop
@@ -1094,7 +1204,7 @@ let trimCtx=null, trimPlay=null, tlDrag=null;
 async function openTrimModal(item){
   let preview;
   try{ preview = await ensurePreview(item); }
-  catch(e){ showBanner('구간 미리보기를 불러오지 못했습니다.'); return; }
+  catch(e){ showBanner(e?.message || '구간 미리보기를 불러오지 못했습니다.'); return; }
   const dur = preview.duration || item.duration || 0;
   if(!dur){ showBanner('이 파일은 길이를 읽을 수 없어 구간 지정이 어렵습니다.'); return; }
   trimCtx = { item, dur, start: clamp(item.trim?.start ?? 0,0,dur), end: clamp(item.trim?.end ?? dur,0,dur), frames:preview.frames };
@@ -1174,7 +1284,7 @@ let pvCtx=null, pvPlay=null;
 async function openPreviewModal(item){
   let preview;
   try{ preview = await ensurePreview(item); }
-  catch(e){ showBanner('미리보기를 불러오지 못했습니다. (배포/로컬 환경에서 실행해 주세요.)'); return; }
+  catch(e){ showBanner(e?.message || '미리보기를 불러오지 못했습니다.'); return; }
   const frames = preview.frames;
   const dur = preview.duration || (frames.length ? frames[frames.length-1].t : 0) || 0;
 
