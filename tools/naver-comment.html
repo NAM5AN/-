@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>블로그 댓글 도우미 - 체험단 매니저</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="블로그 글 링크만 넣으면 글을 꼼꼼히 읽은 듯한 댓글을 만들어 드려요">
+<link rel="stylesheet" href="/styles/base.css">
+<!-- Supabase (로그인 세션 공유 + Edge Function 호출용) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ============================================
+     naver-comment.html (블로그 댓글 도우미)
+     - 별점 메이커와 동일한 톤: base.css 토큰 + 인라인 스타일
+     ============================================ */
+
+  body { background: var(--bg); min-height: 100vh; overflow-x: hidden; }
+
+  /* ---- 미니 헤더 (도구 공통) ---- */
+  .tool-header { background: var(--paper); border-bottom: 1px solid var(--line); padding: 14px 0; }
+  .tool-header-inner {
+    max-width: 1100px; margin: 0 auto; padding: 0 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .tool-header-back {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    color: var(--ink-soft); text-decoration: none; font-size: 12px; font-weight: 600; transition: all 0.15s;
+  }
+  .tool-header-back:hover { border-color: var(--terra); color: var(--terra); transform: translateX(-2px); }
+  .tool-header-logo { display: inline-block; line-height: 0; text-decoration: none; }
+  .tool-header-logo img { height: 28px; width: auto; display: block; }
+  @media (max-width: 600px) { .tool-header-logo img { height: 24px; } }
+
+  /* ---- 히어로 ---- */
+  .tool-hero { max-width: 720px; margin: 0 auto; padding: 48px 20px 28px; text-align: center; }
+  .tool-hero-title {
+    font-family: var(--font-serif); font-weight: 700; font-size: 36px; color: var(--ink);
+    margin-bottom: 10px; letter-spacing: -0.01em;
+  }
+  .tool-hero-title .emoji { margin-right: 8px; }
+  .tool-hero-desc { font-size: 15px; color: var(--ink-soft); line-height: 1.7; margin-bottom: 8px; word-break: keep-all; }
+  .tool-hero-sub { font-size: 13px; color: var(--ink-faint); line-height: 1.7; word-break: keep-all; }
+  @media (max-width: 600px) { .tool-hero-title { font-size: 28px; } .tool-hero { padding: 32px 20px 20px; } }
+
+  /* ---- 메인 (단일 컬럼) ---- */
+  .tool-main { max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
+
+  .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .panel-title {
+    font-family: var(--font-serif); font-weight: 700; font-size: 18px; color: var(--ink);
+    margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
+  }
+
+  /* ---- 입력 그룹 ---- */
+  .field-group { margin-bottom: 18px; }
+  .field-group:last-of-type { margin-bottom: 0; }
+  .field-group-label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+  .field-group input[type="text"],
+  .field-group input[type="url"],
+  .field-group textarea {
+    width: 100%; padding: 10px 12px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 8px; font-family: var(--font-body); font-size: 14px; color: var(--ink);
+    box-sizing: border-box; transition: border-color 0.15s;
+  }
+  .field-group input:focus, .field-group textarea:focus { outline: none; border-color: var(--terra); }
+  .field-group textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
+  .field-group input::placeholder, .field-group textarea::placeholder { color: var(--ink-faint); }
+
+  /* 링크 입력 + 가져오기 버튼 한 줄 */
+  .url-row { display: flex; gap: 8px; }
+  .url-row input { flex: 1; min-width: 0; }
+  .btn-fetch {
+    flex-shrink: 0; padding: 0 16px; background: var(--terra); color: #fff; border: none;
+    border-radius: 8px; font-family: var(--font-body); font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; transition: background 0.15s;
+  }
+  .btn-fetch:hover:not(:disabled) { background: #A8431F; }
+  .btn-fetch:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .fetched-note { margin: 0 0 8px; font-size: 12px; color: var(--terra); font-weight: 600; line-height: 1.4; }
+  .fetched-note b { color: var(--ink); font-weight: 700; }
+  .field-helper { margin-top: 6px; font-size: 12px; color: var(--ink-soft); line-height: 1.5; word-break: keep-all; }
+  .field-error { margin-top: 8px; font-size: 13px; color: var(--rose); font-weight: 600; line-height: 1.5; }
+
+  /* ---- 말투 칩 ---- */
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    padding: 7px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--ink-soft);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .chip:hover { border-color: var(--terra-soft); color: var(--terra); }
+  .chip.active { background: var(--terra); color: #fff; border-color: var(--terra); }
+  .custom-tone { margin-top: 10px; }
+
+  /* ---- 길이 슬라이더 ---- */
+  .len-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .len-row .lbl { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+  .len-val { font-size: 14px; font-weight: 700; color: var(--terra); }
+  .len-val span { color: var(--ink-faint); font-weight: 600; font-size: 12px; margin-left: 2px; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 999px;
+    outline: none; cursor: pointer; margin: 2px 0 12px; background: var(--line);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%;
+    background: #fff; border: 2.5px solid var(--terra); box-shadow: 0 1px 3px rgba(42,37,34,0.18); cursor: pointer;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2.5px solid var(--terra);
+    box-shadow: 0 1px 3px rgba(42,37,34,0.18); cursor: pointer;
+  }
+  .len-presets { display: flex; gap: 6px; }
+  .len-preset {
+    flex: 1; padding: 8px 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--ink-soft);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .len-preset:hover { border-color: var(--terra-soft); color: var(--terra); }
+  .len-preset.active { background: rgba(194,84,43,0.08); border-color: var(--terra); color: var(--terra); }
+
+  /* ---- 생성 버튼 ---- */
+  .btn-generate {
+    width: 100%; margin-top: 22px; padding: 14px 16px; background: var(--terra); color: #fff; border: none;
+    border-radius: 10px; font-family: var(--font-body); font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-generate:hover:not(:disabled) { background: #A8431F; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(194,84,43,0.22); }
+  .btn-generate:disabled { opacity: 0.6; cursor: wait; transform: none; box-shadow: none; }
+
+  /* 남은 횟수 (앱 공통 표기와 동일 톤) */
+  .ai-usage-mini { text-align: center; margin: 12px auto 0; font-size: 11px; color: var(--ink-faint); }
+  .ai-usage-mini strong { color: var(--terra); font-weight: 600; }
+  .ai-usage-mini.exhausted strong { color: var(--rose); }
+
+  /* ---- 결과 ---- */
+  .results { max-width: 720px; margin: 26px auto 0; padding: 0 20px; }
+  .results-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .results-title { font-family: var(--font-serif); font-weight: 700; font-size: 18px; color: var(--ink); }
+  .btn-redo {
+    padding: 7px 13px; background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--ink-soft); cursor: pointer; transition: all 0.15s;
+  }
+  .btn-redo:hover:not(:disabled) { border-color: var(--terra-soft); color: var(--terra); }
+  .btn-redo:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .result-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+    padding: 16px 16px 14px 18px; margin-bottom: 12px; position: relative; overflow: hidden;
+    animation: rise 0.3s ease both;
+  }
+  .result-card::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: var(--terra); opacity: 0.7; border-radius: 0 3px 3px 0; }
+  .result-card:nth-child(2) { animation-delay: 0.05s; }
+  .result-card:nth-child(3) { animation-delay: 0.1s; }
+  .result-text { font-size: 14.5px; line-height: 1.62; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
+  .result-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  .result-count { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+  .btn-copy {
+    padding: 7px 16px; background: var(--card); color: var(--terra); border: 1px solid var(--terra);
+    border-radius: 8px; font-family: var(--font-body); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-copy:hover { background: var(--terra); color: #fff; }
+  .btn-copy.done { background: var(--sage); color: #fff; border-color: var(--sage); }
+
+  .results-loading { text-align: center; padding: 30px 0; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--line); border-top-color: var(--terra); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  .results-loading-text { font-family: var(--font-serif); color: var(--ink-soft); font-size: 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* ---- 로그인 안내 ---- */
+  .auth-gate { max-width: 480px; margin: 8px auto 0; padding: 0 20px; }
+  .auth-gate-inner {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 32px 24px; text-align: center;
+  }
+  .auth-gate-title { font-family: var(--font-serif); font-weight: 700; font-size: 20px; color: var(--ink); margin-bottom: 10px; }
+  .auth-gate-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 20px; word-break: keep-all; }
+  .auth-gate-btn {
+    display: inline-block; padding: 12px 24px; background: var(--terra); color: #fff; border: none; border-radius: 24px;
+    font-family: var(--font-body); font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all 0.18s;
+  }
+  .auth-gate-btn:hover { background: #A8431F; transform: translateY(-1px); }
+
+  .hidden { display: none !important; }
+
+  /* ---- 토스트 ---- */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: 10px;
+    box-shadow: var(--shadow-lift); font-size: 13px; opacity: 0; transition: all 0.3s ease; z-index: 3000;
+    max-width: 90%; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--sage); }
+  .toast.error { background: var(--rose); }
+</style>
+</head>
+<body>
+
+<!-- ============== 미니 헤더 ============== -->
+<header class="tool-header">
+  <div class="tool-header-inner">
+    <a href="/?view=tools" class="tool-header-back">← 도구 목록</a>
+    <a href="/" class="tool-header-logo" aria-label="체험단 매니저 홈">
+      <img src="/images/logo.png" alt="체험단 매니저" />
+    </a>
+  </div>
+</header>
+
+<!-- ============== 히어로 ============== -->
+<section class="tool-hero">
+  <h1 class="tool-hero-title"><span class="emoji">💬</span>블로그 댓글 도우미</h1>
+  <p class="tool-hero-desc">블로그 글 링크만 넣으면, 글을 꼼꼼히 읽은 듯한 댓글 3개를 만들어 드려요.</p>
+  <p class="tool-hero-sub">공감 한마디부터 내 경험까지 자연스럽게. 마음에 드는 걸 골라 복사하세요.</p>
+</section>
+
+<!-- ============== 로그인 안내 (비로그인 시) ============== -->
+<div class="auth-gate hidden" id="authGate">
+  <div class="auth-gate-inner">
+    <div class="auth-gate-title">로그인이 필요해요</div>
+    <p class="auth-gate-desc">댓글 도우미는 체험단 매니저에 로그인한 뒤 이용할 수 있어요.</p>
+    <a href="/" class="auth-gate-btn">로그인하러 가기</a>
+  </div>
+</div>
+
+<!-- ============== 메인 작업 영역 ============== -->
+<main class="tool-main hidden" id="toolMain">
+  <div class="panel">
+    <div class="panel-title">💬 댓글 만들기</div>
+
+    <!-- 1. 링크 -->
+    <div class="field-group">
+      <label class="field-group-label" for="urlInput">블로그 링크</label>
+      <div class="url-row">
+        <input type="url" id="urlInput" inputmode="url" placeholder="https://blog.naver.com/..." />
+        <button class="btn-fetch" id="btnFetch">가져오기</button>
+      </div>
+      <p class="field-error hidden" id="fetchError"></p>
+    </div>
+
+    <!-- 2. 본문 -->
+    <div class="field-group">
+      <label class="field-group-label" for="bodyInput">본문 확인</label>
+      <p class="fetched-note hidden" id="fetchedNote"></p>
+      <textarea id="bodyInput" placeholder="가져온 본문이 여기에 들어와요. 직접 붙여넣어도 됩니다."></textarea>
+      <p class="field-helper">불러온 내용에 군더더기가 있으면 지워도 되고, 링크가 안 되면 본문을 직접 붙여넣어 주세요.</p>
+    </div>
+
+    <!-- 3. 말투 -->
+    <div class="field-group">
+      <label class="field-group-label">말투</label>
+      <div class="chips" id="toneChips">
+        <button class="chip active" data-tone="warm">친근하게</button>
+        <button class="chip" data-tone="polite">정중하게</button>
+        <button class="chip" data-tone="lively">발랄하게</button>
+        <button class="chip" data-tone="plain">담백하게</button>
+        <button class="chip" data-tone="custom">직접 입력</button>
+      </div>
+      <textarea class="custom-tone hidden" id="customTone" style="min-height:44px;"
+        placeholder="원하는 말투를 적어주세요. 예) 동네 단골손님처럼 푸근하게"></textarea>
+    </div>
+
+    <!-- 4. 길이 -->
+    <div class="field-group">
+      <label class="field-group-label">길이</label>
+      <div class="len-row">
+        <span class="lbl">댓글 글자 수</span>
+        <span class="len-val">약 <span id="lenNum">60</span>자<span>내외</span></span>
+      </div>
+      <input type="range" id="lenSlider" min="20" max="150" step="5" value="60" />
+      <div class="len-presets" id="lenPresets">
+        <button class="len-preset" data-len="30">짧게</button>
+        <button class="len-preset active" data-len="60">보통</button>
+        <button class="len-preset" data-len="100">길게</button>
+      </div>
+    </div>
+
+    <button class="btn-generate" id="btnGenerate">댓글 만들기</button>
+    <p class="field-error hidden" id="genError" style="text-align:center;"></p>
+    <p class="ai-usage-mini hidden" id="usageMini"></p>
+  </div>
+</main>
+
+<!-- ============== 결과 ============== -->
+<section class="results hidden" id="resultsWrap">
+  <div class="results-head">
+    <span class="results-title">이렇게 달아보세요</span>
+    <button class="btn-redo" id="btnRedo">다시 만들기</button>
+  </div>
+  <div id="resultsList"></div>
+</section>
+
+<!-- 결과 로딩 -->
+<section class="results hidden" id="resultsLoadingWrap">
+  <div class="results-loading">
+    <div class="spinner"></div>
+    <div class="results-loading-text">댓글을 쓰는 중…</div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ====== 설정 ======
+  const SUPABASE_URL = "https://wvwoqqfizgbhvdzlqscc.supabase.co";
+  // ▼ Supabase 대시보드 → Settings → API → "anon public"(=Publishable) 키를 붙여넣으세요. (공개되어도 안전한 키)
+  const eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU = "여기에_anon_public_키_붙여넣기";
+  const FN_NAME = "naver-comment";
+
+  const sb = window.supabase.createClient(SUPABASE_URL, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU);
+
+  // ====== 말투 프리셋 (서버로 보낼 실제 지시문) ======
+  const TONES = {
+    warm:   "친근하고 다정한 존댓말, 가벼운 이모티콘 1개 정도",
+    polite: "정중하고 깔끔한 존댓말, 이모티콘 없이 담백하게",
+    lively: "밝고 발랄한 톤, 느낌표와 이모티콘을 자연스럽게",
+    plain:  "군더더기 없이 짧고 담백한 존댓말, 이모티콘 최소화",
+  };
+
+  // ====== 상태 ======
+  let toneId = "warm";
+  let length = 60;
+
+  // ====== 엘리먼트 ======
+  const $ = (id) => document.getElementById(id);
+  const elAuthGate = $("authGate"), elToolMain = $("toolMain");
+  const elUrl = $("urlInput"), elBtnFetch = $("btnFetch"), elFetchError = $("fetchError");
+  const elBody = $("bodyInput"), elFetchedNote = $("fetchedNote");
+  const elToneChips = $("toneChips"), elCustomTone = $("customTone");
+  const elLenSlider = $("lenSlider"), elLenNum = $("lenNum"), elLenPresets = $("lenPresets");
+  const elBtnGenerate = $("btnGenerate"), elGenError = $("genError"), elUsageMini = $("usageMini");
+  const elResultsWrap = $("resultsWrap"), elResultsList = $("resultsList");
+  const elResultsLoadingWrap = $("resultsLoadingWrap");
+  const elBtnRedo = $("btnRedo"), elToast = $("toast");
+
+  // ====== 유틸 ======
+  const charCount = (s) => [...(s || "")].length;
+
+  function toast(msg, type) {
+    elToast.textContent = msg;
+    elToast.className = "toast show" + (type ? " " + type : "");
+    setTimeout(() => { elToast.className = "toast" + (type ? " " + type : ""); }, 1800);
+  }
+  function showErr(el, msg) { el.textContent = msg; el.classList.remove("hidden"); }
+  function hideErr(el) { el.classList.add("hidden"); }
+
+  function toneText() {
+    if (toneId === "custom") return (elCustomTone.value.trim() || "자연스럽고 진솔한 존댓말");
+    return TONES[toneId] || TONES.warm;
+  }
+
+  function updateSliderFill() {
+    const pct = ((length - 20) / (150 - 20)) * 100;
+    elLenSlider.style.background = `linear-gradient(to right, var(--terra) ${pct}%, var(--line) ${pct}%)`;
+  }
+
+  // Edge Function 호출 (invoke 가 로그인 세션 토큰 + anon 키를 자동으로 실어줌)
+  async function callFn(body) {
+    const { data, error } = await sb.functions.invoke(FN_NAME, { body });
+    if (error) {
+      let msg = "요청에 실패했어요. 잠시 후 다시 시도해 주세요.";
+      try { const b = await error.context.json(); if (b && b.error) msg = b.error; } catch (_) {}
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  // ====== 본문 가져오기 ======
+  async function onFetch() {
+    const url = elUrl.value.trim();
+    hideErr(elFetchError);
+    if (!url) { showErr(elFetchError, "블로그 글 링크를 넣어 주세요."); return; }
+    elBtnFetch.disabled = true; elBtnFetch.textContent = "가져오는 중…";
+    elFetchedNote.classList.add("hidden");
+    try {
+      const data = await callFn({ action: "fetch", url });
+      const merged = (data.title ? data.title + "\n\n" : "") + (data.text || "");
+      elBody.value = merged.trim();
+      if (data.title) {
+        elFetchedNote.innerHTML = "불러온 글 · <b></b>";
+        elFetchedNote.querySelector("b").textContent = data.title;
+        elFetchedNote.classList.remove("hidden");
+      }
+      toast("본문을 불러왔어요", "success");
+    } catch (e) {
+      showErr(elFetchError, e.message || "본문을 가져오지 못했어요. 직접 붙여넣어 주세요.");
+    } finally {
+      elBtnFetch.disabled = false; elBtnFetch.textContent = "가져오기";
+    }
+  }
+
+  // ====== 댓글 생성 ======
+  async function onGenerate() {
+    const text = elBody.value.trim();
+    hideErr(elGenError);
+    if (!text) { showErr(elGenError, "먼저 본문을 가져오거나 붙여넣어 주세요."); return; }
+
+    elBtnGenerate.disabled = true; elBtnGenerate.textContent = "쓰는 중…";
+    elResultsWrap.classList.add("hidden");
+    elResultsLoadingWrap.classList.remove("hidden");
+
+    try {
+      const data = await callFn({ action: "comment", text: text.slice(0, 8000), tone: toneText(), length });
+      const comments = Array.isArray(data.comments) ? data.comments.filter(Boolean) : [];
+      if (!comments.length) throw new Error("댓글 결과가 비어서 다시 시도가 필요해요.");
+      renderResults(comments.slice(0, 3));
+      if (typeof data.limit === "number") {
+        const remain = Math.max(0, data.limit - (data.used || 0));
+        elUsageMini.innerHTML = "오늘 남은 횟수 <strong></strong>회";
+        elUsageMini.querySelector("strong").textContent = remain;
+        elUsageMini.classList.toggle("exhausted", remain <= 0);
+        elUsageMini.classList.remove("hidden");
+      }
+    } catch (e) {
+      showErr(elGenError, e.message || "댓글을 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      elResultsLoadingWrap.classList.add("hidden");
+      elBtnGenerate.disabled = false; elBtnGenerate.textContent = "댓글 만들기";
+    }
+  }
+
+  function renderResults(comments) {
+    elResultsList.innerHTML = "";
+    comments.forEach((c) => {
+      const card = document.createElement("div");
+      card.className = "result-card";
+
+      const txt = document.createElement("div");
+      txt.className = "result-text";
+      txt.textContent = c;
+
+      const foot = document.createElement("div");
+      foot.className = "result-foot";
+
+      const cnt = document.createElement("span");
+      cnt.className = "result-count";
+      cnt.textContent = charCount(c) + "자";
+
+      const btn = document.createElement("button");
+      btn.className = "btn-copy";
+      btn.textContent = "복사";
+      btn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(c);
+          btn.textContent = "복사됨"; btn.classList.add("done");
+          toast("댓글을 복사했어요", "success");
+          setTimeout(() => { btn.textContent = "복사"; btn.classList.remove("done"); }, 1500);
+        } catch (_) {
+          toast("복사가 안 됐어요. 길게 눌러 직접 복사해 주세요.", "error");
+        }
+      });
+
+      foot.appendChild(cnt); foot.appendChild(btn);
+      card.appendChild(txt); card.appendChild(foot);
+      elResultsList.appendChild(card);
+    });
+    elResultsWrap.classList.remove("hidden");
+  }
+
+  // ====== 이벤트 바인딩 ======
+  function bindEvents() {
+    elBtnFetch.addEventListener("click", onFetch);
+    elUrl.addEventListener("input", () => hideErr(elFetchError));
+
+    elToneChips.addEventListener("click", (e) => {
+      const b = e.target.closest(".chip"); if (!b) return;
+      toneId = b.dataset.tone;
+      [...elToneChips.children].forEach((c) => c.classList.toggle("active", c === b));
+      elCustomTone.classList.toggle("hidden", toneId !== "custom");
+    });
+
+    elLenSlider.addEventListener("input", () => {
+      length = Number(elLenSlider.value);
+      elLenNum.textContent = length;
+      [...elLenPresets.children].forEach((p) => p.classList.toggle("active", Number(p.dataset.len) === length));
+      updateSliderFill();
+    });
+    elLenPresets.addEventListener("click", (e) => {
+      const p = e.target.closest(".len-preset"); if (!p) return;
+      length = Number(p.dataset.len);
+      elLenSlider.value = length; elLenNum.textContent = length;
+      [...elLenPresets.children].forEach((x) => x.classList.toggle("active", x === p));
+      updateSliderFill();
+    });
+
+    elBtnGenerate.addEventListener("click", onGenerate);
+    elBtnRedo.addEventListener("click", onGenerate);
+  }
+
+  // ====== 초기화: 로그인 세션 확인 ======
+  async function init() {
+    updateSliderFill();
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) { elAuthGate.classList.remove("hidden"); return; }
+    } catch (_) {
+      elAuthGate.classList.remove("hidden"); return;
+    }
+    elToolMain.classList.remove("hidden");
+    bindEvents();
+  }
+
+  init();
+</script>
+</body>
+</html>
