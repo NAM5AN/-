@@ -6,8 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="블로그 글 링크만 넣으면 글을 꼼꼼히 읽은 듯한 댓글을 만들어 드려요">
 <link rel="stylesheet" href="/styles/base.css">
-<!-- Supabase (로그인 세션 공유 + Edge Function 호출용) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Supabase (로그인 세션 공유 + Edge Function 호출용) : UMD 빌드로 명시 + 예비 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>window.supabase || document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');</script>
 <style>
   /* ============================================
      naver-comment.html (블로그 댓글 도우미)
@@ -42,6 +43,14 @@
   .tool-hero-desc { font-size: 15px; color: var(--ink-soft); line-height: 1.7; margin-bottom: 8px; word-break: keep-all; }
   .tool-hero-sub { font-size: 13px; color: var(--ink-faint); line-height: 1.7; word-break: keep-all; }
   @media (max-width: 600px) { .tool-hero-title { font-size: 28px; } .tool-hero { padding: 32px 20px 20px; } }
+
+  /* ---- 부팅 오류 안내 ---- */
+  .boot-error { max-width: 520px; margin: 8px auto 0; padding: 0 20px; }
+  .boot-error-inner {
+    background: rgba(194,157,44,0.08); border: 1px solid rgba(194,157,44,0.45);
+    border-radius: 14px; padding: 18px 20px; text-align: center;
+    font-size: 13.5px; color: #8B6F00; line-height: 1.6; word-break: keep-all;
+  }
 
   /* ---- 메인 (단일 컬럼) ---- */
   .tool-main { max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
@@ -215,6 +224,9 @@
   <p class="tool-hero-sub">공감 한마디부터 내 경험까지 자연스럽게. 마음에 드는 걸 골라 복사하세요.</p>
 </section>
 
+<!-- ============== 부팅 오류 안내 ============== -->
+<div class="boot-error hidden" id="bootError"><div class="boot-error-inner" id="bootErrorText"></div></div>
+
 <!-- ============== 로그인 안내 (비로그인 시) ============== -->
 <div class="auth-gate hidden" id="authGate">
   <div class="auth-gate-inner">
@@ -305,10 +317,8 @@
   // ====== 설정 ======
   const SUPABASE_URL = "https://wvwoqqfizgbhvdzlqscc.supabase.co";
   // ▼ Supabase 대시보드 → Settings → API → "anon public"(=Publishable) 키를 붙여넣으세요. (공개되어도 안전한 키)
-  const eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU = "여기에_anon_public_키_붙여넣기";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU";
   const FN_NAME = "naver-comment";
-
-  const sb = window.supabase.createClient(SUPABASE_URL, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU);
 
   // ====== 말투 프리셋 (서버로 보낼 실제 지시문) ======
   const TONES = {
@@ -319,11 +329,13 @@
   };
 
   // ====== 상태 ======
+  let sb = null;
   let toneId = "warm";
   let length = 60;
 
   // ====== 엘리먼트 ======
   const $ = (id) => document.getElementById(id);
+  const elBootError = $("bootError"), elBootErrorText = $("bootErrorText");
   const elAuthGate = $("authGate"), elToolMain = $("toolMain");
   const elUrl = $("urlInput"), elBtnFetch = $("btnFetch"), elFetchError = $("fetchError");
   const elBody = $("bodyInput"), elFetchedNote = $("fetchedNote");
@@ -344,6 +356,12 @@
   }
   function showErr(el, msg) { el.textContent = msg; el.classList.remove("hidden"); }
   function hideErr(el) { el.classList.add("hidden"); }
+  function showBootError(msg) {
+    elBootErrorText.textContent = msg;
+    elBootError.classList.remove("hidden");
+    elAuthGate.classList.add("hidden");
+    elToolMain.classList.add("hidden");
+  }
 
   function toneText() {
     if (toneId === "custom") return (elCustomTone.value.trim() || "자연스럽고 진솔한 존댓말");
@@ -488,15 +506,32 @@
     elBtnRedo.addEventListener("click", onGenerate);
   }
 
-  // ====== 초기화: 로그인 세션 확인 ======
+  // ====== 초기화: 라이브러리 → 키 → 로그인 세션 순으로 확인 ======
   async function init() {
     updateSliderFill();
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session) { elAuthGate.classList.remove("hidden"); return; }
-    } catch (_) {
-      elAuthGate.classList.remove("hidden"); return;
+
+    // 1) supabase-js 로드 확인
+    if (!window.supabase || !window.supabase.createClient) {
+      showBootError("로그인 모듈을 불러오지 못했어요. 페이지를 새로고침하거나, 광고/추적 차단 확장 프로그램을 잠시 끄고 다시 시도해 주세요.");
+      return;
     }
+    // 2) anon 키 설정 확인
+    if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.indexOf("여기에") === 0) {
+      showBootError("설정이 필요해요: 코드의 SUPABASE_ANON_KEY 자리에 Supabase의 anon public 키를 넣고 다시 배포해 주세요.");
+      return;
+    }
+    // 3) 클라이언트 생성
+    try {
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {
+      showBootError("초기화 오류: " + (e && e.message ? e.message : e));
+      return;
+    }
+    // 4) 로그인 세션 확인 (메인 앱과 같은 도메인이면 세션을 공유함)
+    let session = null;
+    try { session = (await sb.auth.getSession()).data.session; } catch (_) {}
+    if (!session) { elAuthGate.classList.remove("hidden"); return; }
+
     elToolMain.classList.remove("hidden");
     bindEvents();
   }
