@@ -174,7 +174,7 @@
             <button type="button" class="bm-copy-btn" id="bmCopyName">복사</button>
           </div>
           <div class="bm-copy-line">
-            <span class="bm-copy-label">② 주소(코드)</span>
+            <span class="bm-copy-label">② 주소</span>
             <button type="button" class="bm-copy-btn primary" id="bmCopyUrl">복사</button>
           </div>
         </div>
@@ -183,8 +183,8 @@
         <div class="bm-browser">
           <div class="bm-browser-name">🟦 엣지(Edge)</div>
           <ol class="bm-manual-steps">
-            <li>위 <b>② 주소(코드) [복사]</b>를 눌러요.</li>
-            <li>북마크바 빈 곳에서 <b>오른쪽 클릭 → [붙여넣기]</b> → 북마크가 하나 생겨요.<span class="bm-manual-tip">[붙여넣기]가 회색이면 ②를 먼저 복사하세요. 제목이 긴 코드로 떠도 정상이에요.</span></li>
+            <li>위 <b>② 주소 [복사]</b>를 눌러요.</li>
+            <li>북마크바 빈 곳에서 <b>오른쪽 클릭 → [붙여넣기]</b> → 북마크가 하나 생겨요.<span class="bm-manual-tip">[붙여넣기]가 회색이면 ②를 먼저 복사하세요. 제목이 길고 이상하게 떠도 정상이에요.</span></li>
             <li>방금 생긴 그 북마크에서 <b>오른쪽 클릭 → [이름 바꾸기]</b> <span class="step-tip">(또는 편집)</span>.</li>
             <li>이름을 <b>나만 추가한 이웃 찾기</b>로 바꾸면 끝이에요. <span class="step-tip">위 ① [복사]를 붙여넣으면 편해요.</span></li>
           </ol>
@@ -201,7 +201,7 @@
           </ol>
         </div>
 
-        <p class="bm-manual-tip" style="margin-top:14px">설치가 끝나면, 위 <b>3단계</b>(블로그 관리 페이지에서 북마크 클릭)와 똑같이 쓰면 돼요.</p>
+        <p class="bm-manual-tip" style="margin-top:14px">설치가 끝나면, 네이버 블로그 <b>관리 페이지</b>를 열고 이 북마크를 클릭하면 결과가 떠요.</p>
       </div>
     </div>
 
@@ -286,7 +286,7 @@
               () => toast("복사가 안 됐어요. 이름을 직접 입력해 주세요: " + bmName, "error"));
     });
 
-    // 주소(코드) 복사
+    // 주소 복사
     const copyUrl = $("bmCopyUrl");
     if (copyUrl) copyUrl.addEventListener("click", () => {
       const href = link.getAttribute("href");
