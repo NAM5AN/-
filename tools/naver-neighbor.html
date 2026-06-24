@@ -71,7 +71,12 @@
   .bm-manual-steps li:last-child { padding-bottom: 0; }
   .bm-manual-steps li::before { content: counter(m); position: absolute; left: 0; top: 0; width: 23px; height: 23px; border-radius: 50%; background: var(--terra); color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
   .bm-manual-tip { display: block; margin-top: 5px; font-size: 12px; color: var(--ink-faint); line-height: 1.5; }
-  .bm-copy-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 9px 0 3px; }
+  .bm-copy-box { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; margin: 0 0 4px; }
+  .bm-copy-line { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .bm-copy-line + .bm-copy-line { margin-top: 9px; }
+  .bm-copy-label { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); min-width: 76px; }
+  .bm-browser { margin-top: 16px; }
+  .bm-browser-name { font-size: 13px; font-weight: 700; color: var(--terra); margin-bottom: 9px; }
   .bm-copy-code { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; }
   .bm-copy-btn { background: var(--paper); border: 1px solid var(--terra); color: var(--terra); border-radius: 8px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font-body); white-space: nowrap; transition: all .15s; }
   .bm-copy-btn:hover { background: var(--terra); color: #fff; }
@@ -159,28 +164,44 @@
 
       <!-- 복사로 직접 추가하는 방법 (펼침) -->
       <div class="bm-manual hidden" id="bmManual">
-        <p class="bm-manual-lead">드래그 없이도 추가할 수 있어요. 아래 순서대로 따라 하면 돼요.<br>(창에 이미 뭔가 적혀 있으면 지우고 새로 넣어주세요.)</p>
-        <ol class="bm-manual-steps">
-          <li>
-            북마크바(즐겨찾기 막대)의 <b>빈 곳에서 마우스 오른쪽 버튼</b>을 누르고, 메뉴에서 <b>[페이지 추가]</b>를 클릭해요. <span class="step-tip">(브라우저에 따라 "새 북마크")</span>
-            <span class="bm-manual-tip">북마크바가 안 보이면 먼저 <b>Ctrl+Shift+B</b>를 눌러 켜주세요.</span>
-          </li>
-          <li>
-            작은 창이 뜨면 <b>‘이름’ 칸</b>에 아래 이름을 넣어요. <b>[이름 복사]</b>를 누른 뒤 그 칸을 클릭하고 붙여넣으면 돼요 <span class="step-tip">(Ctrl+V)</span>.
-            <span class="bm-copy-row">
-              <code class="bm-copy-code" id="bmNameDisplay">나만 추가한 이웃 찾기</code>
-              <button type="button" class="bm-copy-btn" id="bmCopyName">이름 복사</button>
-            </span>
-            <span class="bm-manual-tip">이 칸을 비워두면 제목에 긴 코드가 그대로 떠요. 꼭 채워주세요.</span>
-          </li>
-          <li>
-            이번엔 <b>‘URL’ 칸</b>(주소 칸)을 클릭하고, 아래 <b>[주소 복사]</b>를 누른 뒤 거기에 붙여넣어요 <span class="step-tip">(Ctrl+V)</span>.
-            <span class="bm-copy-row">
-              <button type="button" class="bm-copy-btn primary" id="bmCopyUrl">주소(코드) 복사</button>
-            </span>
-          </li>
-          <li><b>[저장]</b>을 누르면 끝이에요. 북마크바에 <b>나만 추가한 이웃 찾기</b>가 생겨요. 그 다음은 위 3단계와 똑같아요.</li>
-        </ol>
+        <p class="bm-manual-lead">드래그가 안 되면 복사해서 추가할 수 있어요. 먼저 아래 ①②를 복사해 두고, 쓰는 브라우저에 맞춰 따라 해주세요. <span class="step-tip">(북마크바가 안 보이면 Ctrl+Shift+B)</span></p>
+
+        <!-- 공통 복사 버튼 -->
+        <div class="bm-copy-box">
+          <div class="bm-copy-line">
+            <span class="bm-copy-label">① 이름</span>
+            <code class="bm-copy-code" id="bmNameDisplay">나만 추가한 이웃 찾기</code>
+            <button type="button" class="bm-copy-btn" id="bmCopyName">복사</button>
+          </div>
+          <div class="bm-copy-line">
+            <span class="bm-copy-label">② 주소(코드)</span>
+            <button type="button" class="bm-copy-btn primary" id="bmCopyUrl">복사</button>
+          </div>
+        </div>
+
+        <!-- 엣지 -->
+        <div class="bm-browser">
+          <div class="bm-browser-name">🟦 엣지(Edge)</div>
+          <ol class="bm-manual-steps">
+            <li>위 <b>② 주소(코드) [복사]</b>를 눌러요.</li>
+            <li>북마크바 빈 곳에서 <b>오른쪽 클릭 → [붙여넣기]</b> → 북마크가 하나 생겨요.<span class="bm-manual-tip">[붙여넣기]가 회색이면 ②를 먼저 복사하세요. 제목이 긴 코드로 떠도 정상이에요.</span></li>
+            <li>방금 생긴 그 북마크에서 <b>오른쪽 클릭 → [이름 바꾸기]</b> <span class="step-tip">(또는 편집)</span>.</li>
+            <li>이름을 <b>나만 추가한 이웃 찾기</b>로 바꾸면 끝이에요. <span class="step-tip">위 ① [복사]를 붙여넣으면 편해요.</span></li>
+          </ol>
+        </div>
+
+        <!-- 크롬 · 웨일 -->
+        <div class="bm-browser">
+          <div class="bm-browser-name">🟢 크롬 · 웨일(Chrome · Whale)</div>
+          <ol class="bm-manual-steps">
+            <li>북마크바 빈 곳에서 <b>오른쪽 클릭 → [페이지 추가]</b> <span class="step-tip">(웨일은 "새 북마크")</span>.</li>
+            <li>작은 창의 <b>'이름' 칸</b>에 위 <b>① [복사]</b>한 걸 붙여넣어요.</li>
+            <li><b>'URL' 칸</b>에 위 <b>② [복사]</b>한 걸 붙여넣어요.</li>
+            <li><b>[저장]</b>을 누르면 끝!</li>
+          </ol>
+        </div>
+
+        <p class="bm-manual-tip" style="margin-top:14px">설치가 끝나면, 위 <b>3단계</b>(블로그 관리 페이지에서 북마크 클릭)와 똑같이 쓰면 돼요.</p>
       </div>
     </div>
 
