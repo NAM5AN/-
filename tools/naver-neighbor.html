@@ -63,6 +63,20 @@
   .bm-arrow { color: var(--terra); font-weight: 700; }
   .bm-fallback { margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
   .bm-fallback button { background: none; border: 0; color: var(--terra); text-decoration: underline; cursor: pointer; font-size: 13px; padding: 0; font-family: var(--font-body); }
+  /* 복사로 직접 추가하는 방법 (펼침) */
+  .bm-manual { margin: 14px auto 0; max-width: 460px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .bm-manual-lead { font-size: 13px; color: var(--ink); margin: 0 0 14px; line-height: 1.6; word-break: keep-all; }
+  .bm-manual-steps { margin: 0; padding: 0; list-style: none; counter-reset: m; }
+  .bm-manual-steps li { counter-increment: m; position: relative; padding: 0 0 16px 32px; font-size: 13.5px; color: var(--ink); line-height: 1.6; word-break: keep-all; }
+  .bm-manual-steps li:last-child { padding-bottom: 0; }
+  .bm-manual-steps li::before { content: counter(m); position: absolute; left: 0; top: 0; width: 23px; height: 23px; border-radius: 50%; background: var(--terra); color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .bm-manual-tip { display: block; margin-top: 5px; font-size: 12px; color: var(--ink-faint); line-height: 1.5; }
+  .bm-copy-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 9px 0 3px; }
+  .bm-copy-code { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; }
+  .bm-copy-btn { background: var(--paper); border: 1px solid var(--terra); color: var(--terra); border-radius: 8px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font-body); white-space: nowrap; transition: all .15s; }
+  .bm-copy-btn:hover { background: var(--terra); color: #fff; }
+  .bm-copy-btn.primary { background: var(--terra); color: #fff; }
+  .bm-copy-btn.primary:hover { filter: brightness(.93); }
 
   /* ---- 단계 ---- */
   .steps { margin: 24px 0 0; padding: 0; list-style: none; counter-reset: s; }
@@ -141,7 +155,33 @@
         </a>
       </div>
       <p class="bm-hint"><span class="bm-arrow">↑</span> 이 버튼을 브라우저 위쪽 <b>북마크바로 끌어다 놓으세요.</b></p>
-      <p class="bm-fallback">드래그가 안 되나요? <button type="button" id="bmCopy">북마클릿 복사하기</button></p>
+      <p class="bm-fallback">드래그가 잘 안 되나요? <button type="button" id="bmManualToggle">복사해서 직접 추가하기 ▾</button></p>
+
+      <!-- 복사로 직접 추가하는 방법 (펼침) -->
+      <div class="bm-manual hidden" id="bmManual">
+        <p class="bm-manual-lead">드래그 없이도 추가할 수 있어요. 아래 순서대로 따라 하면 돼요.<br>(창에 이미 뭔가 적혀 있으면 지우고 새로 넣어주세요.)</p>
+        <ol class="bm-manual-steps">
+          <li>
+            북마크바(즐겨찾기 막대)의 <b>빈 곳에서 마우스 오른쪽 버튼</b>을 누르고, 메뉴에서 <b>[페이지 추가]</b>를 클릭해요. <span class="step-tip">(브라우저에 따라 "새 북마크")</span>
+            <span class="bm-manual-tip">북마크바가 안 보이면 먼저 <b>Ctrl+Shift+B</b>를 눌러 켜주세요.</span>
+          </li>
+          <li>
+            작은 창이 뜨면 <b>‘이름’ 칸</b>에 아래 이름을 넣어요. <b>[이름 복사]</b>를 누른 뒤 그 칸을 클릭하고 붙여넣으면 돼요 <span class="step-tip">(Ctrl+V)</span>.
+            <span class="bm-copy-row">
+              <code class="bm-copy-code" id="bmNameDisplay">나만 추가한 이웃 찾기</code>
+              <button type="button" class="bm-copy-btn" id="bmCopyName">이름 복사</button>
+            </span>
+            <span class="bm-manual-tip">이 칸을 비워두면 제목에 긴 코드가 그대로 떠요. 꼭 채워주세요.</span>
+          </li>
+          <li>
+            이번엔 <b>‘URL’ 칸</b>(주소 칸)을 클릭하고, 아래 <b>[주소 복사]</b>를 누른 뒤 거기에 붙여넣어요 <span class="step-tip">(Ctrl+V)</span>.
+            <span class="bm-copy-row">
+              <button type="button" class="bm-copy-btn primary" id="bmCopyUrl">주소(코드) 복사</button>
+            </span>
+          </li>
+          <li><b>[저장]</b>을 누르면 끝이에요. 북마크바에 <b>나만 추가한 이웃 찾기</b>가 생겨요. 그 다음은 위 3단계와 똑같아요.</li>
+        </ol>
+      </div>
     </div>
 
     <ol class="steps">
@@ -196,13 +236,44 @@
     const tpl = $("bmtpl").textContent;
     const link = $("bm");
     link.setAttribute("href", tpl.replace("__TOKEN__", token));
+
+    // 북마크 이름 = 버튼 텍스트 (이름이 바뀌어도 여기서 자동 반영)
+    const bmName = (link.textContent || "").replace(/\s+/g, " ").trim();
+    const nameDisp = $("bmNameDisplay");
+    if (nameDisp) nameDisp.textContent = bmName;
+
+    // 드래그 대신 클릭하면 안내
     link.addEventListener("click", (e) => { e.preventDefault(); toast("클릭이 아니라, 위쪽 북마크바로 끌어다 놓으세요 🙂"); });
-    $("bmCopy").addEventListener("click", () => {
+
+    // "복사해서 직접 추가하기" 펼침 토글
+    const toggleBtn = $("bmManualToggle");
+    const manual = $("bmManual");
+    if (toggleBtn && manual) {
+      toggleBtn.addEventListener("click", () => {
+        manual.classList.toggle("hidden");
+        const open = !manual.classList.contains("hidden");
+        toggleBtn.textContent = open ? "복사해서 직접 추가하기 ▴" : "복사해서 직접 추가하기 ▾";
+        if (open) manual.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+    }
+
+    // 이름 복사
+    const copyName = $("bmCopyName");
+    if (copyName) copyName.addEventListener("click", () => {
+      (navigator.clipboard ? navigator.clipboard.writeText(bmName) : Promise.reject())
+        .then(() => toast("이름을 복사했어요! 새 북마크 창의 '이름' 칸에 붙여넣으세요.", "success"),
+              () => toast("복사가 안 됐어요. 이름을 직접 입력해 주세요: " + bmName, "error"));
+    });
+
+    // 주소(코드) 복사
+    const copyUrl = $("bmCopyUrl");
+    if (copyUrl) copyUrl.addEventListener("click", () => {
       const href = link.getAttribute("href");
       (navigator.clipboard ? navigator.clipboard.writeText(href) : Promise.reject())
-        .then(() => toast("복사됐어요! 새 북마크를 만들고 주소(URL) 칸에 붙여넣으세요.", "success"),
-              () => toast("복사 실패 — 버튼을 길게 눌러 직접 복사해 주세요.", "error"));
+        .then(() => toast("주소를 복사했어요! 'URL' 칸에 붙여넣으세요 (Ctrl+V).", "success"),
+              () => toast("복사가 안 됐어요. 버튼을 길게 눌러 직접 복사해 주세요.", "error"));
     });
+
     show($("toolMain"));
   }
 
