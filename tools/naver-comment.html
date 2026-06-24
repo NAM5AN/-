@@ -105,10 +105,10 @@
   .learn-box { margin-top: 10px; }
   .learn-help { margin: 0 0 10px; font-size: 12px; color: var(--ink-soft); line-height: 1.6; word-break: keep-all; }
   .sample-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
-  .sample-input {
-    flex: 1; min-width: 0; padding: 9px 11px; background: var(--card); border: 1px solid var(--line);
+  .learn-box .sample-input {
+    flex: 1; min-width: 0; padding: 8px 11px; background: var(--card); border: 1px solid var(--line);
     border-radius: 8px; font-family: var(--font-body); font-size: 13.5px; color: var(--ink);
-    line-height: 1.5; resize: vertical; box-sizing: border-box;
+    line-height: 1.5; resize: vertical; box-sizing: border-box; min-height: 46px; height: 46px;
   }
   .sample-input:focus { outline: none; border-color: var(--terra); }
   .sample-input::placeholder { color: var(--ink-faint); }
@@ -294,7 +294,7 @@
       <textarea class="custom-tone hidden" id="customTone" style="min-height:44px;"
         placeholder="원하는 말투를 적어주세요. 예) 동네 단골손님처럼 푸근하게"></textarea>
       <div class="learn-box hidden" id="learnBox">
-        <p class="learn-help">제가 예전에 직접 단 댓글을 넣어 주세요. 말투·이모지·끝맺음을 분석해 똑같은 스타일로 써드려요. 2~3개 이상일수록 더 정확해요.</p>
+        <p class="learn-help">제가 예전에 직접 단 댓글을 <b>5개 이상</b> 넣어 주세요. 짧은 감탄, 긴 후기, 내 경험담, 가성비 언급처럼 <b>형식이 다양할수록</b> 말투를 더 정확히 분석해 써드려요.</p>
         <div id="sampleList"></div>
         <button class="btn-add-sample" id="btnAddSample" type="button">+ 댓글 추가</button>
       </div>
@@ -396,13 +396,24 @@
     return TONES[toneId] || TONES.warm;
   }
 
+  const MIN_SAMPLES = 5;
+  const SAMPLE_PLACEHOLDERS = [
+    "예) 우와 사진만 봐도 군침 도네요 ㅎㅎ 꼭 가봐야겠어요!",
+    "예) 분위기 진짜 좋다.. 데이트 코스로 딱일 듯 👍",
+    "예) 저도 저번에 갔는데 주차가 좀 힘들었어요 ㅠㅠ 그래도 맛은 최고였어요",
+    "예) 가격도 착하고 양도 많네요 완전 혜자~ 다음에 또 갈래요",
+    "예) 헐 이거 완전 제 취향이에요 일단 저장해둘게요!!",
+    "예) 인테리어 너무 예뻐서 사진 찍기 좋겠어요 ☺️",
+    "예) 메뉴 종류 많아서 골라먹는 재미 있겠네요 ㅋㅋ",
+  ];
   function addSampleRow(value) {
+    const idx = elSampleList.querySelectorAll(".sample-row").length;
     const row = document.createElement("div");
     row.className = "sample-row";
     const ta = document.createElement("textarea");
     ta.className = "sample-input";
     ta.rows = 2;
-    ta.placeholder = "예) 우와 사진만 봐도 군침 도네요 ㅎㅎ 꼭 가봐야겠어요!";
+    ta.placeholder = SAMPLE_PLACEHOLDERS[idx % SAMPLE_PLACEHOLDERS.length];
     if (value) ta.value = value;
     const rm = document.createElement("button");
     rm.type = "button";
@@ -420,6 +431,10 @@
   }
   function collectSamples() {
     return [...elSampleList.querySelectorAll(".sample-input")].map((t) => t.value.trim()).filter(Boolean);
+  }
+  function ensureSampleRows(min) {
+    let n = elSampleList.querySelectorAll(".sample-row").length;
+    while (n < min) { addSampleRow(""); n++; }
   }
 
   // ====== 말투 설정 저장/복원 (localStorage) ======
@@ -447,7 +462,7 @@
     }
     elCustomTone.classList.toggle("hidden", toneId !== "custom");
     elLearnBox.classList.toggle("hidden", toneId !== "learn");
-    if (toneId === "learn" && !elSampleList.querySelector(".sample-row")) { addSampleRow(""); addSampleRow(""); }
+    if (toneId === "learn") ensureSampleRows(MIN_SAMPLES);
   }
 
   function updateSliderFill() {
@@ -504,7 +519,7 @@
       let body;
       if (toneId === "learn") {
         const styleSamples = collectSamples();
-        if (!styleSamples.length) { showErr(elGenError, "학습할 내 댓글을 한 개 이상 넣어 주세요."); return; }
+        if (styleSamples.length < MIN_SAMPLES) { showErr(elGenError, "더 정확한 분석을 위해 댓글을 " + MIN_SAMPLES + "개 이상 넣어 주세요. (지금 " + styleSamples.length + "개)"); return; }
         body = { action: "comment", text: text.slice(0, 8000), styleSamples, length };
       } else {
         body = { action: "comment", text: text.slice(0, 8000), tone: toneText(), length };
@@ -577,7 +592,7 @@
       [...elToneChips.children].forEach((c) => c.classList.toggle("active", c === b));
       elCustomTone.classList.toggle("hidden", toneId !== "custom");
       elLearnBox.classList.toggle("hidden", toneId !== "learn");
-      if (toneId === "learn" && !elSampleList.querySelector(".sample-row")) { addSampleRow(""); addSampleRow(""); }
+      if (toneId === "learn") ensureSampleRows(MIN_SAMPLES);
       saveStyle();
     });
 
