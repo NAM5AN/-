@@ -412,6 +412,7 @@
     rm.addEventListener("click", () => {
       row.remove();
       if (!elSampleList.querySelector(".sample-row")) addSampleRow("");
+      saveStyle();
     });
     row.appendChild(ta);
     row.appendChild(rm);
@@ -419,6 +420,34 @@
   }
   function collectSamples() {
     return [...elSampleList.querySelectorAll(".sample-input")].map((t) => t.value.trim()).filter(Boolean);
+  }
+
+  // ====== 말투 설정 저장/복원 (localStorage) ======
+  const STYLE_KEY = "cm_naver_comment_style_v1";
+  function saveStyle() {
+    try {
+      localStorage.setItem(STYLE_KEY, JSON.stringify({
+        toneId,
+        customTone: elCustomTone.value,
+        samples: collectSamples(),
+      }));
+    } catch (_e) {}
+  }
+  function applySavedStyle() {
+    let saved = null;
+    try { const raw = localStorage.getItem(STYLE_KEY); saved = raw ? JSON.parse(raw) : null; } catch (_e) {}
+    if (saved && typeof saved.customTone === "string") elCustomTone.value = saved.customTone;
+    elSampleList.innerHTML = "";
+    if (saved && Array.isArray(saved.samples)) saved.samples.forEach((s) => { if (s) addSampleRow(s); });
+    const wanted = saved && saved.toneId;
+    const chip = wanted ? [...elToneChips.children].find((c) => c.dataset.tone === wanted) : null;
+    if (chip) {
+      toneId = wanted;
+      [...elToneChips.children].forEach((c) => c.classList.toggle("active", c === chip));
+    }
+    elCustomTone.classList.toggle("hidden", toneId !== "custom");
+    elLearnBox.classList.toggle("hidden", toneId !== "learn");
+    if (toneId === "learn" && !elSampleList.querySelector(".sample-row")) { addSampleRow(""); addSampleRow(""); }
   }
 
   function updateSliderFill() {
@@ -549,9 +578,12 @@
       elCustomTone.classList.toggle("hidden", toneId !== "custom");
       elLearnBox.classList.toggle("hidden", toneId !== "learn");
       if (toneId === "learn" && !elSampleList.querySelector(".sample-row")) { addSampleRow(""); addSampleRow(""); }
+      saveStyle();
     });
 
-    elBtnAddSample.addEventListener("click", () => addSampleRow(""));
+    elBtnAddSample.addEventListener("click", () => { addSampleRow(""); saveStyle(); });
+    elCustomTone.addEventListener("input", saveStyle);
+    elSampleList.addEventListener("input", saveStyle);
 
     elLenSlider.addEventListener("input", () => {
       length = Number(elLenSlider.value);
@@ -599,6 +631,7 @@
 
     elToolMain.classList.remove("hidden");
     bindEvents();
+    applySavedStyle();
   }
 
   init();
