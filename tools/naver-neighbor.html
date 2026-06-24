@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>이웃 비대칭 분석 - 체험단 매니저</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="네이버에서 내가 추가했는데 나를 추가하지 않은 이웃을 찾아드려요">
+<link rel="stylesheet" href="/styles/base.css">
+<!-- Supabase (로그인 세션 공유 + Edge Function 호출용) : UMD 빌드 + 예비 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>window.supabase || document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');</script>
+<style>
+  /* ============================================
+     naver-neighbor.html (네이버 이웃 비대칭 분석)
+     - 댓글 도우미와 동일 톤: base.css 토큰 + 인라인 스타일
+     - 본체(분석)는 네이버 페이지에서 도는 북마클릿. 이 페이지는 프리미엄 확인 + 북마클릿 발급/설치.
+     ============================================ */
+  body { background: var(--bg); min-height: 100vh; overflow-x: hidden; }
+
+  /* ---- 미니 헤더 (도구 공통) ---- */
+  .tool-header { background: var(--paper); border-bottom: 1px solid var(--line); padding: 14px 0; }
+  .tool-header-inner { max-width: 1100px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .tool-header-back { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; color: var(--ink-soft); text-decoration: none; font-size: 12px; font-weight: 600; transition: all 0.15s; }
+  .tool-header-back:hover { border-color: var(--terra); color: var(--terra); transform: translateX(-2px); }
+  .tool-header-logo { display: inline-block; line-height: 0; text-decoration: none; }
+  .tool-header-logo img { height: 28px; width: auto; display: block; }
+  @media (max-width: 600px) { .tool-header-logo img { height: 24px; } }
+
+  /* ---- 히어로 ---- */
+  .tool-hero { max-width: 720px; margin: 0 auto; padding: 48px 20px 28px; text-align: center; }
+  .tool-hero-title { font-family: var(--font-serif); font-weight: 700; font-size: 36px; color: var(--ink); margin-bottom: 10px; letter-spacing: -0.01em; }
+  .tool-hero-title .emoji { margin-right: 8px; }
+  .tool-hero-desc { font-size: 15px; color: var(--ink-soft); line-height: 1.7; margin-bottom: 8px; word-break: keep-all; }
+  .tool-hero-sub { font-size: 13px; color: var(--ink-faint); line-height: 1.7; word-break: keep-all; }
+  @media (max-width: 600px) { .tool-hero-title { font-size: 28px; } .tool-hero { padding: 32px 20px 20px; } }
+
+  /* ---- 부팅 오류 안내 ---- */
+  .boot-error { max-width: 520px; margin: 8px auto 0; padding: 0 20px; }
+  .boot-error-inner { background: rgba(194,157,44,0.08); border: 1px solid rgba(194,157,44,0.45); border-radius: 14px; padding: 18px 20px; text-align: center; font-size: 13.5px; color: #8B6F00; line-height: 1.6; word-break: keep-all; }
+
+  /* ---- 로그인 / 프리미엄 안내 ---- */
+  .auth-gate { max-width: 480px; margin: 8px auto 0; padding: 0 20px; }
+  .auth-gate-inner { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 32px 24px; text-align: center; }
+  .auth-gate-title { font-family: var(--font-serif); font-weight: 700; font-size: 20px; color: var(--ink); margin-bottom: 10px; }
+  .auth-gate-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 20px; word-break: keep-all; }
+  .auth-gate-btn { display: inline-block; padding: 12px 24px; background: var(--terra); color: #fff; border: none; border-radius: 24px; font-family: var(--font-body); font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all 0.18s; }
+  .auth-gate-btn:hover { background: #A8431F; transform: translateY(-1px); }
+  .auth-gate-badge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--terra); background: rgba(194,84,43,0.08); padding: 4px 12px; border-radius: 999px; margin-bottom: 14px; }
+
+  /* ---- 메인 ---- */
+  .tool-main { max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
+  .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  .panel-title { font-family: var(--font-serif); font-weight: 700; font-size: 18px; color: var(--ink); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+
+  /* ---- 설치 박스 ---- */
+  .install-box { text-align: center; padding: 6px 0 2px; }
+  .install-tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--terra); background: rgba(194,84,43,0.08); padding: 4px 12px; border-radius: 999px; margin-bottom: 18px; }
+  .bm-btn { display: inline-flex; align-items: center; gap: 9px; background: var(--terra); color: #fff; text-decoration: none; font-weight: 700; font-size: 16px; padding: 14px 26px; border-radius: 12px; cursor: grab; box-shadow: 0 6px 16px rgba(194,84,43,.26); transition: transform .12s, box-shadow .12s; user-select: none; font-family: var(--font-body); }
+  .bm-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(194,84,43,.3); }
+  .bm-btn:active { cursor: grabbing; transform: translateY(0); }
+  .bm-btn svg { width: 18px; height: 18px; flex: none; }
+  .bm-hint { margin: 16px 0 0; font-size: 14px; color: var(--ink); line-height: 1.6; word-break: keep-all; }
+  .bm-arrow { color: var(--terra); font-weight: 700; }
+  .bm-fallback { margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
+  .bm-fallback button { background: none; border: 0; color: var(--terra); text-decoration: underline; cursor: pointer; font-size: 13px; padding: 0; font-family: var(--font-body); }
+
+  /* ---- 단계 ---- */
+  .steps { margin: 24px 0 0; padding: 0; list-style: none; counter-reset: s; }
+  .steps li { counter-increment: s; position: relative; padding: 0 0 14px 38px; color: var(--ink); font-size: 14px; line-height: 1.55; word-break: keep-all; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: -1px; width: 25px; height: 25px; border-radius: 50%; background: var(--terra); color: #fff; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .steps li:last-child { padding-bottom: 0; }
+  .step-tip { color: var(--ink-faint); font-size: 12px; }
+
+  /* ---- 결과 안내 ---- */
+  .result-list { margin: 0; padding-left: 18px; }
+  .result-list li { color: var(--ink-soft); font-size: 14px; line-height: 1.7; margin-bottom: 4px; word-break: keep-all; }
+  .result-list li b { color: var(--ink); font-weight: 600; }
+  .next-note { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); line-height: 1.6; word-break: keep-all; }
+  .next-note b { color: var(--terra); }
+  .safe-note { max-width: 720px; margin: 16px auto 0; padding: 0 20px; font-size: 12px; color: var(--ink-faint); line-height: 1.6; text-align: center; word-break: keep-all; }
+
+  .hidden { display: none !important; }
+
+  /* ---- 토스트 ---- */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: 10px; box-shadow: var(--shadow-lift); font-size: 13px; opacity: 0; transition: all 0.3s ease; z-index: 3000; max-width: 90%; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--sage); }
+  .toast.error { background: var(--rose); }
+</style>
+</head>
+<body>
+
+<!-- ============== 미니 헤더 ============== -->
+<header class="tool-header">
+  <div class="tool-header-inner">
+    <a href="/?view=tools" class="tool-header-back">← 도구 목록</a>
+    <a href="/" class="tool-header-logo" aria-label="체험단 매니저 홈">
+      <img src="/images/logo.png" alt="체험단 매니저" />
+    </a>
+  </div>
+</header>
+
+<!-- ============== 히어로 ============== -->
+<section class="tool-hero">
+  <h1 class="tool-hero-title"><span class="emoji">🔍</span>이웃 비대칭 분석</h1>
+  <p class="tool-hero-desc">서로이웃인 줄 알았는데 <b>나를 추가하지 않은 이웃</b>을 찾아드려요.</p>
+  <p class="tool-hero-sub">목록만 읽어서 보여주고, 삭제는 직접 — 안전하게.</p>
+</section>
+
+<!-- ============== 부팅 오류 안내 ============== -->
+<div class="boot-error hidden" id="bootError"><div class="boot-error-inner" id="bootErrorText"></div></div>
+
+<!-- ============== 로그인 안내 (비로그인 시) ============== -->
+<div class="auth-gate hidden" id="authGate">
+  <div class="auth-gate-inner">
+    <div class="auth-gate-title">로그인이 필요해요</div>
+    <p class="auth-gate-desc">이웃 비대칭 분석은 체험단 매니저에 로그인한 뒤 이용할 수 있어요.</p>
+    <a href="/" class="auth-gate-btn">로그인하러 가기</a>
+  </div>
+</div>
+
+<!-- ============== 프리미엄 안내 (비프리미엄 시) ============== -->
+<div class="auth-gate hidden" id="premiumGate">
+  <div class="auth-gate-inner">
+    <span class="auth-gate-badge">💎 프리미엄 전용</span>
+    <div class="auth-gate-title">프리미엄 구독자만 이용할 수 있어요</div>
+    <p class="auth-gate-desc">체험단 매니저 설정 → 플랜에서 프리미엄으로 업그레이드하면 바로 이용할 수 있어요.</p>
+    <a href="/" class="auth-gate-btn">체험단 매니저로 가기</a>
+  </div>
+</div>
+
+<!-- ============== 메인 (설치) ============== -->
+<main class="tool-main hidden" id="toolMain">
+  <div class="panel">
+    <div class="install-box">
+      <span class="install-tag">한 번만 설치</span>
+      <div>
+        <a class="bm-btn" id="bm" draggable="true" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l5-5 3 7 3-1.3-3-6.7h7z"/></svg>
+          이웃 비대칭 분석
+        </a>
+      </div>
+      <p class="bm-hint"><span class="bm-arrow">↑</span> 이 버튼을 브라우저 위쪽 <b>북마크바로 끌어다 놓으세요.</b></p>
+      <p class="bm-fallback">드래그가 안 되나요? <button type="button" id="bmCopy">북마클릿 복사하기</button></p>
+    </div>
+
+    <ol class="steps">
+      <li>위 버튼을 브라우저 북마크바로 <b>드래그</b>해서 등록 <span class="step-tip">(북마크바가 안 보이면 Ctrl+Shift+B)</span></li>
+      <li>네이버 블로그 <b>관리 페이지</b>를 열어요 (로그인된 상태)</li>
+      <li>방금 만든 북마크를 <b>클릭</b> → 화면 오른쪽 위에 결과가 떠요</li>
+    </ol>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+    <div class="panel-title">결과로 보는 것</div>
+    <ul class="result-list">
+      <li><b>⚠️ 내가 추가했는데 나를 추가하지 않은 이웃</b> — 정리 후보. 클릭하면 그 블로그가 열려요.</li>
+      <li><b>➕ 나를 추가했는데 내가 추가하지 않은 이웃</b> — 서로이웃 맺으면 좋은 후보.</li>
+      <li><b>⤓ CSV로 복사·다운로드</b> — 엑셀에서 바로 열려요.</li>
+    </ul>
+    <p class="next-note">곧 추가 예정 · 결과를 정기적으로 저장하면, 원래 서로이웃이었다가 끊긴 <b>"뒷삭"</b>까지 추적할 수 있어요.</p>
+  </div>
+
+  <p class="safe-note">읽기 전용 도구예요. 네이버 계정 정보는 전송하지 않고, 본인 로그인 세션으로 이웃 목록만 읽어 브라우저 안에서 비교해요. 자동 삭제·자동 신청 기능은 없습니다.</p>
+</main>
+
+<!-- 북마클릿 원본 템플릿 (__TOKEN__ 은 로그인 후 JS가 실제 토큰으로 치환) -->
+<script type="text/plain" id="bmtpl">javascript:(function(){(async()=>{const e=window.top||window,t=e.document;const n=function(){const n=(e.location.pathname||"").replace(/^\/+|\/+$/g,"");if(/^[A-Za-z0-9_-]{2,40}$/.test(n))return n;const r=e=>{try{return e&&e.querySelector('input[name="blogId"]')}catch(e){return null}};let o=r(t);if(!o)for(const e of t.querySelectorAll("iframe,frame"))if(o=r(e.contentDocument),o)break;return o&&o.value?o.value.trim():(prompt("블로그 ID를 입력해주세요 (예: tnwjd2854)")||"").trim()}();if(!n)return void alert("블로그 ID를 확인하지 못했어요. 블로그 관리 페이지에서 다시 실행해주세요.");(t.getElementById("nbz-panel")||{}).remove?.();const r=t.createElement("div");r.id="nbz-panel",r.style.cssText='position:fixed;top:20px;right:20px;width:380px;max-height:86vh;overflow:auto;z-index:2147483647;background:rgb(255,255,255);border:1px solid rgb(227,227,227);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.18);font:13px/1.55 -apple-system,"Malgun Gothic",sans-serif;color:rgb(51,51,51);padding:16px',t.body.appendChild(r);const o=e=>{r.innerHTML=e},i=e=>(e||"").replace(/[&<>]/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[e]));o('<b>이웃 비대칭 분석</b><br><span style="color:rgb(153,153,153)">blogId: '+i(n)+"</span><br><br>권한 확인 중…");let a;try{const e=await fetch("https://wvwoqqfizgbhvdzlqscc.supabase.co/functions/v1/tool-verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:"__TOKEN__",tool:"naver-neighbor"})});a=await e.json()}catch(e){a={ok:!1,reason:"network"}}if(!a||!a.ok){const e=a&&a.reason,n="not_premium"===e?"이 도구는 <b>프리미엄 전용</b>이에요. 체험단 매니저에서 프리미엄 구독 후 이용해 주세요.":"invalid_token"===e||"no_token"===e?"이용 권한을 확인할 수 없어요. 체험단 매니저 도구 페이지에서 <b>북마클릿을 다시 받아</b> 주세요.":"권한 확인에 실패했어요. 잠시 후 다시 시도해 주세요.";r.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">이웃 비대칭 분석</b><span id="nbz-x" style="cursor:pointer;color:rgb(170,170,170);font-size:20px;line-height:1">×</span></div><div style="margin:14px 0;line-height:1.6">'+n+'</div><a href="https://cheheomdan-manager.com" target="_blank" style="color:rgb(194,96,61);font-weight:600">체험단 매니저 열기 →</a>';const o=t.getElementById("nbz-x");return void(o&&(o.onclick=()=>r.remove()))}const l=e=>new Promise(t=>setTimeout(t,e));function s(e,t){const n=[];return e.querySelectorAll("tr").forEach(e=>{const r=e.querySelector(".nickname"),o=e.querySelector("td.buddy a[href]");if(!r||!o)return;const i=(o.getAttribute("href")||"").match(/blog\.naver\.com\/([A-Za-z0-9_-]+)/);if(!i||i[1]===t)return;const a=e.querySelector("td.type"),l=e.querySelectorAll("td"),s=l.length?l[l.length-1].textContent.trim():"";n.push({id:i[1],nick:r.textContent.trim(),mutual:!(!a||!/서로이웃/.test(a.textContent)),date:/\d{2}\.\d{2}\.\d{2}\./.test(s)?s:""})}),n}async function d(e,t){const r="https://admin.blog.naver.com/"+e+".naver?blogId="+encodeURIComponent(n)+"&currentPage="+t;for(let e=0;e<2;e++){const e=await fetch(r,{credentials:"include"});if(e.ok){return s((new DOMParser).parseFromString(await e.text(),"text/html"),n)}await l(700)}throw new Error(e+" "+t+"페이지 응답 오류")}async function c(e,t){const r=new Map;for(let a=1;a<=100;a++){let s;o('<b>이웃 비대칭 분석</b><br><span style="color:rgb(153,153,153)">blogId: '+i(n)+"</span><br><br>"+t+" "+a+'페이지 읽는 중…<br><span style="color:rgb(170,170,170)">누적 '+r.size+"명</span>");try{s=await d(e,a)}catch(e){throw o('<b style="color:rgb(204,0,0)">오류</b><br>'+t+" "+a+"페이지를 읽지 못했어요.<br>네이버에 로그인된 상태인지 확인 후 다시 시도해주세요."),e}let c=0;for(const e of s)r.has(e.id)||(r.set(e.id,e),c++);if(s.length<50||0===c)break;await l(500)}return r}let p,b;try{p=await c("BuddyListManage","내가 추가한 이웃"),b=await c("BuddyMeManage","나를 추가한 이웃")}catch(e){return}const g=[...p.values()].filter(e=>!b.has(e.id)),y=[...b.values()].filter(e=>!p.has(e.id)),u=[...p.values()].filter(e=>b.has(e.id)).length,f=(e,t)=>e+","+t.id+',"'+(t.nick||"").replace(/"/g,'""')+'",'+t.date,x="category,blogId,nickname,date\n"+g.map(e=>f("내가추가_상대안함",e)).join("\n")+(g.length&&y.length?"\n":"")+y.map(e=>f("상대추가_내가안함",e)).join("\n"),h=e=>'<div style="padding:5px 0;border-top:1px solid rgb(241,241,241);display:flex;justify-content:space-between;gap:8px;align-items:baseline"><a href="https://blog.naver.com/'+e.id+'" target="_blank" style="color:rgb(194,96,61);text-decoration:none;font-weight:500">'+i(e.nick)+'</a><span style="color:rgb(187,187,187);font-size:11px;white-space:nowrap">'+i(e.id)+(e.date?" · "+e.date:"")+"</span></div>";r.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">이웃 비대칭 분석</b><span id="nbz-x" style="cursor:pointer;color:rgb(170,170,170);font-size:20px;line-height:1">×</span></div><div style="color:rgb(153,153,153);margin:6px 0 12px">blogId: '+i(n)+'</div><div style="background:rgb(247,247,247);border-radius:8px;padding:10px 12px;margin-bottom:14px">내가 추가한 이웃 <b>'+p.size+"</b>명<br>나를 추가한 이웃 <b>"+b.size+"</b>명<br>서로이웃(교집합) <b>"+u+'</b>명</div><div style="font-weight:700;color:rgb(232,89,12)">⚠️ 내가 추가했는데 나를 추가하지 않은 이웃 ('+g.length+')</div><div style="font-size:11px;color:rgb(153,153,153);margin:2px 0 6px">정리 후보 — 클릭하면 블로그가 열려요. 삭제는 직접 하세요.</div>'+(g.length?g.map(h).join(""):'<div style="color:rgb(170,170,170);padding:6px 0">없음 🎉</div>')+'<div style="font-weight:700;color:rgb(28,126,214);margin-top:16px">➕ 나를 추가했는데 내가 추가하지 않은 이웃 ('+y.length+')</div><div style="font-size:11px;color:rgb(153,153,153);margin:2px 0 6px">서로이웃 맺으면 좋은 후보</div>'+(y.length?y.map(h).join(""):'<div style="color:rgb(170,170,170);padding:6px 0">없음</div>')+'<div style="display:flex;gap:8px;margin-top:16px"><button id="nbz-copy" style="flex:1;padding:9px;border:0;border-radius:8px;background:rgb(194,96,61);color:rgb(255,255,255);cursor:pointer;font-size:13px">CSV 복사</button><button id="nbz-dl" style="flex:1;padding:9px;border:0;border-radius:8px;background:rgb(51,51,51);color:rgb(255,255,255);cursor:pointer;font-size:13px">CSV 다운로드</button></div><div style="font-size:11px;color:rgb(153,153,153);margin-top:10px">* 지금 시점의 비대칭만 보여줘요. "원래 서로이웃이었다가 끊긴(뒷삭)" 구분은 추후 스냅샷 비교로 추가됩니다.</div>',t.getElementById("nbz-x").onclick=()=>r.remove(),t.getElementById("nbz-copy").onclick=()=>navigator.clipboard.writeText(x).then(()=>alert("CSV를 클립보드에 복사했어요."),()=>alert("복사 실패 — 다운로드 버튼을 이용해주세요.")),t.getElementById("nbz-dl").onclick=()=>{const e=new Blob(["\ufeff"+x],{type:"text/csv;charset=utf-8"}),r=t.createElement("a");r.href=URL.createObjectURL(e),r.download="neighbor_asymmetry_"+n+"_"+(new Date).toISOString().slice(0,10)+".csv",r.click()}})();})();</script>
+
+<!-- ============== 토스트 ============== -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ====== 설정 ======
+  const SUPABASE_URL = "https://wvwoqqfizgbhvdzlqscc.supabase.co";
+  // anon public 키 (공개되어도 안전 — 댓글 도우미와 동일 키)
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU";
+  const TOOL = "naver-neighbor";
+
+  let sb = null;
+  const $ = (id) => document.getElementById(id);
+  const show = (el) => el.classList.remove("hidden");
+  function showBootError(msg) { $("bootErrorText").textContent = msg; show($("bootError")); }
+
+  let toastTimer;
+  function toast(msg, kind) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.className = "toast show" + (kind ? " " + kind : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = "toast"; }, 2600);
+  }
+
+  // 토큰을 북마클릿에 박아 설치 UI 활성화
+  function setupInstall(token) {
+    const tpl = $("bmtpl").textContent;
+    const link = $("bm");
+    link.setAttribute("href", tpl.replace("__TOKEN__", token));
+    link.addEventListener("click", (e) => { e.preventDefault(); toast("클릭이 아니라, 위쪽 북마크바로 끌어다 놓으세요 🙂"); });
+    $("bmCopy").addEventListener("click", () => {
+      const href = link.getAttribute("href");
+      (navigator.clipboard ? navigator.clipboard.writeText(href) : Promise.reject())
+        .then(() => toast("복사됐어요! 새 북마크를 만들고 주소(URL) 칸에 붙여넣으세요.", "success"),
+              () => toast("복사 실패 — 버튼을 길게 눌러 직접 복사해 주세요.", "error"));
+    });
+    show($("toolMain"));
+  }
+
+  // 로그인 사용자 → tool-token 호출로 토큰 발급 (프리미엄만 발급됨)
+  async function loadToken() {
+    let res;
+    try { res = await sb.functions.invoke("tool-token", { body: { tool: TOOL } }); }
+    catch (e) { showBootError("도구를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
+    const { data, error } = res;
+    if (error) {
+      let reason = "";
+      try { const b = await error.context.json(); reason = b && b.reason; } catch (_) {}
+      if (reason === "not_premium") { show($("premiumGate")); return; }
+      if (reason === "login_required") { show($("authGate")); return; }
+      showBootError("도구를 불러오지 못했어요. 잠시 후 다시 시도하거나 새로고침해 주세요.");
+      return;
+    }
+    if (!data || !data.ok || !data.token) { showBootError("토큰 발급에 실패했어요. 잠시 후 다시 시도해 주세요."); return; }
+    setupInstall(data.token);
+  }
+
+  // ====== 초기화: 라이브러리 → 클라이언트 → 로그인 세션 → 토큰 ======
+  async function init() {
+    if (!window.supabase || !window.supabase.createClient) {
+      showBootError("로그인 모듈을 불러오지 못했어요. 새로고침하거나, 광고/추적 차단 확장 프로그램을 잠시 끄고 다시 시도해 주세요.");
+      return;
+    }
+    try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
+    catch (e) { showBootError("초기화 오류: " + (e && e.message ? e.message : e)); return; }
+
+    let session = null;
+    try { session = (await sb.auth.getSession()).data.session; } catch (_) {}
+    if (!session) { show($("authGate")); return; }
+
+    loadToken();
+  }
+  init();
+</script>
+</body>
+</html>
