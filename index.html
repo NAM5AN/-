@@ -1,358 +1,3699 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<title>나만 추가한 이웃 찾기 - 체험단 매니저</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="네이버에서 내가 추가했는데 나를 추가하지 않은 이웃을 찾아드려요">
-<link rel="stylesheet" href="/styles/base.css">
-<!-- Supabase (로그인 세션 공유 + Edge Function 호출용) : UMD 빌드 + 예비 CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script>window.supabase || document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F5EFE6">
+<title>체험단 매니저 - AI 체험단 일정 자동 관리</title>
+
+<!-- SEO 기본 -->
+<meta name="description" content="체험단 매니저 - AI로 체험단 일정을 자동 관리하세요. 이미지 한 장이면 마감일, 리뷰 일정, 위치까지 자동 등록.">
+<meta name="keywords" content="체험단, 체험단 관리, 체험단 매니저, 체험단 일정, 리뷰 매니저, 인플루언서, 블로거">
+<meta name="author" content="체험단 매니저">
+<meta name="robots" content="index, follow">
+
+<!-- OpenGraph (카카오톡, 페이스북 공유용) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="체험단 매니저">
+<meta property="og:description" content="AI로 체험단 일정을 자동 관리하세요. 이미지 한 장이면 마감일, 리뷰 일정, 위치까지 자동 등록.">
+<meta property="og:site_name" content="체험단 매니저">
+<meta property="og:url" content="https://cheheomdan-manager.com">
+<meta property="og:locale" content="ko_KR">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="체험단 매니저">
+<meta name="twitter:description" content="AI로 체험단 일정을 자동 관리하세요.">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="scripts/sample-data.js"></script>
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/layout.css">
+<link rel="stylesheet" href="styles/components.css">
+<link rel="stylesheet" href="styles/screens.css">
+
+<!-- 소식 탭: 공지/업데이트 글(클릭형) + 소식 모달 전용 스타일 -->
 <style>
-  /* ============================================
-     naver-neighbor.html (네이버 나만 추가한 이웃 찾기)
-     - 댓글 도우미와 동일 톤: base.css 토큰 + 인라인 스타일
-     - 본체(분석)는 네이버 페이지에서 도는 북마클릿. 이 페이지는 프리미엄 확인 + 북마클릿 발급/설치.
-     ============================================ */
-  body { background: var(--bg); min-height: 100vh; overflow-x: hidden; }
+  /* ===== 공지/업데이트 글 (목록, 클릭하면 모달) ===== */
+  #newsList { display: flex; flex-direction: column; gap: 12px; }
+  .notice-loading {
+    font-size: 13px;
+    color: var(--ink-faint);
+    text-align: center;
+    padding: 24px 0;
+    margin: 0;
+  }
+  /* ── 기본 = 얇은 목록형 (이전에 게시된 글들) ── */
+  .notice-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .notice-item:hover { border-color: var(--terra-soft); }
+  .notice-item:focus-visible {
+    outline: 2px solid var(--terra);
+    outline-offset: 2px;
+  }
+  .notice-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .notice-badge {
+    flex-shrink: 0;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--terra);
+    background: rgba(194, 84, 43, .08);
+    padding: 3px 9px;
+    border-radius: 12px;
+    white-space: nowrap;
+  }
+  .notice-title {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .notice-date {
+    flex-shrink: 0;
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--ink-faint);
+    font-family: ui-monospace, Menlo, monospace;
+    white-space: nowrap;
+  }
+  .notice-arrow { display: none; }
 
-  /* ---- 미니 헤더 (도구 공통) ---- */
-  .tool-header { background: var(--paper); border-bottom: 1px solid var(--line); padding: 14px 0; }
-  .tool-header-inner { max-width: 1100px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .tool-header-back { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; color: var(--ink-soft); text-decoration: none; font-size: 12px; font-weight: 600; transition: all 0.15s; }
-  .tool-header-back:hover { border-color: var(--terra); color: var(--terra); transform: translateX(-2px); }
-  .tool-header-logo { display: inline-block; line-height: 0; text-decoration: none; }
-  .tool-header-logo img { height: 28px; width: auto; display: block; }
-  @media (max-width: 600px) { .tool-header-logo img { height: 24px; } }
+  /* ── 가장 최신 글(맨 위) = 두꺼운 카드로 강조 ── */
+  .notice-item:first-of-type {
+    gap: 12px;
+    padding: 18px 20px;
+    border-radius: 14px;
+  }
+  .notice-item:first-of-type:hover {
+    border-color: var(--terra-soft);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(42, 37, 34, .07);
+  }
+  .notice-item:first-of-type .notice-main {
+    display: block;
+  }
+  .notice-item:first-of-type .notice-badge {
+    margin-bottom: 8px;
+  }
+  .notice-item:first-of-type .notice-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 17px;
+    margin: 0 0 5px;
+    white-space: normal;
+    word-break: keep-all;
+  }
+  .notice-item:first-of-type .notice-date {
+    display: block;
+    margin-left: 0;
+  }
+  .notice-item:first-of-type .notice-arrow {
+    display: block;
+    font-size: 22px;
+    color: var(--ink-faint);
+    flex-shrink: 0;
+    transition: color .15s, transform .15s;
+  }
+  .notice-item:first-of-type:hover .notice-arrow {
+    color: var(--terra);
+    transform: translateX(2px);
+  }
 
-  /* ---- 히어로 ---- */
-  .tool-hero { max-width: 720px; margin: 0 auto; padding: 48px 20px 28px; text-align: center; }
-  .tool-hero-title { font-family: var(--font-serif); font-weight: 700; font-size: 36px; color: var(--ink); margin-bottom: 10px; letter-spacing: -0.01em; }
-  .tool-hero-title .emoji { margin-right: 8px; }
-  .tool-hero-desc { font-size: 15px; color: var(--ink-soft); line-height: 1.7; margin-bottom: 8px; word-break: keep-all; }
-  .tool-hero-sub { font-size: 13px; color: var(--ink-faint); line-height: 1.7; word-break: keep-all; }
-  @media (max-width: 600px) { .tool-hero-title { font-size: 28px; } .tool-hero { padding: 32px 20px 20px; } }
+  /* ── 소식 탭 NEW 표시 (일주일 이내 새 글) ── */
+  .tab-new-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #E5484D;
+    margin-left: 5px;
+    vertical-align: top;
+    animation: newDotPop .25s ease;
+  }
+  .tab-new-dot[hidden] { display: none; }
+  @keyframes newDotPop {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+  }
 
-  /* ---- 부팅 오류 안내 ---- */
-  .boot-error { max-width: 520px; margin: 8px auto 0; padding: 0 20px; }
-  .boot-error-inner { background: rgba(194,157,44,0.08); border: 1px solid rgba(194,157,44,0.45); border-radius: 14px; padding: 18px 20px; text-align: center; font-size: 13.5px; color: #8B6F00; line-height: 1.6; word-break: keep-all; }
 
-  /* ---- 로그인 / 프리미엄 안내 ---- */
-  .auth-gate { max-width: 480px; margin: 8px auto 0; padding: 0 20px; }
-  .auth-gate-inner { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 32px 24px; text-align: center; }
-  .auth-gate-title { font-family: var(--font-serif); font-weight: 700; font-size: 20px; color: var(--ink); margin-bottom: 10px; }
-  .auth-gate-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 20px; word-break: keep-all; }
-  .auth-gate-btn { display: inline-block; padding: 12px 24px; background: var(--terra); color: #fff; border: none; border-radius: 24px; font-family: var(--font-body); font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; transition: all 0.18s; }
-  .auth-gate-btn:hover { background: #A8431F; transform: translateY(-1px); }
-  .auth-gate-badge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--terra); background: rgba(194,84,43,0.08); padding: 4px 12px; border-radius: 999px; margin-bottom: 14px; }
-
-  /* ---- 메인 ---- */
-  .tool-main { max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
-  .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
-  .panel-title { font-family: var(--font-serif); font-weight: 700; font-size: 18px; color: var(--ink); margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-
-  /* ---- 설치 박스 ---- */
-  .install-box { text-align: center; padding: 6px 0 2px; }
-  .install-tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--terra); background: rgba(194,84,43,0.08); padding: 4px 12px; border-radius: 999px; margin-bottom: 18px; }
-  .bm-btn { display: inline-flex; align-items: center; gap: 9px; background: var(--terra); color: #fff; text-decoration: none; font-weight: 700; font-size: 16px; padding: 14px 26px; border-radius: 12px; cursor: grab; box-shadow: 0 6px 16px rgba(194,84,43,.26); transition: transform .12s, box-shadow .12s; user-select: none; font-family: var(--font-body); }
-  .bm-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(194,84,43,.3); }
-  .bm-btn:active { cursor: grabbing; transform: translateY(0); }
-  .bm-btn svg { width: 18px; height: 18px; flex: none; }
-  .bm-hint { margin: 16px 0 0; font-size: 14px; color: var(--ink); line-height: 1.6; word-break: keep-all; }
-  .bm-arrow { color: var(--terra); font-weight: 700; }
-  .bm-fallback { margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
-  .bm-fallback button { background: none; border: 0; color: var(--terra); text-decoration: underline; cursor: pointer; font-size: 13px; padding: 0; font-family: var(--font-body); }
-  /* 복사로 직접 추가하는 방법 (펼침) */
-  .bm-manual { margin: 14px auto 0; max-width: 460px; text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
-  .bm-manual-lead { font-size: 13px; color: var(--ink); margin: 0 0 14px; line-height: 1.6; word-break: keep-all; }
-  .bm-manual-steps { margin: 0; padding: 0; list-style: none; counter-reset: m; }
-  .bm-manual-steps li { counter-increment: m; position: relative; padding: 0 0 16px 32px; font-size: 13.5px; color: var(--ink); line-height: 1.6; word-break: keep-all; }
-  .bm-manual-steps li:last-child { padding-bottom: 0; }
-  .bm-manual-steps li::before { content: counter(m); position: absolute; left: 0; top: 0; width: 23px; height: 23px; border-radius: 50%; background: var(--terra); color: #fff; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; }
-  .bm-manual-tip { display: block; margin-top: 5px; font-size: 12px; color: var(--ink-faint); line-height: 1.5; }
-  .bm-copy-box { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; margin: 0 0 4px; }
-  .bm-copy-line { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
-  .bm-copy-line + .bm-copy-line { margin-top: 9px; }
-  .bm-copy-label { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); min-width: 76px; }
-  .bm-browser { margin-top: 16px; }
-  .bm-browser-name { font-size: 13px; font-weight: 700; color: var(--terra); margin-bottom: 9px; }
-  .bm-copy-code { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; }
-  .bm-copy-btn { background: var(--paper); border: 1px solid var(--terra); color: var(--terra); border-radius: 8px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font-body); white-space: nowrap; transition: all .15s; }
-  .bm-copy-btn:hover { background: var(--terra); color: #fff; }
-  .bm-copy-btn.primary { background: var(--terra); color: #fff; }
-  .bm-copy-btn.primary:hover { filter: brightness(.93); }
-
-  /* ---- 단계 ---- */
-  .steps { margin: 24px 0 0; padding: 0; list-style: none; counter-reset: s; }
-  .steps li { counter-increment: s; position: relative; padding: 0 0 14px 38px; color: var(--ink); font-size: 14px; line-height: 1.55; word-break: keep-all; }
-  .steps li::before { content: counter(s); position: absolute; left: 0; top: -1px; width: 25px; height: 25px; border-radius: 50%; background: var(--terra); color: #fff; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
-  .steps li:last-child { padding-bottom: 0; }
-  .step-tip { color: var(--ink-faint); font-size: 12px; }
-
-  /* ---- 결과 안내 ---- */
-  .result-list { margin: 0; padding-left: 18px; }
-  .result-list li { color: var(--ink-soft); font-size: 14px; line-height: 1.7; margin-bottom: 4px; word-break: keep-all; }
-  .result-list li b { color: var(--ink); font-weight: 600; }
-  .next-note { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); line-height: 1.6; word-break: keep-all; }
-  .next-note b { color: var(--terra); }
-  .safe-note { max-width: 720px; margin: 16px auto 0; padding: 0 20px; font-size: 12px; color: var(--ink-faint); line-height: 1.6; text-align: center; word-break: keep-all; }
-
-  .hidden { display: none !important; }
-
-  /* ---- 토스트 ---- */
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: 10px; box-shadow: var(--shadow-lift); font-size: 13px; opacity: 0; transition: all 0.3s ease; z-index: 3000; max-width: 90%; text-align: center; }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-  .toast.success { background: var(--sage); }
-  .toast.error { background: var(--rose); }
+  /* ===== 소식 모달 본문 ===== */
+  .news-modal-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--terra);
+    background: rgba(194, 84, 43, .08);
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  .news-modal-title {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--ink);
+    margin: 0 0 6px;
+    line-height: 1.35;
+    word-break: keep-all;
+  }
+  .news-modal-date {
+    display: block;
+    font-size: 12px;
+    color: var(--ink-faint);
+    font-family: ui-monospace, Menlo, monospace;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .news-modal-body {
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.75;
+    word-break: keep-all;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  .news-modal-body p { margin: 0 0 14px; }
+  .news-modal-body p:last-child { margin-bottom: 0; }
+  .news-modal-body strong { font-weight: 700; color: var(--ink); }
+  .news-modal-body ul, .news-modal-body ol { margin: 0 0 14px; padding-left: 20px; }
+  .news-modal-body li { margin-bottom: 6px; }
+  .news-modal-body a { color: var(--terra); text-decoration: underline; }
+  .news-modal-body a:hover { color: #A8431F; }
+  .news-modal-body img { max-width: 100%; border-radius: 10px; margin: 8px 0; display: block; }
+  .news-modal-body h4 {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 18px 0 8px;
+  }
+  /* 소식 모달 하단 버튼 (바로가기/문의 폼 등) — 기본 링크 스타일보다 우선 */
+  .news-modal-body a.news-modal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 18px;
+    padding: 11px 20px;
+    background: var(--terra);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 10px;
+    transition: background .15s, transform .15s;
+  }
+  .news-modal-body a.news-modal-btn:hover {
+    background: #A8431F;
+    transform: translateY(-1px);
+  }
 </style>
 </head>
 <body>
 
-<!-- ============== 미니 헤더 ============== -->
-<header class="tool-header">
-  <div class="tool-header-inner">
-    <a href="/?view=tools" class="tool-header-back">← 도구 목록</a>
-    <a href="/" class="tool-header-logo" aria-label="체험단 매니저 홈">
+<!-- ============== Login Screen ============== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
       <img src="/images/logo.png" alt="체험단 매니저" />
-    </a>
-  </div>
-</header>
+    </div>
+    <div class="login-sub">체험단 일정을<br>한 곳에서 관리하세요</div>
 
-<!-- ============== 히어로 ============== -->
-<section class="tool-hero">
-  <h1 class="tool-hero-title"><span class="emoji">🔍</span>나만 추가한 이웃 찾기</h1>
-  <p class="tool-hero-desc">서로이웃인 줄 알았는데 <b>나를 추가하지 않은 이웃</b>을 찾아드려요.</p>
-  <p class="tool-hero-sub">목록만 읽어서 보여주고, 삭제는 직접 — 안전하게.</p>
-</section>
+    <div class="login-providers">
+      <button class="provider-btn kakao" id="loginKakao">
+        <span class="icon">💬</span>
+        <span>카카오로 시작하기</span>
+      </button>
+    </div>
 
-<!-- ============== 부팅 오류 안내 ============== -->
-<div class="boot-error hidden" id="bootError"><div class="boot-error-inner" id="bootErrorText"></div></div>
-
-<!-- ============== 로그인 안내 (비로그인 시) ============== -->
-<div class="auth-gate hidden" id="authGate">
-  <div class="auth-gate-inner">
-    <div class="auth-gate-title">로그인이 필요해요</div>
-    <p class="auth-gate-desc">나만 추가한 이웃 찾기는 체험단 매니저에 로그인한 뒤 이용할 수 있어요.</p>
-    <a href="/" class="auth-gate-btn">로그인하러 가기</a>
+    <div class="login-footer">
+      로그인 시 <a href="/terms.html" target="_blank" rel="noopener">이용약관</a> 및 <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
+    </div>
   </div>
 </div>
 
-<!-- ============== 프리미엄 안내 (비프리미엄 시) ============== -->
-<div class="auth-gate hidden" id="premiumGate">
-  <div class="auth-gate-inner">
-    <span class="auth-gate-badge">💎 프리미엄 전용</span>
-    <div class="auth-gate-title">프리미엄 구독자만 이용할 수 있어요</div>
-    <p class="auth-gate-desc">지금은 베타 기간이라 프리미엄을 <b>무료</b>로 쓸 수 있어요! 체험단 매니저 설정 → 💎 플랜에서 프리미엄을 켜면 바로 이용할 수 있어요.</p>
-    <a href="/" class="auth-gate-btn">체험단 매니저로 가기</a>
+<!-- ============== Main App ============== -->
+<div id="mainApp" style="display:none;">
+
+<!-- 게스트 모드 안내 배너 (비로그인 시 상단 고정) -->
+<div id="guestBanner" class="guest-banner" style="display:none;">
+  <div class="guest-banner-inner">
+    <span class="guest-banner-text">
+      👋 <strong>둘러보기 중이에요</strong> · 내 데이터를 저장하려면 로그인해주세요
+    </span>
+    <button class="guest-banner-btn" id="btnGuestBannerLogin">카카오로 시작하기</button>
   </div>
 </div>
 
-<!-- ============== 모바일 안내 (PC 전용) ============== -->
-<div class="auth-gate hidden" id="mobileGate">
-  <div class="auth-gate-inner">
-    <span class="auth-gate-badge">💻 PC 전용</span>
-    <div class="auth-gate-title">PC에서 이용해 주세요</div>
-    <p class="auth-gate-desc">이 도구는 PC(컴퓨터) 브라우저의 북마크바에 설치해서, 네이버 블로그 <b>PC 관리 페이지</b>에서 실행돼요. 모바일에서는 설치도 실행도 되지 않아요.<br><br>컴퓨터에서 체험단 매니저에 접속해 이 페이지를 다시 열어 주세요.</p>
-    <a href="/" class="auth-gate-btn">체험단 매니저 홈</a>
-  </div>
-</div>
-
-<!-- ============== 메인 (설치) ============== -->
-<main class="tool-main hidden" id="toolMain">
-  <div class="panel">
-    <div class="install-box">
-      <span class="install-tag">한 번만 설치</span>
-      <div>
-        <a class="bm-btn" id="bm" draggable="true" href="#">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l5-5 3 7 3-1.3-3-6.7h7z"/></svg>
-          나만 추가한 이웃 찾기
+<div class="app">
+  <header>
+    <div class="title-row">
+      <h1 class="brand-logo">
+        <a href="/" aria-label="체험단 매니저 홈">
+          <img src="/images/logo.png" alt="체험단 매니저" />
         </a>
+      </h1>
+      <div class="header-actions">
+        <span class="sub" id="todayDate"></span>
+        <!-- 로그인 상태: 사용자 정보 표시 -->
+        <div class="user-info" id="userInfo" title="사용자">
+          <div class="user-avatar" id="userAvatar">?</div>
+          <span class="user-name" id="userName">사용자</span>
+        </div>
+        <!-- 게스트 상태: 로그인 버튼 (헤더용 작은 버튼) -->
+        <button class="btn-login-header" id="btnHeaderLogin" style="display:none;">
+          🔑 로그인
+        </button>
+        <button class="icon-btn" id="btnHelp" aria-label="사용법" title="사용법"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></button>
+        <button class="icon-btn" id="btnSettings" aria-label="설정" title="설정"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
       </div>
-      <p class="bm-hint"><span class="bm-arrow">↑</span> 이 버튼을 브라우저 위쪽 <b>북마크바로 끌어다 놓으세요.</b></p>
-      <p class="bm-fallback">드래그가 잘 안 되나요? <button type="button" id="bmManualToggle">복사해서 직접 추가하기 ▾</button></p>
+    </div>
+    <div class="stat-row" id="statRow">진행중 <strong>0</strong> · 완료 <strong>0</strong></div>
+  </header>
 
-      <!-- 복사로 직접 추가하는 방법 (펼침) -->
-      <div class="bm-manual hidden" id="bmManual">
-        <p class="bm-manual-lead">드래그가 안 되면 복사해서 추가할 수 있어요. 먼저 아래 ①②를 복사해 두고, 쓰는 브라우저에 맞춰 따라 해주세요. <span class="step-tip">(북마크바가 안 보이면 Ctrl+Shift+B)</span></p>
+  <nav class="tabs">
+    <button class="tab active" data-view="active">진행 중 <span class="count" id="cntActive">0</span></button>
+    <button class="tab" data-view="map">지도</button>
+    <button class="tab" data-view="completed">완료 <span class="count" id="cntDone">0</span></button>
+    <button class="tab" data-view="tools">🛠️ 도구</button>
+    <button class="tab" data-view="news">📢 소식<span class="tab-new-dot" id="newsNewDot" hidden></span></button>
+  </nav>
 
-        <!-- 공통 복사 버튼 -->
-        <div class="bm-copy-box">
-          <div class="bm-copy-line">
-            <span class="bm-copy-label">① 이름</span>
-            <code class="bm-copy-code" id="bmNameDisplay">나만 추가한 이웃 찾기</code>
-            <button type="button" class="bm-copy-btn" id="bmCopyName">복사</button>
-          </div>
-          <div class="bm-copy-line">
-            <span class="bm-copy-label">② 주소</span>
-            <button type="button" class="bm-copy-btn primary" id="bmCopyUrl">복사</button>
-          </div>
+  <!-- 진행 중 뷰 -->
+  <section id="viewActive">
+    <label class="upload" id="uploadZone">
+      <input type="file" id="fileInput" accept="image/*" />
+      <span class="upload-icon">📷</span>
+      <div class="upload-title">체험단 캡쳐 이미지 올리기</div>
+      <div class="upload-hint">
+        클릭 · 끌어다 놓기<span class="pc-only"> · <kbd>Ctrl</kbd>+<kbd>V</kbd>로 붙여넣기</span> · AI가 자동으로 정보를 추출해요
+      </div>
+    </label>
+    <div class="ai-usage-mini" id="aiUsageMini"></div>
+    <div style="text-align:center; margin-bottom: 24px; margin-top: -8px;">
+      <button class="btn btn-ghost" id="btnManualAdd" style="font-size: 12px;">✏️ 직접 입력하기</button>
+    </div>
+
+    <!-- 캘린더 (토글 — 기본 접힘) -->
+    <div class="calendar-section">
+      <button class="calendar-toggle" id="calendarToggle" aria-expanded="false">
+        <span class="calendar-toggle-label">📅 캘린더로 보기</span>
+        <span class="calendar-toggle-arrow" id="calendarToggleArrow">▾</span>
+      </button>
+      <div class="calendar-body" id="calendarBody" style="display:none;">
+        <div class="calendar-nav">
+          <button class="calendar-nav-btn" id="calPrev" aria-label="이전 달">◀</button>
+          <div class="calendar-month" id="calMonth">2026년 6월</div>
+          <button class="calendar-nav-btn" id="calNext" aria-label="다음 달">▶</button>
         </div>
-
-        <!-- 엣지 -->
-        <div class="bm-browser">
-          <div class="bm-browser-name">🟦 엣지(Edge)</div>
-          <ol class="bm-manual-steps">
-            <li>위 <b>② 주소 [복사]</b>를 눌러요.</li>
-            <li>북마크바 빈 곳에서 <b>오른쪽 클릭 → [붙여넣기]</b> → 북마크가 하나 생겨요.<span class="bm-manual-tip">[붙여넣기]가 회색이면 ②를 먼저 복사하세요. 제목이 길고 이상하게 떠도 정상이에요.</span></li>
-            <li>방금 생긴 그 북마크에서 <b>오른쪽 클릭 → [이름 바꾸기]</b> <span class="step-tip">(또는 편집)</span>.</li>
-            <li>이름을 <b>나만 추가한 이웃 찾기</b>로 바꾸면 끝이에요. <span class="step-tip">위 ① [복사]를 붙여넣으면 편해요.</span></li>
-          </ol>
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-dot deadline"></span>리뷰 마감</span>
+          <span class="legend-item"><span class="legend-dot visit"></span>방문 예정</span>
         </div>
-
-        <!-- 크롬 · 웨일 -->
-        <div class="bm-browser">
-          <div class="bm-browser-name">🟢 크롬 · 웨일(Chrome · Whale)</div>
-          <ol class="bm-manual-steps">
-            <li>북마크바 빈 곳에서 <b>오른쪽 클릭 → [페이지 추가]</b> <span class="step-tip">(웨일은 "새 북마크")</span>.</li>
-            <li>작은 창의 <b>'이름' 칸</b>에 위 <b>① [복사]</b>한 걸 붙여넣어요.</li>
-            <li><b>'URL' 칸</b>에 위 <b>② [복사]</b>한 걸 붙여넣어요.</li>
-            <li><b>[저장]</b>을 누르면 끝!</li>
-          </ol>
+        <div class="calendar-weekdays">
+          <span class="wd sun">일</span><span class="wd">월</span><span class="wd">화</span><span class="wd">수</span><span class="wd">목</span><span class="wd">금</span><span class="wd sat">토</span>
         </div>
-
-        <p class="bm-manual-tip" style="margin-top:14px">설치가 끝나면, 네이버 블로그 <b>관리 페이지</b>를 열고 이 북마크를 클릭하면 결과가 떠요.</p>
+        <div class="calendar-grid" id="calendarGrid">
+          <!-- JS가 채움 -->
+        </div>
       </div>
     </div>
 
-    <ol class="steps">
-      <li>위 버튼을 브라우저 북마크바로 <b>드래그</b>해서 등록 <span class="step-tip">(북마크바가 안 보이면 Ctrl+Shift+B)</span></li>
-      <li>네이버 블로그 <b>관리 페이지</b>를 열어요 (로그인된 상태)</li>
-      <li>방금 만든 북마크를 <b>클릭</b> → 화면 오른쪽 위에 결과가 떠요</li>
-    </ol>
+    <div class="sort-bar" id="sortBarActive">
+      <span class="sort-label">정렬</span>
+      <select class="sort-select" id="sortFieldActive">
+        <option value="createdAt">최근 추가순</option>
+        <option value="deadline">리뷰 마감일</option>
+        <option value="visitDate">방문 예정일</option>
+      </select>
+      <button class="sort-dir-btn" id="sortDirActive" title="정렬 방향 전환" aria-label="정렬 방향 전환">↓</button>
+    </div>
+
+    <div id="activeList"></div>
+  </section>
+
+  <!-- 지도 뷰 -->
+  <section id="viewMap" style="display:none;">
+    <!-- 게스트 모드 전용 안내바 (지도 핀이 임의 주소라 부정확할 수 있음을 알림) -->
+    <div id="guestMapNotice" class="guest-map-notice" style="display:none;">
+      <span class="notice-icon">📍</span>
+      <span class="notice-text">
+        <strong>둘러보기 모드</strong> · 샘플 임의 주소를 사용했으므로 핀 위치가 부정확할 수 있어요
+      </span>
+    </div>
+    <div id="mapView">
+      <div class="kakao-map-empty" id="mapEmpty">
+        <div class="icon">🗺️</div>
+        <div>지도 없음</div>
+        <div style="font-size:11px; max-width:280px;">설정에서 카카오 API 키를 등록하면 등록된 체험단 위치를 지도로 볼 수 있어요</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 완료 뷰 -->
+  <section id="viewCompleted" style="display:none;">
+    <div class="sort-bar" id="sortBarCompleted">
+      <span class="sort-label">정렬</span>
+      <select class="sort-select" id="sortFieldCompleted">
+        <option value="completedAt">최근 완료순</option>
+        <option value="createdAt">최근 추가순</option>
+        <option value="deadline">리뷰 마감일</option>
+        <option value="visitDate">방문 예정일</option>
+      </select>
+      <button class="sort-dir-btn" id="sortDirCompleted" title="정렬 방향 전환" aria-label="정렬 방향 전환">↓</button>
+    </div>
+    <div id="completedList"></div>
+  </section>
+
+  <!-- 도구 뷰 (블로그 작성 보조 도구 모음) -->
+  <section id="viewTools" style="display:none;">
+    <div class="tools-header">
+      <h2 class="tools-title">🛠️ 블로그 작성 도구</h2>
+      <p class="tools-sub">체험단 리뷰 작성에 유용한 도구들을 모아둘 공간이에요.</p>
+    </div>
+    <div class="tools-grid">
+      <!-- 네이버 나만 추가한 이웃 찾기 (프리미엄, 라이브) -->
+      <a href="/tools/naver-neighbor.html" class="tool-card" data-tool="naver-neighbor">
+        <div class="tool-card-icon">🔍</div>
+        <div class="tool-card-name">나만 추가한 이웃 찾기</div>
+        <div class="tool-card-desc">나를 삭제한 서로이웃 ·<br>내 서이추 거절한 이웃<br>💻 PC에서만 이용해요</div>
+        <div class="tool-card-badge">💎 프리미엄</div>
+      </a>
+
+      <!-- 별점 텍스트 메이커 -->
+      <a href="/tools/rating-maker.html" class="tool-card" data-tool="rating-maker">
+        <div class="tool-card-icon">⭐</div>
+        <div class="tool-card-name">별점 메이커</div>
+        <div class="tool-card-desc">⭐⭐⭐⭐⭐ 텍스트로 별점을<br>쉽게 만들어요</div>
+        <div class="tool-card-badge">준비 중</div>
+      </a>
+
+      <!-- GIF 스튜디오 -->
+      <a href="/tools/gif-studio.html" class="tool-card" data-tool="gif-studio">
+        <div class="tool-card-icon">🎞️</div>
+        <div class="tool-card-name">GIF 스튜디오</div>
+        <div class="tool-card-desc">GIF·MP4 용량 압축<br>크롭·부메랑·구간 편집</div>
+        <div class="tool-card-badge">준비 중</div>
+      </a>
+
+      <!-- 글자 수 카운터 (준비 중) -->
+      <a href="#" class="tool-card disabled" data-tool="char-counter" aria-disabled="true">
+        <div class="tool-card-icon">📝</div>
+        <div class="tool-card-name">글자 수 카운터</div>
+        <div class="tool-card-desc">한글·공백 포함/제외<br>다양한 기준으로 카운트</div>
+        <div class="tool-card-badge">준비 중</div>
+      </a>
+
+      <!-- 해시태그 정리 (준비 중) -->
+      <a href="#" class="tool-card disabled" data-tool="hashtag-helper" aria-disabled="true">
+        <div class="tool-card-icon">#️⃣</div>
+        <div class="tool-card-name">해시태그 정리</div>
+        <div class="tool-card-desc">중복 제거, # 자동 추가<br>한 줄로 정리</div>
+        <div class="tool-card-badge">준비 중</div>
+      </a>
+
+      <!-- 이모지 모음 (준비 중) -->
+      <a href="#" class="tool-card disabled" data-tool="emoji-pack" aria-disabled="true">
+        <div class="tool-card-icon">😊</div>
+        <div class="tool-card-name">이모지 모음</div>
+        <div class="tool-card-desc">맛집·뷰티·일상별<br>자주 쓰는 이모지 모음</div>
+        <div class="tool-card-badge">준비 중</div>
+      </a>
+    </div>
+    <div class="tools-footer-note">
+      💡 어떤 도구가 더 필요한지 알려주세요. 하단의 [문의]에서 의견 보내실 수 있어요.
+    </div>
+  </section>
+
+  <!-- 소식 뷰 (공지/이벤트/모집 등) -->
+  <section id="viewNews" style="display:none;">
+    <div class="news-header">
+      <h2 class="news-title">📢 소식</h2>
+      <p class="news-sub">체험단 매니저의 새로운 소식과 공지사항을 확인할 수 있어요.</p>
+    </div>
+
+    <!-- 글 목록 -->
+    <div class="news-list" id="newsList">
+
+      <!-- ════════════════════════════════════════════════════
+           공지/업데이트 글은 별도 파일 /news.html 에서 불러와
+           아래 #noticeFeed 안에 자동으로 채워집니다.
+           ▸ 새 글을 쓰려면 index.html이 아니라 news.html 파일만 수정하세요.
+           ════════════════════════════════════════════════════ -->
+      <div id="noticeFeed">
+        <p class="notice-loading" id="noticeLoading">소식을 불러오는 중...</p>
+      </div>
+
+      <!-- 광고주 모집 (이미지 펼침형) — 항상 목록 맨 아래에 유지 -->
+      <article class="news-post expanded">
+        <header class="news-post-header">
+          <div class="news-post-badge">📣 모집</div>
+          <h3 class="news-post-title">광고주 모집</h3>
+          <time class="news-post-date" datetime="2026-06-02">2026.06.02</time>
+        </header>
+        <div class="news-post-content">
+          <picture>
+            <source media="(max-width: 768px)" srcset="/images/ads_mo.png">
+            <img src="/images/ads_pc.png" alt="광고주 모집 안내" class="news-post-image" />
+          </picture>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- App Footer (약관/방침 링크) -->
+  <footer class="app-footer">
+    <div class="footer-links">
+      <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>
+      <span class="footer-sep">·</span>
+      <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>
+      <span class="footer-sep">·</span>
+      <a href="#" id="footerContact">문의</a>
+    </div>
+    <div class="footer-copyright">
+      © <span id="footerYear">2026</span> 체험단 매니저 · 운영자 김수정 · All rights reserved.
+    </div>
+  </footer>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <h2 id="mTitle">체험단 정보</h2>
+    <div class="modal-sub" id="mSub"></div>
+
+    <div class="detail-meta">
+      <div class="field">
+        <span class="field-label">🏷 상호명</span>
+        <input type="text" class="field-input" id="mStoreName" placeholder="가게 이름" />
+      </div>
+      <div class="field">
+        <span class="field-label">📍 지역</span>
+        <input type="text" class="field-input" id="mRegion" placeholder="예) 서울 강남구" />
+      </div>
+      <div class="field" id="mAddressField" style="display:none;">
+        <span class="field-label">📌 실제 주소 <span style="font-weight:400; color:var(--ink-faint); font-size:11px;">(지도 핀 위치)</span></span>
+        <!-- 읽기 모드 -->
+        <div class="address-read-row" id="mAddressRead">
+          <div class="field-hint" style="flex:1; margin:0;">
+            <span class="field-hint-label">실제 위치</span>📌 <span id="mAddressReadText"></span>
+          </div>
+          <button type="button" class="address-edit-btn" id="mAddressEditBtn" title="주소 직접 수정">✏️</button>
+        </div>
+        <!-- 편집 모드 (기본 숨김) -->
+        <div class="address-edit-row" id="mAddressEdit" style="display:none;">
+          <input type="text" class="field-input" id="mActualAddress" placeholder="정확한 주소를 입력하세요" style="flex:1;" />
+          <button type="button" class="address-action-btn confirm" id="mAddressConfirmBtn" title="적용">✓</button>
+          <button type="button" class="address-action-btn cancel" id="mAddressCancelBtn" title="취소">✕</button>
+        </div>
+        <div class="field-hint-info" id="mAddressEditHint" style="display:none;">
+          💡 저장하면 입력한 주소로 지도 핀 위치를 다시 찾아요
+        </div>
+      </div>
+      <div class="field">
+        <span class="field-label">🎁 제공 내용</span>
+        <textarea class="field-textarea" id="mContent" placeholder="제공받는 서비스/제품" style="min-height: 60px;"></textarea>
+      </div>
+      <div class="field">
+        <span class="field-label">⏰ 리뷰 마감일</span>
+        <input type="date" class="field-input" id="mDeadline" />
+      </div>
+      <div class="field">
+        <span class="field-label">📆 방문 예정일</span>
+        <input type="date" class="field-input" id="mVisitDate" />
+      </div>
+      <div class="field">
+        <span class="field-label">✏️ 메모</span>
+        <textarea class="field-textarea" id="mMemo" placeholder="예) 친구와 함께 방문 · 저녁 7시 예약"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btnSave">💾 저장</button>
+      <button class="btn btn-success" id="btnComplete">✓ 완료 처리</button>
+      <button class="btn btn-ghost" id="btnRestore" style="display:none;">↩ 진행 중으로</button>
+      <button class="btn btn-danger" id="btnDelete">🗑 삭제</button>
+    </div>
   </div>
+</div>
 
-  <div class="panel" style="margin-top:16px">
-    <div class="panel-title">결과로 보는 것</div>
-    <ul class="result-list">
-      <li><b>⚠️ 내가 추가했는데 나를 추가하지 않은 이웃</b> — 정리 후보. 클릭하면 그 블로그가 열려요.</li>
-      <li><b>➕ 나를 추가했는데 내가 추가하지 않은 이웃</b> — 서로이웃 맺으면 좋은 후보.</li>
-      <li><b>⤓ CSV로 복사·다운로드</b> — 엑셀에서 바로 열려요.</li>
-    </ul>
-    <p class="next-note">곧 추가 예정 · 결과를 정기적으로 저장하면, 원래 서로이웃이었다가 끊긴 <b>"뒷삭"</b>까지 추적할 수 있어요.</p>
+<!-- 소식 모달 (공지/업데이트 글 내용 표시) -->
+<div class="modal-bg" id="newsModalBg">
+  <div class="modal" id="newsModal">
+    <button class="modal-close" id="newsModalClose">✕</button>
+    <span class="news-modal-badge" id="newsModalBadge"></span>
+    <h2 class="news-modal-title" id="newsModalTitle"></h2>
+    <time class="news-modal-date" id="newsModalDate"></time>
+    <div class="news-modal-body" id="newsModalBody"></div>
   </div>
+</div>
 
-  <p class="safe-note">읽기 전용 도구예요. 네이버 계정 정보는 전송하지 않고, 본인 로그인 세션으로 이웃 목록만 읽어 브라우저 안에서 비교해요. 자동 삭제·자동 신청 기능은 없습니다.</p>
-</main>
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">이미지에서 정보를 추출하는 중...</div>
+</div>
 
-<!-- 북마클릿 원본 템플릿 (__TOKEN__ 은 로그인 후 JS가 실제 토큰으로 치환) -->
-<script type="text/plain" id="bmtpl">javascript:(function(){(async()=>{const e=window.top||window,t=e.document;const n=function(){const n=(e.location.pathname||"").replace(/^\/+|\/+$/g,"");if(/^[A-Za-z0-9_-]{2,40}$/.test(n))return n;const r=e=>{try{return e&&e.querySelector('input[name="blogId"]')}catch(e){return null}};let o=r(t);if(!o)for(const e of t.querySelectorAll("iframe,frame"))if(o=r(e.contentDocument),o)break;return o&&o.value?o.value.trim():(prompt("블로그 ID를 입력해주세요 (예: tnwjd2854)")||"").trim()}();if(!n)return void alert("블로그 ID를 확인하지 못했어요. 블로그 관리 페이지에서 다시 실행해주세요.");(t.getElementById("nbz-panel")||{}).remove?.();const r=t.createElement("div");r.id="nbz-panel",r.style.cssText='position:fixed;top:20px;right:20px;width:380px;max-height:86vh;overflow:auto;z-index:2147483647;background:rgb(255,255,255);border:1px solid rgb(227,227,227);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.18);font:13px/1.55 -apple-system,"Malgun Gothic",sans-serif;color:rgb(51,51,51);padding:16px',t.body.appendChild(r);const o=e=>{r.innerHTML=e},i=e=>(e||"").replace(/[&<>]/g,e=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[e]));o('<b>나만 추가한 이웃 찾기</b><br><span style="color:rgb(153,153,153)">blogId: '+i(n)+"</span><br><br>권한 확인 중…");let a;try{const e=await fetch("https://wvwoqqfizgbhvdzlqscc.supabase.co/functions/v1/tool-verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:"__TOKEN__",tool:"naver-neighbor"})});a=await e.json()}catch(e){a={ok:!1,reason:"network"}}if(!a||!a.ok){const e=a&&a.reason,n="not_premium"===e?"이 도구는 <b>프리미엄 전용</b>이에요. 지금은 베타라 <b>무료</b>! 체험단 매니저 설정 → 플랜에서 프리미엄을 켜주세요.":"invalid_token"===e||"no_token"===e?"이용 권한을 확인할 수 없어요. 체험단 매니저 도구 페이지에서 <b>북마클릿을 다시 받아</b> 주세요.":"권한 확인에 실패했어요. 잠시 후 다시 시도해 주세요.";r.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">나만 추가한 이웃 찾기</b><span id="nbz-x" style="cursor:pointer;color:rgb(170,170,170);font-size:20px;line-height:1">×</span></div><div style="margin:14px 0;line-height:1.6">'+n+'</div><a href="https://cheheomdan-manager.com" target="_blank" style="color:rgb(194,96,61);font-weight:600">체험단 매니저 열기 →</a>';const o=t.getElementById("nbz-x");return void(o&&(o.onclick=()=>r.remove()))}const l=e=>new Promise(t=>setTimeout(t,e));function s(e,t){const n=[];return e.querySelectorAll("tr").forEach(e=>{const r=e.querySelector(".nickname"),o=e.querySelector("td.buddy a[href]");if(!r||!o)return;const i=(o.getAttribute("href")||"").match(/blog\.naver\.com\/([A-Za-z0-9_-]+)/);if(!i||i[1]===t)return;const a=e.querySelector("td.type"),l=e.querySelectorAll("td"),s=l.length?l[l.length-1].textContent.trim():"";n.push({id:i[1],nick:r.textContent.trim(),mutual:!(!a||!/서로이웃/.test(a.textContent)),date:/\d{2}\.\d{2}\.\d{2}\./.test(s)?s:""})}),n}async function d(e,t){const r="https://admin.blog.naver.com/"+e+".naver?blogId="+encodeURIComponent(n)+"&currentPage="+t;for(let e=0;e<2;e++){const e=await fetch(r,{credentials:"include"});if(e.ok){return s((new DOMParser).parseFromString(await e.text(),"text/html"),n)}await l(700)}throw new Error(e+" "+t+"페이지 응답 오류")}async function c(e,t){const r=new Map;for(let a=1;a<=100;a++){let s;o('<b>나만 추가한 이웃 찾기</b><br><span style="color:rgb(153,153,153)">blogId: '+i(n)+"</span><br><br>"+t+" "+a+'페이지 읽는 중…<br><span style="color:rgb(170,170,170)">누적 '+r.size+"명</span>");try{s=await d(e,a)}catch(e){throw o('<b style="color:rgb(204,0,0)">오류</b><br>'+t+" "+a+"페이지를 읽지 못했어요.<br>네이버에 로그인된 상태인지 확인 후 다시 시도해주세요."),e}let c=0;for(const e of s)r.has(e.id)||(r.set(e.id,e),c++);if(s.length<50||0===c)break;await l(500)}return r}let p,b;try{p=await c("BuddyListManage","내가 추가한 이웃"),b=await c("BuddyMeManage","나를 추가한 이웃")}catch(e){return}const g=[...p.values()].filter(e=>!b.has(e.id)),y=[...b.values()].filter(e=>!p.has(e.id)),u=[...p.values()].filter(e=>b.has(e.id)).length,f=(e,t)=>e+","+t.id+',"'+(t.nick||"").replace(/"/g,'""')+'",'+t.date,x="category,blogId,nickname,date\n"+g.map(e=>f("내가추가_상대안함",e)).join("\n")+(g.length&&y.length?"\n":"")+y.map(e=>f("상대추가_내가안함",e)).join("\n"),h=e=>'<div style="padding:5px 0;border-top:1px solid rgb(241,241,241);display:flex;justify-content:space-between;gap:8px;align-items:baseline"><a href="https://blog.naver.com/'+e.id+'" target="_blank" style="color:rgb(194,96,61);text-decoration:none;font-weight:500">'+i(e.nick)+'</a><span style="color:rgb(187,187,187);font-size:11px;white-space:nowrap">'+i(e.id)+(e.date?" · "+e.date:"")+"</span></div>";r.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:15px">나만 추가한 이웃 찾기</b><span id="nbz-x" style="cursor:pointer;color:rgb(170,170,170);font-size:20px;line-height:1">×</span></div><div style="color:rgb(153,153,153);margin:6px 0 12px">blogId: '+i(n)+'</div><div style="background:rgb(247,247,247);border-radius:8px;padding:10px 12px;margin-bottom:14px">내가 추가한 이웃 <b>'+p.size+"</b>명<br>나를 추가한 이웃 <b>"+b.size+"</b>명<br>서로이웃(교집합) <b>"+u+'</b>명</div><div style="font-weight:700;color:rgb(232,89,12)">⚠️ 내가 추가했는데 나를 추가하지 않은 이웃 ('+g.length+')</div><div style="font-size:11px;color:rgb(153,153,153);margin:2px 0 6px">정리 후보 — 클릭하면 블로그가 열려요. 삭제는 직접 하세요.</div>'+(g.length?g.map(h).join(""):'<div style="color:rgb(170,170,170);padding:6px 0">없음 🎉</div>')+'<div style="font-weight:700;color:rgb(28,126,214);margin-top:16px">➕ 나를 추가했는데 내가 추가하지 않은 이웃 ('+y.length+')</div><div style="font-size:11px;color:rgb(153,153,153);margin:2px 0 6px">서로이웃 맺으면 좋은 후보</div>'+(y.length?y.map(h).join(""):'<div style="color:rgb(170,170,170);padding:6px 0">없음</div>')+'<div style="display:flex;gap:8px;margin-top:16px"><button id="nbz-copy" style="flex:1;padding:9px;border:0;border-radius:8px;background:rgb(194,96,61);color:rgb(255,255,255);cursor:pointer;font-size:13px">CSV 복사</button><button id="nbz-dl" style="flex:1;padding:9px;border:0;border-radius:8px;background:rgb(51,51,51);color:rgb(255,255,255);cursor:pointer;font-size:13px">CSV 다운로드</button></div><div style="font-size:11px;color:rgb(153,153,153);margin-top:10px">* 지금 시점의 비대칭만 보여줘요. "원래 서로이웃이었다가 끊긴(뒷삭)" 구분은 추후 스냅샷 비교로 추가됩니다.</div>',t.getElementById("nbz-x").onclick=()=>r.remove(),t.getElementById("nbz-copy").onclick=()=>navigator.clipboard.writeText(x).then(()=>alert("CSV를 클립보드에 복사했어요."),()=>alert("복사 실패 — 다운로드 버튼을 이용해주세요.")),t.getElementById("nbz-dl").onclick=()=>{const e=new Blob(["\ufeff"+x],{type:"text/csv;charset=utf-8"}),r=t.createElement("a");r.href=URL.createObjectURL(e),r.download="neighbor_asymmetry_"+n+"_"+(new Date).toISOString().slice(0,10)+".csv",r.click()}})();})();</script>
+<!-- Help Modal (사용법 가이드 - 6페이지) -->
+<div class="modal-bg" id="helpModalBg">
+  <div class="modal help-modal">
+    <button class="modal-close" id="helpModalClose">✕</button>
 
-<!-- ============== 토스트 ============== -->
+    <div class="help-viewport">
+      <div class="help-pages" id="helpPages">
+        <!-- 페이지 1: 환영 -->
+        <div class="help-page" data-page="1">
+          <div class="help-icon">👋</div>
+          <h2 class="help-title">체험단 매니저에 오신 걸 환영해요</h2>
+          <div class="help-desc">
+            <p>체험단 일정을 <strong>AI로 자동 등록</strong>하고<br>마감일을 놓치지 않도록 도와드려요.</p>
+            <ul class="help-bullets">
+              <li>✨ 캡쳐 이미지에서 AI가 정보 자동 추출</li>
+              <li>📅 마감일 임박 카드는 자동 강조</li>
+              <li>🗺️ 지도에서 가게 위치 한눈에</li>
+              <li>📱 핸드폰 홈화면에 추가해서 앱처럼</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 페이지 2: AI 자동 등록 -->
+        <div class="help-page" data-page="2">
+          <div class="help-icon">📷</div>
+          <h2 class="help-title">AI로 자동 등록하기</h2>
+          <div class="help-desc">
+            <p>체험단 공고 캡쳐만 있으면 끝이에요.</p>
+            <ol class="help-steps">
+              <li><strong>캡쳐</strong> — 체험단 공고 페이지를 캡쳐</li>
+              <li><strong>업로드</strong> — 상단 박스에 클릭·드래그·Ctrl+V</li>
+              <li><strong>확인</strong> — AI가 상호명·지역·내용·마감일 자동 추출</li>
+              <li><strong>저장</strong> — 필요시 수정 후 저장</li>
+            </ol>
+            <div class="help-tip">💡 무료는 하루 3회, 프리미엄은 무제한이에요</div>
+          </div>
+        </div>
+
+        <!-- 페이지 3: 일정 관리 -->
+        <div class="help-page" data-page="3">
+          <div class="help-icon">🗂️</div>
+          <h2 class="help-title">일정 관리</h2>
+          <div class="help-desc">
+            <p>세 가지 탭으로 깔끔하게 관리해요.</p>
+            <ul class="help-bullets">
+              <li><strong>진행 중</strong> — 마감 전 체험단들</li>
+              <li><strong>지도</strong> — 가게 위치를 한눈에</li>
+              <li><strong>완료</strong> — 리뷰 작성 끝난 것들</li>
+            </ul>
+            <div class="help-tip">💡 마감일이 임박하면 카드 색이 자동으로 변해요</div>
+          </div>
+        </div>
+
+        <!-- 페이지 4: 지도와 위치 -->
+        <div class="help-page" data-page="4">
+          <div class="help-icon">🗺️</div>
+          <h2 class="help-title">지도와 위치</h2>
+          <div class="help-desc">
+            <p>가게 위치를 지도에서 확인할 수 있어요.</p>
+            <ul class="help-bullets">
+              <li>핀을 클릭하면 가게 정보가 떠요</li>
+              <li>핀 색깔은 진행 중·완료·임박에 따라 달라요</li>
+            </ul>
+            <div class="help-tip">
+              💡 <strong>지도 핀이 엉뚱한 곳에?</strong><br>
+              카드를 열고 <strong>실제 주소</strong> 옆 ✏️ 버튼을 누르면 직접 수정할 수 있어요.
+            </div>
+          </div>
+        </div>
+
+        <!-- 페이지 5: 앱처럼 쓰기 -->
+        <div class="help-page" data-page="5">
+          <div class="help-icon">📱</div>
+          <h2 class="help-title">앱처럼 쓰는 법</h2>
+          <div class="help-desc">
+            <p>홈 화면에 추가하면 앱처럼 빠르게 열 수 있어요.</p>
+            <div class="help-platform-box">
+              <div class="platform-title">📱 안드로이드 (크롬)</div>
+              <ol class="help-steps-compact">
+                <li>주소창 옆 <strong>⋮</strong> 메뉴</li>
+                <li><strong>홈 화면에 추가</strong> 선택</li>
+                <li>이름 확인 후 추가</li>
+              </ol>
+            </div>
+            <div class="help-platform-box">
+              <div class="platform-title">🍎 아이폰 (사파리)</div>
+              <ol class="help-steps-compact">
+                <li>하단 <strong>공유</strong> 버튼 (□↑)</li>
+                <li><strong>홈 화면에 추가</strong> 선택</li>
+                <li>추가 누르면 끝</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- 페이지 6: 프리미엄 + 더 보기 -->
+        <div class="help-page" data-page="6">
+          <div class="help-icon">💎</div>
+          <h2 class="help-title">프리미엄과 더 보기</h2>
+          <div class="help-desc">
+            <p><strong>💎 프리미엄 플랜</strong></p>
+            <ul class="help-bullets">
+              <li>AI 자동 추출 무제한</li>
+              <li>🎉 <strong>2026년 9월 30일까지 베타 무료!</strong></li>
+            </ul>
+            <p style="margin-top:18px;"><strong>🔔 곧 추가될 기능</strong></p>
+            <ul class="help-bullets">
+              <li>카카오톡으로 마감일/방문일 알림</li>
+              <li>달력 보기, 통계, 데이터 내보내기</li>
+            </ul>
+            <div class="help-tip" style="margin-top:18px;">
+              💬 문의는 하단의 [문의] 클릭<br>
+              또는 cheheomdan.manager@gmail.com
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단: 인디케이터 + 페이지 넘김 -->
+    <div class="help-nav">
+      <button class="help-nav-btn" id="helpPrev" aria-label="이전">◀</button>
+      <div class="help-dots" id="helpDots">
+        <span class="help-dot active" data-page="1"></span>
+        <span class="help-dot" data-page="2"></span>
+        <span class="help-dot" data-page="3"></span>
+        <span class="help-dot" data-page="4"></span>
+        <span class="help-dot" data-page="5"></span>
+        <span class="help-dot" data-page="6"></span>
+      </div>
+      <button class="help-nav-btn" id="helpNext" aria-label="다음">▶</button>
+    </div>
+    <button class="help-skip" id="helpSkip">시작하기 →</button>
+  </div>
+</div>
+
+<!-- Contact Modal (푸터 [문의] 클릭 시 표시) -->
+<div class="modal-bg" id="contactModalBg">
+  <div class="modal contact-modal">
+    <button class="modal-close" id="contactModalClose">✕</button>
+    <div class="contact-modal-content">
+      <div class="contact-modal-icon">💬</div>
+      <h2 class="contact-modal-title">문의하기</h2>
+      <div class="contact-modal-sub">
+        궁금한 점이나 건의사항이 있으신가요?<br>
+        아래 방법 중 편한 걸로 연락주세요.
+      </div>
+
+      <!-- 이메일 섹션 -->
+      <div class="contact-section">
+        <div class="contact-section-label">📧 이메일</div>
+        <div class="contact-email-row">
+          <span class="contact-email-text" id="contactEmailText">cheheomdan.manager@gmail.com</span>
+          <button class="contact-copy-btn" id="contactCopyBtn">복사</button>
+        </div>
+      </div>
+
+      <!-- 구글 폼 섹션 -->
+      <div class="contact-section">
+        <div class="contact-section-label">📝 문의 폼</div>
+        <a href="https://forms.gle/jFR4zEMQwzTxrDC58" target="_blank" rel="noopener" class="contact-form-link">
+          버그 제보·피드백 및 개선·문의사항
+          <span class="contact-form-arrow">↗</span>
+        </a>
+        <div class="contact-form-hint">새 탭에서 폼이 열려요</div>
+      </div>
+
+      <!-- 카카오 채널 안내 (준비 중) -->
+      <div class="contact-section disabled">
+        <div class="contact-section-label">💬 카카오 채널 <span class="contact-soon">준비 중</span></div>
+        <div class="contact-soon-desc">카카오톡으로도 곧 문의할 수 있게 준비하고 있어요.</div>
+      </div>
+
+      <button class="contact-close-btn" id="contactCloseBtn">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- Login Modal (게스트 모드에서 [로그인] 버튼 클릭 시 표시) -->
+<div class="modal-bg" id="loginModalBg">
+  <div class="modal login-modal">
+    <button class="modal-close" id="loginModalClose">✕</button>
+    <div class="login-modal-content">
+      <div class="login-modal-icon">🔑</div>
+      <h2 class="login-modal-title">로그인</h2>
+      <div class="login-modal-sub">
+        간편하게 로그인하고 나만의 체험단 일정을 관리해보세요
+      </div>
+      <button class="provider-btn kakao" id="btnModalLoginKakao">
+        <span class="icon">💬</span>
+        <span>카카오로 시작하기</span>
+      </button>
+      <div class="login-modal-footer">
+        로그인 시 <a href="/terms.html" target="_blank" rel="noopener" id="linkTerms">이용약관</a>과 <a href="/privacy.html" target="_blank" rel="noopener" id="linkPrivacy">개인정보처리방침</a>에 동의하게 돼요
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-bg" id="settingsBg">
+  <div class="modal">
+    <button class="modal-close" id="settingsClose">✕</button>
+    <h2>⚙️ 설정</h2>
+    <div class="modal-sub">계정 정보와 사용량을 확인할 수 있어요.</div>
+
+    <!-- ⓪ 플랜 -->
+    <div class="settings-section">
+      <h3>💎 플랜</h3>
+      <div class="field">
+        <div class="plan-card" id="planCard">
+          <div class="plan-header">
+            <span class="plan-name" id="planName">불러오는 중...</span>
+            <span class="plan-badge free" id="planBadge">FREE</span>
+          </div>
+          <ul class="plan-benefits" id="planBenefits">
+            <!-- JS가 채움 -->
+          </ul>
+          <!-- 무료 유저: 업그레이드 버튼 + 베타 안내 -->
+          <div id="planUpgradeArea">
+            <button class="btn-upgrade" id="btnUpgrade">⚡ 프리미엄 시작하기</button>
+            <div class="beta-notice">
+              🎉 <strong>베타 기간 한정</strong> — 프리미엄 혜택을<br>
+              지금 신청하면 <strong>2026년 9월 30일까지 무료</strong>로 이용할 수 있어요!
+            </div>
+          </div>
+          <!-- 프리미엄 유저: 활성 상태 안내 + 해제 버튼 -->
+          <div id="planActiveArea" style="display:none;">
+            <div class="plan-active-info" id="planActiveInfo"></div>
+            <button class="btn-downgrade" id="btnDowngrade">무료 플랜으로 전환</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="settings-divider" />
+
+    <!-- ① AI 사용량 -->
+    <div class="settings-section">
+      <h3>🤖 AI 자동 추출 사용량</h3>
+      <div class="field">
+        <div id="aiUsageBox" style="padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:10px; font-size:14px; color:var(--ink); text-align:center;">
+          <div id="aiUsageDisplay" class="ai-usage-display">불러오는 중...</div>
+          <div style="font-size:11px; color:var(--ink-faint); margin-top:6px;">사용량은 매일 자정에 초기화됩니다</div>
+        </div>
+        <div class="settings-hint">
+          캡쳐 이미지를 올리면 AI가 상호명/지역/제공 내용/리뷰 마감일을 자동으로 추출해드려요. 사용량을 초과하면 직접 입력으로 사용 가능합니다.
+        </div>
+      </div>
+    </div>
+
+    <hr class="settings-divider" />
+
+    <!-- ② 알림 설정 -->
+    <div class="settings-section">
+      <h3>🔔 알림 설정</h3>
+      <div class="field">
+        <span class="field-label">카카오톡 알림</span>
+        <div class="notify-status-card" id="notifyStatusCard">
+          <div class="notify-status-text">
+            <span id="notifyStatusIcon">💬</span>
+            <span id="notifyStatusLabel">불러오는 중...</span>
+            <span class="badge off" id="notifyStatusBadge">확인 중</span>
+          </div>
+          <button class="btn-notify-toggle" id="btnNotifyToggle">켜기</button>
+        </div>
+        <div class="settings-hint">
+          체험단 마감일과 방문 예정일을 카카오톡 '나에게 메시지'로 알려드려요. <br>
+          🚧 알림 발송 기능은 추후 정식 출시 예정입니다. 지금은 동의만 받아둘 수 있어요.
+        </div>
+      </div>
+    </div>
+
+    <hr class="settings-divider" />
+
+    <!-- ③ 계정 -->
+    <div class="settings-section">
+      <h3>👤 계정</h3>
+      <div class="field">
+        <span class="field-label">현재 로그인</span>
+        <div id="accountInfo" style="padding:10px 12px; background:var(--card); border:1px solid var(--line); border-radius:8px; font-size:13px; color:var(--ink-soft);">
+          —
+        </div>
+        <div class="settings-hint">
+          로그아웃하면 다른 계정으로 다시 로그인할 수 있어요. 저장된 데이터는 클라우드에 보관되므로 사라지지 않아요.
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btnLogout">🚪 로그아웃</button>
+        <button class="btn-delete-account" id="btnDeleteAccount">🗑️ 회원탈퇴</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<!-- 카톡 알림 온보딩 모달 -->
+<div class="modal-bg" id="onboardingBg">
+  <div class="modal onboarding-modal">
+    <div class="onboarding-icon">💌</div>
+    <div class="onboarding-title">카톡 알림 받을까요?</div>
+    <div class="onboarding-desc">
+      체험단 <strong>마감일·방문 예정일</strong>이 다가올 때<br>
+      카카오톡으로 알려드릴 수 있어요.<br><br>
+      놓치면 안 되는 일정, 카톡 알림으로 챙기세요!
+    </div>
+    <div class="onboarding-actions">
+      <button class="btn-onboarding-primary" id="btnOnboardingEnable">
+        <span>💬</span>
+        <span>지금 카톡 알림 켜기</span>
+      </button>
+      <button class="btn-onboarding-later" id="btnOnboardingLater">나중에 할게요</button>
+    </div>
+    <div class="onboarding-hint">
+      ⓘ 이미 동의하신 경우 별도 작업 없이 자동 활성화됩니다.<br>
+      언제든 설정에서 변경할 수 있어요.
+    </div>
+  </div>
+</div>
+
 <script>
-  // ====== 설정 ======
-  const SUPABASE_URL = "https://wvwoqqfizgbhvdzlqscc.supabase.co";
-  // anon public 키 (공개되어도 안전 — 댓글 도우미와 동일 키)
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU";
-  const TOOL = "naver-neighbor";
+(function() {
+  'use strict';
 
-  let sb = null;
-  const $ = (id) => document.getElementById(id);
-  const show = (el) => el.classList.remove("hidden");
-  function showBootError(msg) { $("bootErrorText").textContent = msg; show($("bootError")); }
+  // ============== State ==============
+  let entries = [];
+  let editingId = null;
+  let isNewEntry = false;
+  let map = null;
+  let currentView = 'active';
 
-  // 이 도구는 PC 북마크바 + 네이버 PC 관리페이지가 필요 → 모바일 미지원
-  function isMobile() {
+  // 게스트 모드 (둘러보기) — 로그인 없이 사이트를 체험하는 모드
+  // 데이터는 메모리에만 존재. 새로고침 시 원본 샘플로 복원.
+  let isGuestMode = false;
+
+  const KEY_PREFIX = 'entry:';
+
+  // ============== Supabase Setup ==============
+  const SUPABASE_URL = 'https://wvwoqqfizgbhvdzlqscc.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_iLtSrF52sRfzalwcR4Nt-w_dJiU2q16';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
+  let currentUser = null;
+
+  // ============== 내장 API 키 (관리자 제공) ==============
+  // 카카오 JS 키는 도메인 제한으로 보호됨 - cheheomdan.vercel.app에서만 작동
+  // Gemini 키는 절대 클라이언트에 두지 않음 - /api/extract 서버 함수에서 처리
+  const KAKAO_KEY = '21466d7ae884ca307c2ec034bd6887e1';
+  const AI_DAILY_LIMIT = 3;
+
+  // ============== DB <-> Frontend 변환 ==============
+  function dbToEntry(row) {
+    return {
+      id: row.id,
+      storeName: row.store_name || '',
+      region: row.region || '',
+      content: row.content || '',
+      deadline: row.deadline || '',
+      visitDate: row.visit_date || '',
+      memo: row.memo || '',
+      lat: row.lat,
+      lng: row.lng,
+      locationSource: row.location_source || '',
+      actualAddress: row.actual_address || '',
+      category: row.category || '',
+      completed: row.completed || false,
+      completedAt: row.completed_at || '',
+      createdAt: row.created_at || new Date().toISOString()
+    };
+  }
+
+  function entryToDB(entry) {
+    if (!currentUser) throw new Error('NOT_LOGGED_IN');
+    return {
+      id: entry.id,
+      user_id: currentUser.id,
+      store_name: entry.storeName || '',
+      region: entry.region || '',
+      content: entry.content || '',
+      deadline: entry.deadline || null,
+      visit_date: entry.visitDate || null,
+      memo: entry.memo || '',
+      lat: entry.lat,
+      lng: entry.lng,
+      location_source: entry.locationSource || '',
+      actual_address: entry.actualAddress || '',
+      category: entry.category || '',
+      completed: entry.completed || false,
+      completed_at: entry.completedAt || null,
+      created_at: entry.createdAt
+    };
+  }
+
+  // ============== Storage Abstraction (Supabase-backed) ==============
+  // 기존 코드와 호환성을 위한 인터페이스 유지: get/set/delete/list
+  // entry:* 는 entries 테이블로, 그 외 키는 user_settings 테이블로 라우팅
+  const storage = {
+    async get(key) {
+      if (!currentUser) return null;
+      // entry:xxx → entries 테이블
+      if (key.startsWith(KEY_PREFIX)) {
+        const id = key.slice(KEY_PREFIX.length);
+        const { data, error } = await sb.from('entries').select('*').eq('id', id).maybeSingle();
+        if (error || !data) return null;
+        return { key, value: JSON.stringify(dbToEntry(data)) };
+      }
+      // 설정 키 → user_settings 테이블
+      const { data, error } = await sb.from('user_settings').select(key).eq('user_id', currentUser.id).maybeSingle();
+      if (error || !data || !data[key]) return null;
+      return { key, value: data[key] };
+    },
+
+    async set(key, value) {
+      if (!currentUser) return null;
+      if (key.startsWith(KEY_PREFIX)) {
+        const entry = JSON.parse(value);
+        const row = entryToDB(entry);
+        const { error } = await sb.from('entries').upsert(row, { onConflict: 'id' });
+        if (error) { console.error('entry upsert', error); return null; }
+        return { key, value };
+      }
+      // 설정 키
+      const updates = { user_id: currentUser.id, [key]: value };
+      const { error } = await sb.from('user_settings').upsert(updates, { onConflict: 'user_id' });
+      if (error) { console.error('settings upsert', error); return null; }
+      return { key, value };
+    },
+
+    async delete(key) {
+      if (!currentUser) return null;
+      if (key.startsWith(KEY_PREFIX)) {
+        const id = key.slice(KEY_PREFIX.length);
+        const { error } = await sb.from('entries').delete().eq('id', id);
+        if (error) { console.error('entry delete', error); return null; }
+        return { key, deleted: true };
+      }
+      // 설정 키 비우기 (행 자체는 유지)
+      const updates = { user_id: currentUser.id, [key]: '' };
+      const { error } = await sb.from('user_settings').upsert(updates, { onConflict: 'user_id' });
+      if (error) return null;
+      return { key, deleted: true };
+    },
+
+    async list(prefix) {
+      if (!currentUser) return { keys: [] };
+      if (prefix === KEY_PREFIX || prefix === 'entry:') {
+        const { data, error } = await sb.from('entries').select('id').order('created_at', { ascending: false });
+        if (error || !data) return { keys: [] };
+        return { keys: data.map(r => KEY_PREFIX + r.id) };
+      }
+      return { keys: [] };
+    }
+  };
+
+  // ============== ID 생성 (UUID) ==============
+  function uid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    // fallback
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
+  // ============== Storage ==============
+  // 게스트 모드에서는 Supabase 호출 없이 메모리(entries 배열)에서만 동작.
+  // 로그인 모드에서는 Supabase entries 테이블과 동기화.
+
+  async function loadAll() {
+    // 게스트 모드: 샘플 데이터로 entries 초기화 (있으면)
+    if (isGuestMode) {
+      const samples = window.GUEST_SAMPLE_ENTRIES || [];
+      // 깊은 복사 — 사용자가 수정해도 원본은 유지
+      entries = samples.map(e => JSON.parse(JSON.stringify(e)));
+      return;
+    }
+    if (!currentUser) { entries = []; return; }
     try {
-      const uad = navigator.userAgentData;
-      if (uad && typeof uad.mobile === "boolean" && uad.mobile) return true;
-    } catch (_) {}
-    const ua = navigator.userAgent || "";
-    return /Android|iPhone|iPod|Mobile|Opera Mini|IEMobile|BlackBerry|webOS|Windows Phone/i.test(ua);
+      const { data, error } = await sb.from('entries')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      entries = (data || []).map(dbToEntry);
+    } catch (e) {
+      console.error('[loadAll] failed:', e);
+      entries = [];
+    }
   }
 
-  let toastTimer;
-  function toast(msg, kind) {
-    const t = $("toast");
+  async function saveEntry(entry) {
+    // 게스트 모드: 메모리 entries 배열에만 반영
+    if (isGuestMode) {
+      const idx = entries.findIndex(e => e.id === entry.id);
+      if (idx >= 0) {
+        entries[idx] = entry;
+      } else {
+        entries.unshift(entry);
+      }
+      return true;
+    }
+    try {
+      await storage.set(KEY_PREFIX + entry.id, JSON.stringify(entry));
+      return true;
+    } catch (e) {
+      console.error('Save failed:', e);
+      return false;
+    }
+  }
+
+  async function deleteEntry(id) {
+    // 게스트 모드: 메모리에서만 제거
+    if (isGuestMode) {
+      entries = entries.filter(e => e.id !== id);
+      return true;
+    }
+    try {
+      await storage.delete(KEY_PREFIX + id);
+      entries = entries.filter(e => e.id !== id);
+      return true;
+    } catch (e) {
+      console.error('Delete failed:', e);
+      return false;
+    }
+  }
+
+  // ============== Utils ==============
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function fmtKDate(d) {
+    if (!d) return '';
+    const parts = d.split('-');
+    if (parts.length !== 3) return d;
+    return `${parts[0]}년 ${Number(parts[1])}월 ${Number(parts[2])}일`;
+  }
+
+  function daysUntil(deadline) {
+    if (!deadline) return null;
+    try {
+      const today = new Date(todayStr());
+      const target = new Date(deadline);
+      const diff = Math.round((target - today) / 86400000);
+      return diff;
+    } catch (e) { return null; }
+  }
+
+  function deadlineTag(d) {
+    const days = daysUntil(d);
+    if (days === null) return '';
+    if (days < 0) return `<span class="deadline-tag past">마감</span>`;
+    if (days === 0) return `<span class="deadline-tag urgent">D-day</span>`;
+    if (days <= 3) return `<span class="deadline-tag urgent">D-${days}</span>`;
+    if (days <= 7) return `<span class="deadline-tag warn">D-${days}</span>`;
+    return `<span class="deadline-tag">D-${days}</span>`;
+  }
+
+  function isUrgent(d) {
+    const days = daysUntil(d);
+    return days !== null && days >= 0 && days <= 3;
+  }
+
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  // ============== 업종별 아이콘 매칭 ==============
+  // 카카오 카테고리(예: "음식점 > 카페 > 테이크아웃") 또는 가게 이름에서 키워드 매칭
+  const CATEGORY_ICONS = [
+    // 음식 - 세부
+    { pattern: /카페|커피|coffee|cafe|에스프레소|로스터/i, icon: '☕' },
+    { pattern: /디저트|케이크|베이커리|빵|제과|마카롱|쿠키|와플|크로플|도넛|크레페|아이스크림|젤라또|빙수/i, icon: '🥐' },
+    { pattern: /초밥|스시|사시미|회|일식|이자카야|라멘|돈까스|우동|소바|덮밥|규동|텐동/i, icon: '🍣' },
+    { pattern: /중식|중화|짜장|짬뽕|마라|훠궈|딤섬|양꼬치/i, icon: '🥡' },
+    { pattern: /파스타|피자|스테이크|양식|이탈리안|프렌치|스페인|타파스/i, icon: '🍝' },
+    { pattern: /햄버거|버거|패스트푸드/i, icon: '🍔' },
+    { pattern: /치킨|닭갈비|찜닭|닭발/i, icon: '🍗' },
+    { pattern: /삼겹살|돼지|소고기|한우|갈비|고깃집|숯불|구이|곱창|막창|족발|보쌈/i, icon: '🥩' },
+    { pattern: /분식|떡볶이|김밥|순대|어묵|튀김|핫도그/i, icon: '🍢' },
+    { pattern: /한식|국밥|백반|냉면|찌개|국수|칼국수|만두|쌈밥|비빔밥|설렁탕|곰탕|순두부|해장국|보리밥|쌈|쌈장/i, icon: '🍚' },
+    { pattern: /해산물|조개|회집|장어|문어|새우|랍스터|게|꽃게|대게/i, icon: '🦐' },
+    { pattern: /샐러드|건강|채식|비건|포케/i, icon: '🥗' },
+    { pattern: /술집|호프|와인|이자카야|포차|바|펍|위스키|칵테일|맥주/i, icon: '🍺' },
+    { pattern: /떡|떡집|한과|전통/i, icon: '🍡' },
+    { pattern: /과일|청과|주스|스무디|쥬스/i, icon: '🍓' },
+    { pattern: /음식점|식당|레스토랑|키친|다이닝|푸드/i, icon: '🍽️' },
+    // 의료/건강
+    { pattern: /피부과|피부|에스테틱|스킨/i, icon: '✨' },
+    { pattern: /성형|미용|시술/i, icon: '💎' },
+    { pattern: /치과|덴탈/i, icon: '🦷' },
+    { pattern: /안과|안경|렌즈/i, icon: '👓' },
+    { pattern: /한의원|한방/i, icon: '🌿' },
+    { pattern: /병원|의원|클리닉|메디컬|내과|외과|소아과|이비인후과|정형외과|산부인과/i, icon: '🏥' },
+    { pattern: /약국/i, icon: '💊' },
+    // 미용/뷰티
+    { pattern: /미용실|헤어|살롱|cut|커트|펌|염색/i, icon: '💇' },
+    { pattern: /네일|페디/i, icon: '💅' },
+    { pattern: /마사지|스파|왁싱|타이|아로마|두피/i, icon: '💆' },
+    { pattern: /속눈썹|래쉬/i, icon: '👁️' },
+    { pattern: /화장품|코스메틱|cosmetic/i, icon: '💄' },
+    // 운동/취미
+    { pattern: /헬스|피트니스|짐|gym|크로스핏/i, icon: '💪' },
+    { pattern: /요가|필라테스|발레/i, icon: '🧘' },
+    { pattern: /수영|풀|swim/i, icon: '🏊' },
+    { pattern: /클라이밍|볼더링/i, icon: '🧗' },
+    { pattern: /골프|스크린골프/i, icon: '⛳' },
+    { pattern: /테니스|스쿼시|배드민턴/i, icon: '🎾' },
+    // 숙박/여행
+    { pattern: /펜션|호텔|모텔|숙박|풀빌라|리조트|게스트하우스|민박/i, icon: '🏨' },
+    { pattern: /캠핑|글램핑|차박/i, icon: '🏕️' },
+    // 기타
+    { pattern: /서점|책|북카페|독립서점/i, icon: '📚' },
+    { pattern: /꽃|플라워|플로리스트|화원/i, icon: '💐' },
+    { pattern: /사진|스튜디오|포토|증명사진/i, icon: '📷' },
+    { pattern: /공방|클래스|원데이|체험|만들기|diy/i, icon: '🎨' },
+    { pattern: /펫|동물|강아지|고양이|반려|애견|미용\s*샵/i, icon: '🐾' },
+    { pattern: /노래방|코노|karaoke/i, icon: '🎤' },
+    { pattern: /pc방|게임|보드게임|방탈출/i, icon: '🎮' },
+    { pattern: /영화|시네마|cgv|메가박스|롯데시네마/i, icon: '🎬' },
+    { pattern: /마트|편의점|시장|쇼핑|아울렛|백화점/i, icon: '🛍️' },
+    { pattern: /세탁|크리닝|빨래/i, icon: '👕' },
+    { pattern: /자동차|정비|세차|타이어/i, icon: '🚗' },
+    { pattern: /가구|인테리어|소품/i, icon: '🛋️' },
+    { pattern: /학원|교습|과외|수학|영어/i, icon: '📖' },
+  ];
+
+  function getCategoryIcon(entry) {
+    if (!entry) return '📍';
+    const text = [entry.category, entry.storeName, entry.content].filter(Boolean).join(' ');
+    if (!text) return '📍';
+    for (const ci of CATEGORY_ICONS) {
+      if (ci.pattern.test(text)) return ci.icon;
+    }
+    return '📍'; // 기본
+  }
+
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.className = 'toast show ' + type;
     t.textContent = msg;
-    t.className = "toast show" + (kind ? " " + kind : "");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.className = "toast"; }, 2600);
+    setTimeout(() => { t.className = 'toast ' + type; }, 2800);
   }
 
-  // 토큰을 북마클릿에 박아 설치 UI 활성화
-  function setupInstall(token) {
-    const tpl = $("bmtpl").textContent;
-    const link = $("bm");
-    link.setAttribute("href", tpl.replace("__TOKEN__", token));
+  function setLoading(on, text) {
+    const el = document.getElementById('loading');
+    if (text) document.getElementById('loadingText').textContent = text;
+    el.classList.toggle('active', !!on);
+  }
 
-    // 북마크 이름 = 버튼 텍스트 (이름이 바뀌어도 여기서 자동 반영)
-    const bmName = (link.textContent || "").replace(/\s+/g, " ").trim();
-    const nameDisp = $("bmNameDisplay");
-    if (nameDisp) nameDisp.textContent = bmName;
+  // ============== AI Image Extraction (via Vercel Serverless Function) ==============
+  // 사용자가 API 키를 입력할 필요 없음. 서버에서 키를 안전하게 관리하고
+  // 하루 N회 사용량 제한도 서버에서 체크함.
+  async function extractFromImage(file) {
+    // 게스트 모드: 실제 OpenAI 호출 없이 시뮬레이션으로 처리
+    // - 비용/보안 위험 회피 (익명 사용자에게 진짜 API 노출 시 자동화 공격 가능)
+    // - 사용자 경험은 거의 동일 (1.5초 로딩 후 미리 준비된 결과 표시)
+    if (isGuestMode) {
+      return simulateGuestExtraction();
+    }
 
-    // 드래그 대신 클릭하면 안내
-    link.addEventListener("click", (e) => { e.preventDefault(); toast("클릭이 아니라, 위쪽 북마크바로 끌어다 놓으세요 🙂"); });
+    if (!currentUser) throw new Error('NOT_LOGGED_IN');
 
-    // "복사해서 직접 추가하기" 펼침 토글
-    const toggleBtn = $("bmManualToggle");
-    const manual = $("bmManual");
-    if (toggleBtn && manual) {
-      toggleBtn.addEventListener("click", () => {
-        manual.classList.toggle("hidden");
-        const open = !manual.classList.contains("hidden");
-        toggleBtn.textContent = open ? "복사해서 직접 추가하기 ▴" : "복사해서 직접 추가하기 ▾";
-        if (open) manual.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const base64 = await readFileAsBase64(file);
+    const mimeType = file.type || 'image/jpeg';
+
+    // 현재 세션의 액세스 토큰 가져오기
+    const { data: sessionData } = await sb.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) throw new Error('NO_TOKEN');
+
+    const response = await fetch('/api/extract', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ imageBase64: base64, mimeType })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      // 사용량 초과
+      if (response.status === 429 && result.error === 'DAILY_LIMIT_EXCEEDED') {
+        const err = new Error('DAILY_LIMIT_EXCEEDED');
+        err.code = 'DAILY_LIMIT_EXCEEDED';
+        err.limit = result.limit;
+        err.used = result.used;
+        throw err;
+      }
+      // 인증 문제
+      if (response.status === 401) {
+        const err = new Error('NOT_AUTHENTICATED');
+        err.code = 'NOT_AUTHENTICATED';
+        throw err;
+      }
+      // 그 외 오류
+      const err = new Error(result.error || 'EXTRACTION_FAILED');
+      err.code = result.error || 'UNKNOWN';
+      throw err;
+    }
+
+    // 성공: 사용량 정보 업데이트 (UI 갱신용)
+    if (result.usage) {
+      lastUsage = result.usage;
+      refreshUsageDisplay();
+    }
+
+    return {
+      storeName: result.data?.storeName || '',
+      region: result.data?.region || '',
+      content: result.data?.content || '',
+      deadline: result.data?.deadline || ''
+    };
+  }
+
+  // 게스트 모드용 AI 추출 시뮬레이션
+  // GUEST_AI_DEMO_RESULTS에서 랜덤으로 하나 선택해 가짜 로딩 후 반환
+  async function simulateGuestExtraction() {
+    const demos = window.GUEST_AI_DEMO_RESULTS || [];
+    if (demos.length === 0) {
+      // 폴백: 데모 데이터가 없으면 빈 결과
+      await new Promise(r => setTimeout(r, 1500));
+      return { storeName: '', region: '', content: '', deadline: '' };
+    }
+    // 진짜 AI 호출처럼 1.5초 정도 로딩 시간
+    await new Promise(r => setTimeout(r, 1500));
+    // 깊은 복사로 반환 (원본 보호)
+    const pick = demos[Math.floor(Math.random() * demos.length)];
+    return JSON.parse(JSON.stringify(pick));
+  }
+
+  async function readFileAsBase64(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('파일 읽기 실패'));
+      r.readAsDataURL(file);
+    });
+  }
+
+  // 사용량 추적 (브라우저 상태)
+  let lastUsage = null; // { used, limit, remaining }
+
+  // 서버에서 직접 오늘 사용량 조회 (페이지 로드 시 호출)
+  async function fetchTodayUsage() {
+    if (!currentUser) return null;
+
+    // 관리자 체크 (클라이언트 측 UI 표시용 - 실제 권한은 서버가 검증)
+    const isAdmin = currentUser.app_metadata?.is_admin === true;
+    if (isAdmin) {
+      lastUsage = { isAdmin: true };
+      refreshUsageDisplay();
+      return lastUsage;
+    }
+
+    // 프리미엄 체크 — 활성 프리미엄이면 무제한 표시
+    if (isSubscriptionPremium(currentSubscription)) {
+      lastUsage = { isPremium: true };
+      refreshUsageDisplay();
+      return lastUsage;
+    }
+
+    try {
+      // KST 기준 오늘 날짜 (서버 api/extract.js와 동일 기준)
+      const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const today = kstNow.toISOString().slice(0, 10);
+      const { data } = await sb.from('daily_usage')
+        .select('count')
+        .eq('user_id', currentUser.id)
+        .eq('date', today)
+        .maybeSingle();
+      const used = data?.count || 0;
+      lastUsage = {
+        used,
+        limit: AI_DAILY_LIMIT,
+        remaining: Math.max(0, AI_DAILY_LIMIT - used)
+      };
+      refreshUsageDisplay();
+      return lastUsage;
+    } catch (e) {
+      console.warn('Failed to fetch usage:', e);
+      return null;
+    }
+  }
+
+  function refreshUsageDisplay() {
+    if (!lastUsage) return;
+
+    // 관리자 모드 표시
+    if (lastUsage.isAdmin) {
+      const main = document.getElementById('aiUsageDisplay');
+      if (main) {
+        main.innerHTML = `👑 <strong>관리자 모드</strong> · 무제한 사용`;
+        main.className = 'ai-usage-display admin';
+      }
+      const mini = document.getElementById('aiUsageMini');
+      if (mini) {
+        mini.innerHTML = `👑 <strong>관리자 모드</strong> · 무제한 사용`;
+        mini.className = 'ai-usage-mini admin';
+      }
+      return;
+    }
+
+    // 프리미엄 모드 표시
+    if (lastUsage.isPremium) {
+      const main = document.getElementById('aiUsageDisplay');
+      if (main) {
+        main.innerHTML = `💎 <strong>프리미엄</strong> · AI 추출 무제한`;
+        main.className = 'ai-usage-display admin';
+      }
+      const mini = document.getElementById('aiUsageMini');
+      if (mini) {
+        mini.innerHTML = `💎 <strong>프리미엄</strong> · AI 추출 무제한`;
+        mini.className = 'ai-usage-mini admin';
+      }
+      return;
+    }
+
+    const { used, limit, remaining } = lastUsage;
+
+    // 설정 모달 큰 표시
+    const main = document.getElementById('aiUsageDisplay');
+    if (main) {
+      main.innerHTML = `오늘 AI 추출 <strong>${used}</strong> / ${limit}회 사용 (남은 횟수 <strong>${remaining}</strong>회)`;
+      main.className = 'ai-usage-display' + (remaining === 0 ? ' exhausted' : '');
+    }
+
+    // 업로드 영역 아래 미니 표시
+    const mini = document.getElementById('aiUsageMini');
+    if (mini) {
+      if (remaining === 0) {
+        mini.innerHTML = `오늘 AI 추출을 모두 사용했어요 (<strong>${used}</strong>/${limit}). 직접 입력으로 사용 가능해요`;
+      } else {
+        mini.innerHTML = `오늘 AI 추출 <strong>${used}</strong>/${limit}회 사용 (남은 횟수 <strong>${remaining}</strong>회)`;
+      }
+      mini.className = 'ai-usage-mini' + (remaining === 0 ? ' exhausted' : '');
+    }
+  }
+
+  // ============== Geocoding ==============
+  let kakaoLoadPromise = null;
+
+  async function loadKakaoSDK() {
+    // 이미 로드되었으면 재사용
+    if (window.kakao && window.kakao.maps && window.kakao.maps.services) {
+      return window.kakao;
+    }
+    if (kakaoLoadPromise) return kakaoLoadPromise;
+
+    kakaoLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(KAKAO_KEY)}&libraries=services&autoload=false`;
+      script.onload = () => {
+        if (!window.kakao || !window.kakao.maps) {
+          reject(new Error('SDK_LOAD_FAIL'));
+          return;
+        }
+        window.kakao.maps.load(() => resolve(window.kakao));
+      };
+      script.onerror = () => reject(new Error('SDK_LOAD_FAIL'));
+      document.head.appendChild(script);
+    });
+    return kakaoLoadPromise;
+  }
+
+  async function geocodeWithKakao(storeName, region) {
+    try {
+      await loadKakaoSDK();
+    } catch (e) {
+      console.warn('Kakao SDK load failed:', e.message);
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      const ps = new window.kakao.maps.services.Places();
+
+      // 검색어 우선순위 — 동명 업체가 많은 경우를 대비해 region을 다양한 형태로 결합
+      // 모든 쿼리를 다 돌려서 후보를 모은 뒤, 가장 적합한 것을 점수로 선택
+      const queries = [];
+      if (storeName && region) {
+        queries.push(`${region} ${storeName}`);
+        queries.push(`${storeName} ${region}`);
+        const hasSuffix = /(시|구|군|동|읍|면|로|길)$/.test(region.trim());
+        if (!hasSuffix) {
+          queries.push(`${region}시 ${storeName}`);
+        }
+      }
+      if (storeName) queries.push(storeName);
+      if (region) queries.push(region);
+
+      // 후보 매장의 적합도 점수 계산
+      // 높을수록 좋은 매칭. 점수 기준:
+      //  +100 : storeName 단어가 결과 place_name에 그대로 포함됨 (필수에 가까움)
+      //  +50  : region 단어가 결과 주소에 포함됨
+      //  +10  : 첫 번째 결과인 경우 가산 (카카오의 인기/근접 신호 약간 반영)
+      function scoreCandidate(place, queryIdx, resultIdx) {
+        let score = 0;
+        const placeName = place.place_name || '';
+        const addr = (place.address_name || '') + ' ' + (place.road_address_name || '');
+        if (storeName && placeName.includes(storeName.trim())) score += 100;
+        if (region && addr.includes(region.trim())) score += 50;
+        if (resultIdx === 0) score += 10;
+        return score;
+      }
+
+      // 모든 쿼리를 순차 실행한 뒤 후보를 모아서 점수순 선택
+      const allCandidates = [];
+      let qIdx = 0;
+
+      const tryNext = () => {
+        if (qIdx >= queries.length) {
+          finalize();
+          return;
+        }
+        const q = queries[qIdx++];
+        ps.keywordSearch(q, (data, status) => {
+          if (status === window.kakao.maps.services.Status.OK && data && data.length > 0) {
+            data.slice(0, 5).forEach((p, i) => {
+              const s = scoreCandidate(p, qIdx - 1, i);
+              allCandidates.push({ place: p, score: s });
+            });
+          }
+          tryNext();
+        });
+      };
+
+      const finalize = () => {
+        if (allCandidates.length === 0) {
+          resolve(null);
+          return;
+        }
+        // 중복 제거 (같은 매장이 여러 쿼리에 걸쳐 잡힐 수 있음, 좌표+이름 키로 dedupe)
+        const seen = new Set();
+        const unique = [];
+        for (const c of allCandidates) {
+          const key = `${c.place.x},${c.place.y},${c.place.place_name}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(c);
+          }
+        }
+        // 점수 내림차순 정렬 후 최고 점수 매장 선택
+        unique.sort((a, b) => b.score - a.score);
+        const best = unique[0].place;
+        resolve({
+          lat: parseFloat(best.y),
+          lng: parseFloat(best.x),
+          address: best.address_name || best.road_address_name || '',
+          actualName: best.place_name || '',
+          category: best.category_name || best.category_group_name || '',
+          source: 'kakao'
+        });
+      };
+
+      tryNext();
+    });
+  }
+
+  async function geocodeWithNominatim(storeName, region) {
+    const tryQuery = async (q) => {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=ko`;
+      try {
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data && data.length > 0) {
+          return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), source: 'osm' };
+        }
+      } catch (e) { /* ignore */ }
+      return null;
+    };
+
+    const queries = [];
+    if (storeName && region) queries.push(`${storeName} ${region}`);
+    if (storeName) queries.push(storeName);
+    if (region) queries.push(region);
+    queries.push('서울');
+
+    for (const q of queries) {
+      const r = await tryQuery(q);
+      if (r) return r;
+      await new Promise(res => setTimeout(res, 500));
+    }
+    return { lat: 37.5665, lng: 126.9780, source: 'fallback' };
+  }
+
+  async function geocode(storeName, region) {
+    // 카카오 키가 설정되어 있으면 우선 시도
+    const kakaoResult = await geocodeWithKakao(storeName, region);
+    if (kakaoResult) return kakaoResult;
+    // Fallback: OpenStreetMap
+    return await geocodeWithNominatim(storeName, region);
+  }
+
+  // ============== Rendering ==============
+  // ============== Sort ==============
+  // 정렬 상태 (탭별)
+  const sortState = {
+    active: { field: 'createdAt', dir: 'desc' },     // 진행중: 기본 최근 추가순(내림차순)
+    completed: { field: 'completedAt', dir: 'desc' } // 완료: 기본 최근 완료순(내림차순)
+  };
+
+  // 값이 빈 항목은 정렬 시 항상 뒤로 보냄 (방향과 무관)
+  function sortEntries(list, field, dir) {
+    const isAsc = dir === 'asc';
+    const sorted = [...list].sort((a, b) => {
+      const va = a[field] || '';
+      const vb = b[field] || '';
+      // 둘 다 비어있으면 동순위
+      if (!va && !vb) return 0;
+      // 한쪽이 비어있으면 그쪽이 뒤로
+      if (!va) return 1;
+      if (!vb) return -1;
+      // 둘 다 값 있으면 사전순 비교 (YYYY-MM-DD나 ISO 모두 사전순 = 시간순)
+      if (va < vb) return isAsc ? -1 : 1;
+      if (va > vb) return isAsc ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }
+
+  // 정렬 컨트롤 UI 상태 동기화
+  function syncSortUI(tab) {
+    const state = sortState[tab];
+    const fieldEl = document.getElementById(tab === 'active' ? 'sortFieldActive' : 'sortFieldCompleted');
+    const dirBtn = document.getElementById(tab === 'active' ? 'sortDirActive' : 'sortDirCompleted');
+    if (fieldEl) fieldEl.value = state.field;
+    if (dirBtn) {
+      dirBtn.textContent = state.dir === 'asc' ? '↑' : '↓';
+      dirBtn.title = state.dir === 'asc' ? '오름차순 (오래된→최근, 빠른→늦은)' : '내림차순 (최근→오래된, 늦은→빠른)';
+    }
+  }
+
+  function setupSortControls() {
+    // 진행중 탭
+    const fieldActive = document.getElementById('sortFieldActive');
+    const dirActive = document.getElementById('sortDirActive');
+    if (fieldActive) {
+      fieldActive.addEventListener('change', (e) => {
+        sortState.active.field = e.target.value;
+        renderActiveList();
+      });
+    }
+    if (dirActive) {
+      dirActive.addEventListener('click', () => {
+        sortState.active.dir = sortState.active.dir === 'asc' ? 'desc' : 'asc';
+        syncSortUI('active');
+        renderActiveList();
       });
     }
 
-    // 이름 복사
-    const copyName = $("bmCopyName");
-    if (copyName) copyName.addEventListener("click", () => {
-      (navigator.clipboard ? navigator.clipboard.writeText(bmName) : Promise.reject())
-        .then(() => toast("이름을 복사했어요! 새 북마크 창의 '이름' 칸에 붙여넣으세요.", "success"),
-              () => toast("복사가 안 됐어요. 이름을 직접 입력해 주세요: " + bmName, "error"));
-    });
+    // 완료 탭
+    const fieldCompleted = document.getElementById('sortFieldCompleted');
+    const dirCompleted = document.getElementById('sortDirCompleted');
+    if (fieldCompleted) {
+      fieldCompleted.addEventListener('change', (e) => {
+        sortState.completed.field = e.target.value;
+        renderCompletedList();
+      });
+    }
+    if (dirCompleted) {
+      dirCompleted.addEventListener('click', () => {
+        sortState.completed.dir = sortState.completed.dir === 'asc' ? 'desc' : 'asc';
+        syncSortUI('completed');
+        renderCompletedList();
+      });
+    }
 
-    // 주소 복사
-    const copyUrl = $("bmCopyUrl");
-    if (copyUrl) copyUrl.addEventListener("click", () => {
-      const href = link.getAttribute("href");
-      (navigator.clipboard ? navigator.clipboard.writeText(href) : Promise.reject())
-        .then(() => toast("주소를 복사했어요! 'URL' 칸에 붙여넣으세요 (Ctrl+V).", "success"),
-              () => toast("복사가 안 됐어요. 버튼을 길게 눌러 직접 복사해 주세요.", "error"));
-    });
-
-    show($("toolMain"));
+    // 초기 UI 동기화
+    syncSortUI('active');
+    syncSortUI('completed');
   }
 
-  // 로그인 사용자 → tool-token 호출로 토큰 발급 (프리미엄만 발급됨)
-  async function loadToken() {
-    let res;
-    try { res = await sb.functions.invoke("tool-token", { body: { tool: TOOL } }); }
-    catch (e) { showBootError("도구를 불러오지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
-    const { data, error } = res;
+  function renderActiveList() {
+    // 일정 변경 반영: 캘린더가 펼쳐져 있으면 같이 갱신
+    refreshCalendarIfOpen();
+    const container = document.getElementById('activeList');
+    const sortBar = document.getElementById('sortBarActive');
+    let list = entries.filter(e => !e.completed);
+
+    if (list.length === 0) {
+      if (sortBar) sortBar.style.display = 'none';
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="em">아직 등록된 체험단이 없어요</div>
+          <div class="sm">위에서 캡쳐 이미지를 올려보세요</div>
+        </div>`;
+      return;
+    }
+
+    if (sortBar) sortBar.style.display = '';
+    list = sortEntries(list, sortState.active.field, sortState.active.dir);
+
+    container.innerHTML = `<div class="card-grid">${list.map(cardHtml).join('')}</div>`;
+    container.querySelectorAll('.card').forEach(c => {
+      c.addEventListener('click', () => openModal(c.dataset.id));
+    });
+  }
+
+  function renderCompletedList() {
+    const container = document.getElementById('completedList');
+    const sortBar = document.getElementById('sortBarCompleted');
+    let list = entries.filter(e => e.completed);
+
+    if (list.length === 0) {
+      if (sortBar) sortBar.style.display = 'none';
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="em">아직 완료된 체험단이 없어요</div>
+          <div class="sm">체험단을 다녀온 뒤 완료 처리해보세요</div>
+        </div>`;
+      return;
+    }
+
+    if (sortBar) sortBar.style.display = '';
+    list = sortEntries(list, sortState.completed.field, sortState.completed.dir);
+
+    container.innerHTML = `<div class="card-grid">${list.map(cardHtml).join('')}</div>`;
+    container.querySelectorAll('.card').forEach(c => {
+      c.addEventListener('click', () => openModal(c.dataset.id));
+    });
+  }
+
+  function cardHtml(e) {
+    const urgent = !e.completed && isUrgent(e.deadline);
+    const cls = (e.completed ? 'completed' : '') + (urgent ? ' urgent' : '');
+    // 방문 예정일이 있으면 sage 색으로 강조, 없으면 회색 + "미정"
+    const visitRow = e.visitDate
+      ? `<div class="meta-row"><span class="meta-ico">📆</span><span class="meta-text" style="color: var(--sage); font-weight: 600;">방문 예정 ${fmtKDate(e.visitDate)}</span></div>`
+      : `<div class="meta-row"><span class="meta-ico">📆</span><span class="meta-text" style="color: var(--ink-faint);">방문 예정 미정</span></div>`;
+    return `
+      <div class="card ${cls}" data-id="${e.id}">
+        <div class="card-store">${escapeHtml(e.storeName || '(이름 없음)')}</div>
+        <div class="meta">
+          <div class="meta-row"><span class="meta-ico">📍</span><span class="meta-text">${escapeHtml(e.region || '-')}</span></div>
+          <div class="meta-row"><span class="meta-ico">🎁</span><span class="meta-text">${escapeHtml(e.content || '-')}</span></div>
+          <div class="meta-row"><span class="meta-ico">⏰</span><span class="meta-text">${e.deadline ? `${fmtKDate(e.deadline)}까지` : '-'} ${deadlineTag(e.deadline)}</span></div>
+          ${visitRow}
+        </div>
+        <div class="memo-preview ${e.memo ? '' : 'empty'}">${escapeHtml(e.memo || '메모를 추가해보세요')}</div>
+      </div>`;
+  }
+
+  function renderStats() {
+    const active = entries.filter(e => !e.completed).length;
+    const done = entries.filter(e => e.completed).length;
+    document.getElementById('cntActive').textContent = active;
+    document.getElementById('cntDone').textContent = done;
+    document.getElementById('statRow').innerHTML = `진행중 <strong>${active}</strong> · 완료 <strong>${done}</strong>`;
+  }
+
+  // ============== Map (Kakao Maps) ==============
+  let kakaoOverlays = []; // 마커용 CustomOverlay 배열
+  let kakaoInfoOverlay = null; // 인포윈도우용 CustomOverlay (하나만 유지)
+
+  async function ensureMap() {
+    if (map) return map;
+
+    try {
+      await loadKakaoSDK();
+    } catch (e) {
+      console.warn('Kakao SDK load failed for map:', e.message);
+      const empty = document.getElementById('mapEmpty');
+      if (empty) {
+        empty.innerHTML = '<div class="icon">⚠️</div><div>지도 로드 실패</div><div style="font-size:11px;">네트워크를 확인해주세요</div>';
+        empty.style.display = '';
+      }
+      return null;
+    }
+
+    // SDK 로드 성공 → 빈 상태 숨기고 지도 생성
+    const empty = document.getElementById('mapEmpty');
+    if (empty) empty.style.display = 'none';
+
+    const container = document.getElementById('mapView');
+    map = new window.kakao.maps.Map(container, {
+      center: new window.kakao.maps.LatLng(37.5665, 126.9780),
+      level: 8 // 카카오 줌 레벨 (낮을수록 확대)
+    });
+    return map;
+  }
+
+  function closeInfoWindow() {
+    if (kakaoInfoOverlay) {
+      kakaoInfoOverlay.setMap(null);
+      kakaoInfoOverlay = null;
+    }
+  }
+
+  async function renderMap() {
+    // 레이아웃이 완료된 뒤에 지도 작업 (display 전환 직후 크기가 0 되는 문제 방지)
+    requestAnimationFrame(async () => {
+      requestAnimationFrame(async () => {
+        const m = await ensureMap();
+        if (!m) return; // 키 없거나 SDK 로드 실패
+
+        // relayout (display 전환 후 필요)
+        m.relayout();
+
+        // 기존 마커 정리
+        kakaoOverlays.forEach(o => o.setMap(null));
+        kakaoOverlays = [];
+        closeInfoWindow();
+
+        const list = entries.filter(e => !e.completed && e.lat && e.lng);
+        if (list.length === 0) return;
+
+        const bounds = new window.kakao.maps.LatLngBounds();
+
+        list.forEach((e) => {
+          const urgent = isUrgent(e.deadline);
+          const icon = getCategoryIcon(e);
+          const latlng = new window.kakao.maps.LatLng(e.lat, e.lng);
+
+          // 마커 (HTML 핀) — wrap div가 0x0 앵커, 내부 .pin이 시각적 핀
+          const wrap = document.createElement('div');
+          wrap.className = 'pin-wrap';
+          wrap.innerHTML = `<div class="pin ${urgent ? 'urgent' : ''}"><span class="pin-icon">${icon}</span></div>`;
+          wrap.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            showInfoWindow(e, latlng);
+          });
+
+          const overlay = new window.kakao.maps.CustomOverlay({
+            position: latlng,
+            content: wrap,
+            xAnchor: 0,
+            yAnchor: 0,
+            clickable: true
+          });
+          overlay.setMap(m);
+          kakaoOverlays.push(overlay);
+          bounds.extend(latlng);
+        });
+
+        if (!bounds.isEmpty()) {
+          m.setBounds(bounds, 40, 40, 40, 40);
+          // 너무 가까이 확대된 경우 적당히 빼기
+          if (m.getLevel() < 4) m.setLevel(4);
+        }
+      });
+    });
+  }
+
+  function showInfoWindow(e, latlng) {
+    closeInfoWindow();
+
+    const wrap = document.createElement('div');
+    wrap.className = 'info-window';
+    wrap.innerHTML = `
+      <button class="close" aria-label="닫기">✕</button>
+      <div class="popup-title">${escapeHtml(e.storeName || '(이름 없음)')}</div>
+      <div class="popup-meta">📍 ${escapeHtml(e.actualAddress || e.region || '')}</div>
+      <div class="popup-meta">🎁 ${escapeHtml((e.content || '').slice(0, 30))}${(e.content || '').length > 30 ? '...' : ''}</div>
+      <div class="popup-meta">⏰ ${e.deadline ? `${fmtKDate(e.deadline)}까지` : '-'}</div>
+      ${e.visitDate
+        ? `<div class="popup-meta" style="color: var(--sage); font-weight: 600;">📆 방문 예정 ${fmtKDate(e.visitDate)}</div>`
+        : `<div class="popup-meta" style="color: var(--ink-faint);">📆 방문 예정 미정</div>`}
+      <button class="popup-btn">상세보기</button>
+    `;
+    wrap.querySelector('.close').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      closeInfoWindow();
+    });
+    wrap.querySelector('.popup-btn').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      closeInfoWindow();
+      openModal(e.id);
+    });
+
+    kakaoInfoOverlay = new window.kakao.maps.CustomOverlay({
+      position: latlng,
+      content: wrap,
+      xAnchor: 0.5,
+      yAnchor: 1.25,  // 핀 위로 띄움
+      zIndex: 100
+    });
+    kakaoInfoOverlay.setMap(map);
+  }
+
+  window.__openModalFromMap = function(id) {
+    openModal(id);
+  };
+
+  // ============== 캘린더 (진행 중 탭) ==============
+  // 마감일/방문일을 월 그리드에 표시. 토글로 접기/펼치기.
+  let calYear, calMonth;       // 현재 보고 있는 연/월
+  let calendarInited = false;
+
+  // 'YYYY-MM-DD' 문자열 → {y, m, d} (로컬, 타임존 안전)
+  function parseDateStr(s) {
+    if (!s) return null;
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    return { y: +m[1], mo: +m[2], d: +m[3] };
+  }
+
+  // 캘린더 그리기
+  function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    const monthLabel = document.getElementById('calMonth');
+    if (!grid || !monthLabel) return;
+
+    monthLabel.textContent = `${calYear}년 ${calMonth + 1}월`;
+
+    // 이번 달 정보
+    const first = new Date(calYear, calMonth, 1);
+    const startDow = first.getDay();              // 0(일)~6(토)
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+    // 오늘
+    const now = new Date();
+    const isThisMonth = (now.getFullYear() === calYear && now.getMonth() === calMonth);
+    const todayDate = now.getDate();
+
+    // 이번 달 일정 매핑: { 날짜(d): [ {id, name, type} ] }
+    const byDay = {};
+    function addEvent(dateStr, entry, type) {
+      const p = parseDateStr(dateStr);
+      if (!p) return;
+      if (p.y !== calYear || (p.mo - 1) !== calMonth) return;
+      (byDay[p.d] = byDay[p.d] || []).push({
+        id: entry.id,
+        name: entry.storeName || '(이름 없음)',
+        type
+      });
+    }
+    entries.forEach(e => {
+      if (e.completed) return;          // 진행 중만
+      addEvent(e.deadline, e, 'deadline');
+      addEvent(e.visitDate, e, 'visit');
+    });
+
+    // 셀 생성
+    let html = '';
+    // 앞 빈 칸
+    for (let i = 0; i < startDow; i++) {
+      html += '<div class="cal-cell empty"></div>';
+    }
+    // 날짜 칸
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dow = (startDow + d - 1) % 7;
+      const isToday = isThisMonth && d === todayDate;
+      const dateCls = dow === 0 ? 'sun' : (dow === 6 ? 'sat' : '');
+      const evs = byDay[d] || [];
+
+      let evHtml = '';
+      const shown = evs.slice(0, 2);    // 최대 2개 표시
+      shown.forEach(ev => {
+        evHtml += `<div class="cal-event ${ev.type}" data-id="${ev.id}" title="${escapeHtml(ev.name)}">${escapeHtml(ev.name)}</div>`;
+      });
+      if (evs.length > 2) {
+        evHtml += `<div class="cal-more">+${evs.length - 2}</div>`;
+      }
+
+      html += `
+        <div class="cal-cell${isToday ? ' today' : ''}">
+          <div class="cal-date ${dateCls}">${d}</div>
+          ${evHtml}
+        </div>`;
+    }
+    grid.innerHTML = html;
+
+    // 일정 칩 클릭 → 상세 모달
+    grid.querySelectorAll('.cal-event').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = el.dataset.id;
+        if (id) openModal(id);
+      });
+    });
+  }
+
+  function initCalendar() {
+    const toggle = document.getElementById('calendarToggle');
+    const body = document.getElementById('calendarBody');
+    if (!toggle || !body) return;
+
+    // 토글
+    toggle.addEventListener('click', () => {
+      const isOpen = body.style.display !== 'none';
+      if (isOpen) {
+        body.style.display = 'none';
+        toggle.setAttribute('aria-expanded', 'false');
+      } else {
+        // 처음 펼칠 때 현재 달로 초기화
+        if (!calendarInited) {
+          const now = new Date();
+          calYear = now.getFullYear();
+          calMonth = now.getMonth();
+          calendarInited = true;
+        }
+        body.style.display = '';
+        toggle.setAttribute('aria-expanded', 'true');
+        renderCalendar();
+      }
+    });
+
+    // 이전/다음 달
+    document.getElementById('calPrev')?.addEventListener('click', () => {
+      calMonth--;
+      if (calMonth < 0) { calMonth = 11; calYear--; }
+      renderCalendar();
+    });
+    document.getElementById('calNext')?.addEventListener('click', () => {
+      calMonth++;
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      renderCalendar();
+    });
+  }
+
+  // 일정이 바뀌면 캘린더도 갱신 (펼쳐져 있을 때만)
+  function refreshCalendarIfOpen() {
+    const body = document.getElementById('calendarBody');
+    if (body && body.style.display !== 'none' && calendarInited) {
+      renderCalendar();
+    }
+  }
+
+  // ============== Modal ==============
+  function openModal(id) {
+    const e = entries.find(x => x.id === id);
+    if (!e) return;
+    editingId = id;
+    isNewEntry = false;
+
+    document.getElementById('mTitle').textContent = '체험단 정보';
+    document.getElementById('mSub').textContent = e.createdAt ? ('등록일: ' + e.createdAt.slice(0, 10)) : '';
+
+    document.getElementById('mStoreName').value = e.storeName || '';
+    document.getElementById('mRegion').value = e.region || '';
+    document.getElementById('mContent').value = e.content || '';
+    document.getElementById('mDeadline').value = e.deadline || '';
+    document.getElementById('mVisitDate').value = e.visitDate || '';
+    document.getElementById('mMemo').value = e.memo || '';
+
+    // 카카오에서 찾은 실제 주소 표시 (읽기 모드)
+    // 주소가 있으면 필드 노출 + 읽기 모드, 없으면 필드 자체 숨김
+    const addrField = document.getElementById('mAddressField');
+    const addrInput = document.getElementById('mActualAddress');
+    const addrText = document.getElementById('mAddressReadText');
+    if (e.actualAddress) {
+      addrField.style.display = '';
+      addrText.textContent = e.actualAddress;
+      addrInput.value = e.actualAddress;
+      // 편집 모드 닫기, 읽기 모드 표시
+      setAddressEditMode(false);
+    } else {
+      // 주소 없으면 필드 자체를 숨기되, 사용자가 편집 모드로 강제 열 수도 있게
+      // (등록 직후엔 주소 없는 게 정상이므로 일단 숨김 유지)
+      addrField.style.display = 'none';
+      addrInput.value = '';
+    }
+
+    document.getElementById('btnComplete').style.display = e.completed ? 'none' : '';
+    document.getElementById('btnRestore').style.display = e.completed ? '' : 'none';
+    document.getElementById('btnDelete').style.display = '';
+
+    document.getElementById('modalBg').classList.add('active');
+  }
+
+  function openNewEntryModal(prefill) {
+    editingId = null;
+    isNewEntry = true;
+    const p = prefill || {};
+
+    document.getElementById('mTitle').textContent = '새 체험단 등록';
+    document.getElementById('mSub').textContent = p.fromAI
+      ? 'AI가 추출한 내용을 확인하고 수정해주세요'
+      : '내용을 입력하고 저장하세요';
+
+    document.getElementById('mStoreName').value = p.storeName || '';
+    document.getElementById('mRegion').value = p.region || '';
+    document.getElementById('mContent').value = p.content || '';
+    document.getElementById('mDeadline').value = p.deadline || '';
+    document.getElementById('mVisitDate').value = '';
+    document.getElementById('mMemo').value = '';
+
+    // 신규 등록 시 실제 주소 필드 숨김 (저장 후 자동 검색되면 나타남)
+    document.getElementById('mAddressField').style.display = 'none';
+    document.getElementById('mActualAddress').value = '';
+    setAddressEditMode(false);
+
+    document.getElementById('btnComplete').style.display = 'none';
+    document.getElementById('btnRestore').style.display = 'none';
+    document.getElementById('btnDelete').style.display = 'none';
+
+    document.getElementById('modalBg').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('modalBg').classList.remove('active');
+    editingId = null;
+    isNewEntry = false;
+  }
+
+  // ============== 소식 모달 (공지/업데이트 글) ==============
+  // .notice-item 을 클릭하면 그 안의 제목·날짜·배지·본문(.notice-body)을
+  // 모달에 채워 보여줌. 글 추가는 HTML만 복사하면 되고 JS는 손댈 필요 없음.
+  function openNewsModal(item) {
+    if (!item) return;
+    const titleEl = item.querySelector('.notice-title');
+    const dateEl = item.querySelector('.notice-date');
+    const badgeEl = item.querySelector('.notice-badge');
+    const bodyEl = item.querySelector('.notice-body');
+
+    document.getElementById('newsModalTitle').textContent = titleEl ? titleEl.textContent : '';
+
+    const mBadge = document.getElementById('newsModalBadge');
+    if (badgeEl && badgeEl.textContent.trim()) {
+      mBadge.textContent = badgeEl.textContent;
+      mBadge.style.display = '';
+    } else {
+      mBadge.style.display = 'none';
+    }
+
+    const mDate = document.getElementById('newsModalDate');
+    if (dateEl && dateEl.textContent.trim()) {
+      mDate.textContent = dateEl.textContent;
+      mDate.setAttribute('datetime', dateEl.getAttribute('datetime') || '');
+      mDate.style.display = '';
+    } else {
+      mDate.style.display = 'none';
+    }
+
+    document.getElementById('newsModalBody').innerHTML = bodyEl ? bodyEl.innerHTML : '';
+    document.getElementById('newsModalBody').scrollTop = 0;
+    document.getElementById('newsModalBg').classList.add('active');
+  }
+
+  function closeNewsModal() {
+    document.getElementById('newsModalBg').classList.remove('active');
+  }
+
+  // 소식 모달 이벤트 연결 (목록은 이벤트 위임 → 글이 늘어나도 자동 동작)
+  function setupNewsModal() {
+    const list = document.getElementById('newsList');
+    if (list) {
+      list.addEventListener('click', (e) => {
+        const item = e.target.closest('.notice-item');
+        if (item) openNewsModal(item);
+      });
+      // 키보드 접근성: 포커스된 글에서 Enter/Space로 열기
+      list.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          const item = e.target.closest('.notice-item');
+          if (item) { e.preventDefault(); openNewsModal(item); }
+        }
+      });
+    }
+    const closeBtn = document.getElementById('newsModalClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeNewsModal);
+    const bg = document.getElementById('newsModalBg');
+    if (bg) {
+      bg.addEventListener('click', (e) => {
+        if (e.target.id === 'newsModalBg') closeNewsModal();
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (bg && bg.classList.contains('active') && e.key === 'Escape') closeNewsModal();
+    });
+  }
+
+  // 공지/업데이트 글을 /news.html 에서 불러와 #noticeFeed 에 채움.
+  // 앱 시작 시 한 번만 실행(탭에서도 NEW 표시를 계산하려고 미리 불러옴).
+  // 글 클릭은 이벤트 위임이라 추가 작업 불필요.
+  let newsLoaded = false;
+  async function loadNewsPosts() {
+    if (newsLoaded) return;
+    const feed = document.getElementById('noticeFeed');
+    if (!feed) return;
+    try {
+      const res = await fetch('/news.html', { cache: 'no-cache' });
+      if (!res.ok) throw new Error('news load failed: ' + res.status);
+      const html = await res.text();
+      feed.innerHTML = html;
+      newsLoaded = true;
+      updateNewsBadge();
+      // 불러온 시점에 이미 소식 탭을 보고 있으면 '읽음' 처리
+      if (currentView === 'news') markNewsSeen();
+    } catch (e) {
+      console.error('[소식 불러오기 실패]', e);
+      feed.innerHTML = '<p class="notice-loading">소식을 불러오지 못했어요. 잠시 후 새로고침 해주세요.</p>';
+    }
+  }
+
+  // ── 소식 NEW 표시 (일주일 이내 + 아직 안 본 글) ──
+  const NEWS_SEEN_KEY = 'news-last-seen-v1';
+  const NEWS_NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7일
+
+  // 불러온 글들 중 가장 최신 날짜(datetime)의 timestamp 반환 (없으면 null)
+  function getLatestPostTime() {
+    const dates = Array.from(document.querySelectorAll('#noticeFeed .notice-item .notice-date'))
+      .map(t => t.getAttribute('datetime'))
+      .filter(Boolean)
+      .sort(); // ISO 날짜 문자열은 사전순 = 날짜순
+    if (!dates.length) return null;
+    const latest = dates[dates.length - 1];
+    const ts = new Date(latest + 'T00:00:00').getTime();
+    return isNaN(ts) ? null : ts;
+  }
+
+  function updateNewsBadge() {
+    const dot = document.getElementById('newsNewDot');
+    if (!dot) return;
+    const latest = getLatestPostTime();
+    if (latest === null) { dot.hidden = true; return; }
+    let lastSeen = 0;
+    try { lastSeen = parseInt(localStorage.getItem(NEWS_SEEN_KEY) || '0', 10) || 0; } catch (e) {}
+    const isRecent = latest >= (Date.now() - NEWS_NEW_WINDOW_MS);
+    const isUnseen = latest > lastSeen;
+    dot.hidden = !(isRecent && isUnseen);
+  }
+
+  // 소식 탭을 열면 '읽음'으로 기록하고 NEW 점을 숨김
+  function markNewsSeen() {
+    const latest = getLatestPostTime();
+    if (latest !== null) {
+      try { localStorage.setItem(NEWS_SEEN_KEY, String(latest)); } catch (e) {}
+    }
+    const dot = document.getElementById('newsNewDot');
+    if (dot) dot.hidden = true;
+  }
+
+  // 실제 주소 필드의 읽기/편집 모드 전환
+  // editing=true → input 활성화, 확인/취소 버튼 표시
+  // editing=false → 읽기 모드 (초록 hint + 연필 버튼)
+  function setAddressEditMode(editing) {
+    const readRow = document.getElementById('mAddressRead');
+    const editRow = document.getElementById('mAddressEdit');
+    const hint = document.getElementById('mAddressEditHint');
+    if (!readRow || !editRow) return;
+    if (editing) {
+      readRow.style.display = 'none';
+      editRow.style.display = '';
+      if (hint) hint.style.display = '';
+      // 포커스 + 텍스트 끝으로
+      const inp = document.getElementById('mActualAddress');
+      if (inp) {
+        setTimeout(() => {
+          inp.focus();
+          inp.setSelectionRange(inp.value.length, inp.value.length);
+        }, 50);
+      }
+    } else {
+      readRow.style.display = '';
+      editRow.style.display = 'none';
+      if (hint) hint.style.display = 'none';
+    }
+  }
+
+  // ============== View Switching ==============
+  function switchView(view) {
+    // 도구 탭: 게스트는 접근 차단 (로그인 안내)
+    if (view === 'tools' && isGuestMode) {
+      showToast('도구는 로그인 후 사용할 수 있어요', 'success');
+      openLoginModal();
+      return;
+    }
+
+    currentView = view;
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.view === view);
+    });
+    document.getElementById('viewActive').style.display = view === 'active' ? '' : 'none';
+    document.getElementById('viewMap').style.display = view === 'map' ? '' : 'none';
+    document.getElementById('viewCompleted').style.display = view === 'completed' ? '' : 'none';
+    document.getElementById('viewTools').style.display = view === 'tools' ? '' : 'none';
+    document.getElementById('viewNews').style.display = view === 'news' ? '' : 'none';
+
+    // 지도 탭 진입 시 게스트 모드라면 안내바 표시
+    const mapNotice = document.getElementById('guestMapNotice');
+    if (mapNotice) {
+      mapNotice.style.display = (view === 'map' && isGuestMode) ? '' : 'none';
+    }
+
+    if (view === 'map') renderMap();
+    if (view === 'completed') renderCompletedList();
+    if (view === 'news') { loadNewsPosts(); markNewsSeen(); }
+  }
+
+  // ============== Image Upload Handler ==============
+  async function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+      showToast('이미지 파일만 올릴 수 있어요', 'error');
+      return;
+    }
+
+    // 관리자가 아니고 사용량이 0이면 미리 거절 (서버 왕복 절약)
+    if (!lastUsage?.isAdmin && lastUsage && lastUsage.remaining === 0) {
+      showToast(`오늘은 AI 추출을 ${lastUsage.limit}회 모두 사용했어요. 직접 입력해주세요`, 'error');
+      openNewEntryModal({ fromAI: false });
+      return;
+    }
+
+    setLoading(true, 'AI가 이미지에서 정보를 추출하는 중...');
+
+    let extracted = null;
+    let errorCode = null;
+    try {
+      extracted = await extractFromImage(file);
+    } catch (err) {
+      console.warn('AI extraction failed:', err);
+      errorCode = err.code || 'UNKNOWN';
+    }
+
+    setLoading(false);
+
+    if (extracted) {
+      openNewEntryModal({ ...extracted, fromAI: true });
+      if (isGuestMode) {
+        // 게스트 모드: 시뮬레이션임을 명시
+        showToast('✨ AI 추출 데모 완료! (로그인하면 실제 이미지로 추출 가능)', 'success');
+      } else {
+        const remaining = lastUsage?.remaining;
+        if (remaining !== undefined) {
+          showToast(`AI 추출 완료! 오늘 ${remaining}회 남음`, 'success');
+        } else {
+          showToast('AI가 자동 추출했어요. 확인 후 저장하세요', 'success');
+        }
+      }
+    } else {
+      // 에러 종류별 안내
+      if (errorCode === 'DAILY_LIMIT_EXCEEDED') {
+        // 서버에서 거부 → 최신 사용량으로 표시 갱신
+        await fetchTodayUsage();
+        showToast(`오늘은 AI 추출을 ${AI_DAILY_LIMIT}회 모두 사용했어요. 직접 입력해주세요`, 'error');
+      } else if (errorCode === 'NOT_AUTHENTICATED') {
+        showToast('로그인이 필요해요. 다시 로그인해주세요', 'error');
+      } else if (errorCode === 'JSON_PARSE_FAILED') {
+        showToast('AI 분석은 됐는데 결과 파싱에 실패했어요. 직접 입력해주세요', 'error');
+      } else {
+        showToast('AI 추출에 실패했어요. 직접 입력해주세요', 'error');
+      }
+      openNewEntryModal({ fromAI: false });
+    }
+  }
+
+  // ============== Event Listeners ==============
+  function init() {
+    // Today display
+    const t = new Date();
+    document.getElementById('todayDate').textContent = t.toLocaleDateString('ko-KR', {
+      year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+    });
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t => {
+      t.addEventListener('click', () => switchView(t.dataset.view));
+    });
+
+    // Sort controls
+    setupSortControls();
+
+    // Upload
+    const zone = document.getElementById('uploadZone');
+    const input = document.getElementById('fileInput');
+
+    input.addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if (f) handleFile(f);
+      input.value = '';
+    });
+
+    zone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      zone.classList.add('drag');
+    });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('drag');
+      const f = e.dataTransfer.files[0];
+      if (f) handleFile(f);
+    });
+
+    // Ctrl+V 클립보드 이미지 붙여넣기 (PC 유저용)
+    // 텍스트 입력 중이거나 모달 열렸을 때는 무시
+    document.addEventListener('paste', (e) => {
+      // 텍스트 입력 필드에 포커스가 있으면 무시 (텍스트 붙여넣기는 정상 처리되게)
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+        return;
+      }
+      // 모달이 열려있으면 무시
+      if (document.getElementById('modalBg')?.classList.contains('active')) return;
+      if (document.getElementById('settingsBg')?.classList.contains('active')) return;
+      // 로그인 화면이면 무시
+      if (document.getElementById('loginScreen')?.classList.contains('active')) return;
+
+      // 클립보드에서 이미지 찾기
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            // 진행중 탭이 아니면 자동으로 전환
+            if (currentView !== 'active') {
+              switchView('active');
+            }
+            // 시각 피드백
+            const zoneEl = document.getElementById('uploadZone');
+            if (zoneEl) {
+              zoneEl.classList.remove('paste-flash');
+              // 강제 reflow로 애니메이션 재시작
+              void zoneEl.offsetWidth;
+              zoneEl.classList.add('paste-flash');
+              setTimeout(() => zoneEl.classList.remove('paste-flash'), 700);
+            }
+            showToast('📋 클립보드 이미지 붙여넣기됨', 'success');
+            handleFile(file);
+            return;
+          }
+        }
+      }
+    });
+
+    // Modal
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.getElementById('modalBg').addEventListener('click', (e) => {
+      if (e.target.id === 'modalBg') closeModal();
+    });
+
+    // 소식 모달 (공지/업데이트 글)
+    setupNewsModal();
+    // 소식 글 미리 불러오기 (탭에서도 NEW 표시가 보이도록)
+    loadNewsPosts();
+
+    // 직접 입력 버튼
+    document.getElementById('btnManualAdd').addEventListener('click', () => {
+      openNewEntryModal({ fromAI: false });
+    });
+
+    // 실제 주소 편집 모드 토글 (연필 버튼)
+    const editBtn = document.getElementById('mAddressEditBtn');
+    if (editBtn) {
+      editBtn.addEventListener('click', () => setAddressEditMode(true));
+    }
+    // 확인 버튼: 읽기 모드 텍스트 갱신 후 닫기 (실제 저장은 [💾 저장] 누를 때)
+    const confirmBtn = document.getElementById('mAddressConfirmBtn');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        const newVal = document.getElementById('mActualAddress').value.trim();
+        document.getElementById('mAddressReadText').textContent = newVal || '(주소 없음)';
+        setAddressEditMode(false);
+      });
+    }
+    // 취소 버튼: 변경 사항 버리고 원래 값 복원 후 읽기 모드로
+    const cancelBtn = document.getElementById('mAddressCancelBtn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        const original = document.getElementById('mAddressReadText').textContent;
+        document.getElementById('mActualAddress').value = original === '(주소 없음)' ? '' : original;
+        setAddressEditMode(false);
+      });
+    }
+
+    document.getElementById('btnSave').addEventListener('click', async () => {
+      const storeName = document.getElementById('mStoreName').value.trim();
+      const region = document.getElementById('mRegion').value.trim();
+      const content = document.getElementById('mContent').value.trim();
+      const deadline = document.getElementById('mDeadline').value.trim();
+      const visitDate = document.getElementById('mVisitDate').value.trim();
+      const memo = document.getElementById('mMemo').value;
+      const userAddress = document.getElementById('mActualAddress').value.trim();
+
+      if (!storeName && !region) {
+        showToast('상호명이나 지역 중 하나는 입력해주세요', 'error');
+        return;
+      }
+
+      if (isNewEntry) {
+        // 신규 저장
+        // 우선순위:
+        //   1. 사용자가 '실제 주소'를 직접 입력했으면 그걸로 지오코딩
+        //   2. 아니면 평소처럼 storeName+region으로 검색
+        setLoading(true, '가게 위치를 찾는 중...');
+        let coords = null;
+        try {
+          if (userAddress) {
+            // 사용자 직접 입력 주소 우선 — 주소만으로 지오코딩
+            coords = await geocode('', userAddress);
+            // 실패 시 fallback
+            if (!coords) coords = { lat: 37.5665, lng: 126.9780, source: 'fallback', address: userAddress };
+            else coords.address = userAddress; // 사용자 입력을 그대로 저장 (카카오 정규화 안 함)
+          } else {
+            coords = await geocode(storeName, region);
+            if (!coords) coords = { lat: 37.5665, lng: 126.9780, source: 'fallback' };
+          }
+        } catch (e) {
+          coords = { lat: 37.5665, lng: 126.9780, source: 'fallback' };
+        }
+
+        const entry = {
+          id: uid(),
+          storeName, region, content, deadline, visitDate, memo,
+          lat: coords.lat, lng: coords.lng,
+          locationSource: coords.source || 'unknown',
+          actualAddress: coords.address || userAddress || '',
+          category: coords.category || '',
+          completed: false,
+          createdAt: new Date().toISOString()
+        };
+
+        const ok = await saveEntry(entry);
+        setLoading(false);
+        if (ok) {
+          entries.unshift(entry);
+          renderActiveList();
+          renderStats();
+          if (currentView === 'map') renderMap();
+          if (userAddress) {
+            showToast(`📍 직접 입력한 주소로 등록`, 'success');
+          } else if (coords.source === 'kakao') {
+            showToast(`📍 ${coords.actualName || storeName} 위치 찾음`, 'success');
+          } else if (coords.source === 'osm') {
+            showToast(`등록 완료 (대략적인 위치)`, 'success');
+          } else {
+            showToast(`등록 완료 (위치를 못 찾아 지역 중심으로 표시)`, 'success');
+          }
+          closeModal();
+        } else {
+          showToast('저장 실패', 'error');
+        }
+      } else {
+        // 기존 항목 수정
+        if (!editingId) return;
+        const e = entries.find(x => x.id === editingId);
+        if (!e) return;
+
+        const regionChanged = (e.region !== region) || (e.storeName !== storeName);
+        const addressChanged = (e.actualAddress || '') !== userAddress;
+        e.storeName = storeName;
+        e.region = region;
+        e.content = content;
+        e.deadline = deadline;
+        e.visitDate = visitDate;
+        e.memo = memo;
+
+        // 위치 갱신 로직:
+        //   1. 사용자가 실제 주소를 직접 수정했으면 → 그 주소로 다시 지오코딩
+        //   2. 사용자가 주소는 안 건드렸지만 상호/지역이 바뀌었으면 → 자동 재검색
+        //   3. 아무것도 안 바뀌었으면 → 기존 위치 유지
+        if (addressChanged && userAddress) {
+          // 사용자가 직접 입력한 주소로 지오코딩
+          setLoading(true, '주소로 위치 찾는 중...');
+          try {
+            const coords = await geocode('', userAddress);
+            if (coords) {
+              e.lat = coords.lat;
+              e.lng = coords.lng;
+              e.locationSource = coords.source || 'unknown';
+            }
+            // 사용자 입력 주소 그대로 저장 (카카오 정규화 안 함)
+            e.actualAddress = userAddress;
+          } catch (err) {
+            e.actualAddress = userAddress; // 지오코딩 실패해도 주소는 저장
+          }
+          setLoading(false);
+        } else if (addressChanged && !userAddress) {
+          // 사용자가 주소를 비웠으면 actualAddress만 비움 (좌표는 유지)
+          e.actualAddress = '';
+        } else if (regionChanged) {
+          // 주소 직접 수정은 없지만 상호/지역이 바뀌었으면 자동 재검색
+          setLoading(true, '위치 업데이트 중...');
+          try {
+            const coords = await geocode(storeName, region);
+            e.lat = coords.lat;
+            e.lng = coords.lng;
+            e.locationSource = coords.source || 'unknown';
+            e.actualAddress = coords.address || '';
+            e.category = coords.category || '';
+          } catch (err) { /* keep old */ }
+          setLoading(false);
+        }
+
+        const ok = await saveEntry(e);
+        if (ok) {
+          showToast('저장했어요', 'success');
+          renderActiveList();
+          renderCompletedList();
+          if (currentView === 'map') renderMap();
+          closeModal();
+        } else {
+          showToast('저장 실패', 'error');
+        }
+      }
+    });
+
+    document.getElementById('btnComplete').addEventListener('click', async () => {
+      if (!editingId) return;
+      const e = entries.find(x => x.id === editingId);
+      if (!e) return;
+      e.storeName = document.getElementById('mStoreName').value.trim();
+      e.region = document.getElementById('mRegion').value.trim();
+      e.content = document.getElementById('mContent').value.trim();
+      e.deadline = document.getElementById('mDeadline').value.trim();
+      e.visitDate = document.getElementById('mVisitDate').value.trim();
+      e.memo = document.getElementById('mMemo').value;
+      e.actualAddress = document.getElementById('mActualAddress').value.trim();
+      e.completed = true;
+      e.completedAt = new Date().toISOString();
+      const ok = await saveEntry(e);
+      if (ok) {
+        showToast('완료 처리했어요', 'success');
+        renderActiveList();
+        renderCompletedList();
+        renderStats();
+        if (currentView === 'map') renderMap();
+        closeModal();
+      }
+    });
+
+    document.getElementById('btnRestore').addEventListener('click', async () => {
+      if (!editingId) return;
+      const e = entries.find(x => x.id === editingId);
+      if (!e) return;
+      e.completed = false;
+      delete e.completedAt;
+      const ok = await saveEntry(e);
+      if (ok) {
+        showToast('진행 중으로 복원했어요', 'success');
+        renderActiveList();
+        renderCompletedList();
+        renderStats();
+        closeModal();
+      }
+    });
+
+    document.getElementById('btnDelete').addEventListener('click', async () => {
+      if (!editingId) return;
+      if (!confirm('정말 삭제할까요? 되돌릴 수 없어요.')) return;
+      const ok = await deleteEntry(editingId);
+      if (ok) {
+        showToast('삭제했어요');
+        renderActiveList();
+        renderCompletedList();
+        renderStats();
+        if (currentView === 'map') renderMap();
+        closeModal();
+      }
+    });
+
+    // 창 크기 변경 시 지도 재계산
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (map && currentView === 'map') map.relayout();
+      }, 150);
+    });
+
+    // ===== 설정 모달 =====
+    const settingsBg = document.getElementById('settingsBg');
+
+    document.getElementById('btnSettings').addEventListener('click', async () => {
+      // 계정 정보 표시
+      const acctEl = document.getElementById('accountInfo');
+      if (acctEl) {
+        if (isGuestMode) {
+          acctEl.innerHTML = '<span style="color:var(--ink-faint); font-style:italic;">로그인하면 계정 정보가 표시돼요</span>';
+        } else if (currentUser) {
+          const name = getUserDisplayName(currentUser);
+          const email = currentUser.email || '(이메일 미제공)';
+          const provider = currentUser.app_metadata?.provider || 'email';
+          const providerName = { kakao: '카카오', google: '구글', email: '이메일' }[provider] || provider;
+          acctEl.innerHTML = `<strong>${name}</strong> <span style="color:var(--ink-faint); font-size:12px;">· ${providerName}</span><br><span style="font-size:12px;">${email}</span>`;
+        }
+      }
+
+      // 게스트 모드: 서버 호출 없이 안내만 표시
+      if (isGuestMode) {
+        applyGuestSettingsContent();
+      } else {
+        // 로그인 모드: 구독 정보 + 사용량 새로고침
+        await fetchSubscription();
+        updatePlanUI();
+        await fetchTodayUsage();
+      }
+      settingsBg.classList.add('active');
+    });
+
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      // 게스트 모드: 로그인 모달 열기 / 로그인 상태: 로그아웃
+      if (isGuestMode) {
+        // 설정 모달 먼저 닫고 로그인 모달 열기
+        settingsBg.classList.remove('active');
+        openLoginModal();
+      } else {
+        signOut();
+      }
+    });
+    document.getElementById('btnDeleteAccount').addEventListener('click', deleteAccount);
+
+    // ===== 유료 플랜 =====
+    document.getElementById('btnUpgrade').addEventListener('click', activatePremium);
+    document.getElementById('btnDowngrade').addEventListener('click', deactivatePremium);
+
+    // ===== 카톡 알림 설정 =====
+    document.getElementById('btnNotifyToggle').addEventListener('click', handleNotifyToggle);
+
+    // 온보딩 모달 이벤트
+    document.getElementById('btnOnboardingEnable').addEventListener('click', (e) => {
+      enableKakaoNotify(e.currentTarget);
+    });
+    document.getElementById('btnOnboardingLater').addEventListener('click', () => {
+      setNotifyStatus('disabled');
+      markOnboardingShown();
+      updateNotifyUI();
+      closeOnboarding();
+      showToast('나중에 설정 메뉴에서 켜실 수 있어요');
+    });
+    // 배경 클릭으로 닫기 = '나중에'와 동일 처리
+    document.getElementById('onboardingBg').addEventListener('click', (e) => {
+      if (e.target.id === 'onboardingBg') {
+        setNotifyStatus('disabled');
+        markOnboardingShown();
+        updateNotifyUI();
+        closeOnboarding();
+      }
+    });
+
+    document.getElementById('settingsClose').addEventListener('click', () => {
+      settingsBg.classList.remove('active');
+    });
+
+    settingsBg.addEventListener('click', (e) => {
+      if (e.target.id === 'settingsBg') settingsBg.classList.remove('active');
+    });
+  }
+
+  // ============== 인증 (Auth) ==============
+  function emailToInitial(email) {
+    if (!email) return '?';
+    return email.charAt(0).toUpperCase();
+  }
+
+  function getUserDisplayName(user) {
+    if (!user) return '사용자';
+    const meta = user.user_metadata || {};
+    return meta.name || meta.full_name || meta.preferred_username || user.email?.split('@')[0] || '사용자';
+  }
+
+  function updateUserUI(user) {
+    const nameEl = document.getElementById('userName');
+    const avatarEl = document.getElementById('userAvatar');
+    if (!user) {
+      // 게스트 모드: 헤더에 둘러보기 안내 표시
+      if (nameEl) nameEl.textContent = '둘러보기';
+      if (avatarEl) avatarEl.textContent = '👤';
+      return;
+    }
+    const name = getUserDisplayName(user);
+    if (nameEl) nameEl.textContent = name;
+    if (avatarEl) avatarEl.textContent = emailToInitial(user.email || name);
+  }
+
+  // ============== 사용법 가이드 모달 (Help) ==============
+  // 6페이지 슬라이드 형식. Step 3에선 함수만 정의, 이벤트 연결은 Step 4에서.
+
+  const TOTAL_HELP_PAGES = 6;
+  let currentHelpPage = 1;
+
+  function openHelpModal() {
+    currentHelpPage = 1;
+    renderHelpPage();
+    const bg = document.getElementById('helpModalBg');
+    if (bg) bg.classList.add('active');
+  }
+
+  function closeHelpModal() {
+    const bg = document.getElementById('helpModalBg');
+    if (bg) bg.classList.remove('active');
+    // 본 적 있음을 기록 (다시 자동 표시 안 되게)
+    try {
+      const key = currentUser ? `help_seen_${currentUser.id}` : 'help_seen_guest';
+      localStorage.setItem(key, '1');
+    } catch (_) { /* localStorage 차단 시 무시 */ }
+  }
+
+  // 첫 진입자에게만 자동 표시 (이미 본 적 있으면 안 띄움)
+  // 부팅 완료 시점에 호출
+  function showHelpIfFirstTime() {
+    try {
+      const key = currentUser ? `help_seen_${currentUser.id}` : 'help_seen_guest';
+      if (!localStorage.getItem(key)) {
+        // 약간 지연 (다른 모달들과 겹침 방지)
+        setTimeout(() => openHelpModal(), 600);
+      }
+    } catch (_) { /* localStorage 차단 시 자동 표시 안 함 */ }
+  }
+
+  function renderHelpPage() {
+    // 페이지 슬라이드 위치 이동
+    const pages = document.getElementById('helpPages');
+    if (pages) {
+      pages.style.transform = `translateX(-${(currentHelpPage - 1) * 100}%)`;
+    }
+    // 점 인디케이터 활성화
+    document.querySelectorAll('.help-dot').forEach(dot => {
+      dot.classList.toggle('active', parseInt(dot.dataset.page) === currentHelpPage);
+    });
+    // 이전/다음 버튼 활성화
+    const prev = document.getElementById('helpPrev');
+    const next = document.getElementById('helpNext');
+    if (prev) prev.style.visibility = currentHelpPage === 1 ? 'hidden' : 'visible';
+    if (next) next.style.visibility = currentHelpPage === TOTAL_HELP_PAGES ? 'hidden' : 'visible';
+    // 마지막 페이지에선 "시작하기" 버튼 강조, 아니면 "건너뛰기"
+    const skip = document.getElementById('helpSkip');
+    if (skip) {
+      skip.textContent = currentHelpPage === TOTAL_HELP_PAGES ? '시작하기 →' : '건너뛰기';
+    }
+  }
+
+  function helpNextPage() {
+    if (currentHelpPage < TOTAL_HELP_PAGES) {
+      currentHelpPage++;
+      renderHelpPage();
+    }
+  }
+
+  function helpPrevPage() {
+    if (currentHelpPage > 1) {
+      currentHelpPage--;
+      renderHelpPage();
+    }
+  }
+
+  // 이벤트 리스너 등록 — 부팅 시 한 번 호출
+  function initHelp() {
+    // 헤더 [?] 버튼 클릭 → 모달 열기
+    const btn = document.getElementById('btnHelp');
+    if (btn) btn.addEventListener('click', openHelpModal);
+
+    // 모달 닫기 (✕ 버튼)
+    const closeBtn = document.getElementById('helpModalClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeHelpModal);
+
+    // 하단 [시작하기 →] / [건너뛰기] 버튼
+    const skip = document.getElementById('helpSkip');
+    if (skip) skip.addEventListener('click', closeHelpModal);
+
+    // 페이지 넘김 ◀ ▶ 버튼
+    const prev = document.getElementById('helpPrev');
+    const next = document.getElementById('helpNext');
+    if (prev) prev.addEventListener('click', helpPrevPage);
+    if (next) next.addEventListener('click', helpNextPage);
+
+    // 점 인디케이터 클릭으로 바로 이동
+    document.querySelectorAll('.help-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        currentHelpPage = parseInt(dot.dataset.page);
+        renderHelpPage();
+      });
+    });
+
+    // 배경 클릭으로 닫기
+    const bg = document.getElementById('helpModalBg');
+    if (bg) {
+      bg.addEventListener('click', (e) => {
+        if (e.target === bg) closeHelpModal();
+      });
+    }
+
+    // 키보드: 모달이 열려 있을 때만 ←/→/Esc 작동
+    document.addEventListener('keydown', (e) => {
+      if (!bg || !bg.classList.contains('active')) return;
+      if (e.key === 'ArrowLeft') helpPrevPage();
+      else if (e.key === 'ArrowRight') helpNextPage();
+      else if (e.key === 'Escape') closeHelpModal();
+    });
+  }
+
+  // ============== 도구 탭 (블로그 작성 도구) ==============
+  // 현재는 모든 도구가 '준비 중' 상태. 클릭 시 안내 토스트만.
+  // 실제 도구 페이지가 만들어지면 .disabled 클래스를 제거하고
+  // href="/tools/xxx.html"로 바꾸면 그대로 이동 가능.
+  function initTools() {
+    document.querySelectorAll('.tool-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        // 비활성 카드: 클릭 무효 + 안내
+        if (card.classList.contains('disabled')) {
+          e.preventDefault();
+          const name = card.querySelector('.tool-card-name')?.textContent || '도구';
+          showToast(`${name}는 곧 추가될 예정이에요`, 'success');
+        }
+        // 활성 카드는 기본 동작(href 이동) 그대로 실행
+      });
+    });
+  }
+
+  // 푸터 카피라이트 연도 자동 갱신
+  // 시작 연도(START_YEAR)와 현재 연도가 같으면 "2026"
+  // 다음 해부터는 "2026 - 2027"처럼 범위로 표시
+  function updateFooterYear() {
+    const START_YEAR = 2026;
+    const nowYear = new Date().getFullYear();
+    const yearEl = document.getElementById('footerYear');
+    if (!yearEl) return;
+    yearEl.textContent = (nowYear > START_YEAR)
+      ? `${START_YEAR} - ${nowYear}`
+      : `${START_YEAR}`;
+  }
+
+  // 게스트 모드일 때 UI 요소 일부 조정 (안내 메시지 등)
+  // 부팅 시 + 로그인/로그아웃으로 모드 전환 시 호출됨
+  function applyGuestModeUI() {
+    // 1. 상단 배너 (게스트 모드에서만 표시)
+    const banner = document.getElementById('guestBanner');
+    if (banner) banner.style.display = isGuestMode ? '' : 'none';
+
+    // 2. 헤더: 게스트면 userInfo 숨기고 [로그인] 버튼 노출
+    const userInfo = document.getElementById('userInfo');
+    const headerLogin = document.getElementById('btnHeaderLogin');
+    if (userInfo) userInfo.style.display = isGuestMode ? 'none' : '';
+    if (headerLogin) headerLogin.style.display = isGuestMode ? '' : 'none';
+
+    // 3. 업로드 영역 안내 메시지
+    const uploadHint = document.querySelector('.upload-hint');
+    if (uploadHint) {
+      if (isGuestMode) {
+        uploadHint.innerHTML =
+          '🎭 <strong>둘러보기 모드</strong> · 어떤 이미지를 올려도 샘플 추출 결과가 나타나요' +
+          '<br><span style="font-size: 11px; opacity: 0.85;">샘플은 실제 업체가 아닌 임의 정보예요</span>';
+        uploadHint.style.color = 'var(--mustard)';
+      } else {
+        uploadHint.innerHTML =
+          '클릭 · 끌어다 놓기<span class="pc-only"> · <kbd>Ctrl</kbd>+<kbd>V</kbd>로 붙여넣기</span> · AI가 자동으로 정보를 추출해요';
+        uploadHint.style.color = '';
+      }
+    }
+
+    // 4. 지도 안내바: 로그인 모드로 전환되면 항상 숨김
+    // (게스트 모드에서 지도 탭에 있을 때만 보이게 — 표시는 switchView가 담당)
+    const mapNotice = document.getElementById('guestMapNotice');
+    if (mapNotice && !isGuestMode) {
+      mapNotice.style.display = 'none';
+    }
+
+    // 5. 설정 모달 — 계정 섹션 (로그아웃↔로그인, 회원탈퇴 숨김)
+    const btnLogout = document.getElementById('btnLogout');
+    const btnDeleteAccount = document.getElementById('btnDeleteAccount');
+    if (btnLogout) {
+      if (isGuestMode) {
+        btnLogout.innerHTML = '🔑 로그인';
+        btnLogout.classList.add('btn-primary');
+        btnLogout.classList.remove('btn-ghost');
+      } else {
+        btnLogout.innerHTML = '🚪 로그아웃';
+        btnLogout.classList.add('btn-ghost');
+        btnLogout.classList.remove('btn-primary');
+      }
+    }
+    if (btnDeleteAccount) {
+      btnDeleteAccount.style.display = isGuestMode ? 'none' : '';
+    }
+  }
+
+  // 게스트 모드용 설정 모달 콘텐츠 채우기
+  // 플랜/AI사용량/카톡알림 섹션을 "로그인 필요" 안내로 대체
+  function applyGuestSettingsContent() {
+    // 플랜 카드 → 무료 플랜 UI + 업그레이드 버튼 비활성화 안내
+    const planNameEl = document.getElementById('planName');
+    const planBadgeEl = document.getElementById('planBadge');
+    const planBenefitsEl = document.getElementById('planBenefits');
+    const upgradeArea = document.getElementById('planUpgradeArea');
+    const activeArea = document.getElementById('planActiveArea');
+    const planCard = document.getElementById('planCard');
+
+    if (planCard && planNameEl && planBadgeEl && planBenefitsEl) {
+      planCard.classList.remove('premium');
+      planNameEl.innerHTML = '🎭 둘러보기';
+      planBadgeEl.textContent = 'GUEST';
+      planBadgeEl.className = 'plan-badge free';
+      planBenefitsEl.innerHTML = `
+        <li><span class="lock">🔒</span><span style="opacity:0.8;">로그인하면 무료/프리미엄 플랜을 이용할 수 있어요</span></li>
+      `;
+      if (upgradeArea) {
+        upgradeArea.innerHTML = `
+          <button class="btn-upgrade" id="btnGuestSettingsLogin">🔑 카카오로 로그인하기</button>
+          <div class="beta-notice">
+            로그인 후 베타 프리미엄을 <strong>2026년 9월 30일까지 무료</strong>로 이용할 수 있어요
+          </div>
+        `;
+        upgradeArea.style.display = '';
+        // 새로 생성된 버튼에 이벤트 연결
+        const guestLoginBtn = document.getElementById('btnGuestSettingsLogin');
+        if (guestLoginBtn) {
+          guestLoginBtn.addEventListener('click', () => {
+            document.getElementById('settingsBg').classList.remove('active');
+            openLoginModal();
+          });
+        }
+      }
+      if (activeArea) activeArea.style.display = 'none';
+    }
+
+    // AI 사용량 표시 → 시뮬레이션 안내로
+    const aiUsageDisplay = document.getElementById('aiUsageDisplay');
+    if (aiUsageDisplay) {
+      aiUsageDisplay.innerHTML = '🎭 <strong>둘러보기 모드</strong> · AI 추출은 데모 결과로 시뮬레이션돼요';
+      aiUsageDisplay.className = 'ai-usage-display';
+    }
+
+    // 카톡 알림 섹션 → 로그인 필요 안내로
+    const notifyCard = document.querySelector('.notify-status-card');
+    if (notifyCard) {
+      notifyCard.innerHTML = `
+        <div class="notify-status-text">
+          <span>🔒 로그인 후 사용할 수 있어요</span>
+        </div>
+      `;
+      notifyCard.classList.remove('enabled');
+    }
+  }
+
+  function showLogin() {
+    document.getElementById('loginScreen').classList.add('active');
+    document.getElementById('mainApp').style.display = 'none';
+  }
+
+  function showApp() {
+    document.getElementById('loginScreen').classList.remove('active');
+    document.getElementById('mainApp').style.display = '';
+  }
+
+  // ============== 유료 플랜 (Premium) ==============
+  // 구독 상태는 subscriptions 테이블에서 조회 (RLS로 본인 것만 읽기 가능)
+  // 활성화는 서버 API(/api/activate-premium)를 통해서만 — 클라이언트 직접 쓰기 차단
+
+  let currentSubscription = null; // { plan, status, expires_at, source }
+
+  // 구독이 유효한 프리미엄인지 판별
+  function isSubscriptionPremium(sub) {
+    if (!sub) return false;
+    if (sub.plan !== 'premium' || sub.status !== 'active') return false;
+    if (sub.expires_at && Date.now() > new Date(sub.expires_at).getTime()) return false;
+    return true;
+  }
+
+  // 구독 정보 조회
+  async function fetchSubscription() {
+    if (!currentUser) { currentSubscription = null; return; }
+    try {
+      const { data } = await sb.from('subscriptions')
+        .select('plan, status, expires_at, source')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      currentSubscription = data || null;
+    } catch (e) {
+      console.warn('구독 정보 조회 실패:', e);
+      currentSubscription = null;
+    }
+  }
+
+  // 만료일을 'YYYY년 M월 D일' 형식으로
+  function formatExpireDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  }
+
+  // 플랜 카드 UI 갱신
+  function updatePlanUI() {
+    const card = document.getElementById('planCard');
+    const nameEl = document.getElementById('planName');
+    const badgeEl = document.getElementById('planBadge');
+    const benefitsEl = document.getElementById('planBenefits');
+    const upgradeArea = document.getElementById('planUpgradeArea');
+    const activeArea = document.getElementById('planActiveArea');
+    const activeInfo = document.getElementById('planActiveInfo');
+    if (!card || !nameEl || !badgeEl || !benefitsEl) return;
+
+    // 버튼 상태 초기화 (전환 후 다시 활성화)
+    const upgradeBtn = document.getElementById('btnUpgrade');
+    const downgradeBtn = document.getElementById('btnDowngrade');
+    if (upgradeBtn) { upgradeBtn.disabled = false; upgradeBtn.textContent = '⚡ 프리미엄 시작하기'; }
+    if (downgradeBtn) { downgradeBtn.disabled = false; downgradeBtn.textContent = '무료 플랜으로 전환'; }
+
+    const isPremium = isSubscriptionPremium(currentSubscription);
+
+    if (isPremium) {
+      card.classList.add('premium');
+      nameEl.innerHTML = '💎 프리미엄';
+      badgeEl.textContent = 'PREMIUM';
+      badgeEl.className = 'plan-badge premium';
+      benefitsEl.innerHTML = `
+        <li><span class="check">✓</span><span>AI 자동 추출 <strong>무제한</strong></span></li>
+        <li><span class="check">✓</span><span>체험단 일정 무제한 등록</span></li>
+        <li><span class="check">✓</span><span>향후 추가되는 프리미엄 기능 우선 이용</span></li>
+      `;
+      if (upgradeArea) upgradeArea.style.display = 'none';
+      if (activeArea) activeArea.style.display = '';
+      if (activeInfo) {
+        const expStr = formatExpireDate(currentSubscription.expires_at);
+        const isBeta = currentSubscription.source === 'beta_free';
+        activeInfo.innerHTML = isBeta
+          ? `🎉 베타 프리미엄 이용 중<br><span class="expire-date">${expStr}</span>까지 무료로 이용할 수 있어요`
+          : `💎 프리미엄 이용 중<br>${expStr ? `<span class="expire-date">${expStr}</span>까지` : ''}`;
+      }
+    } else {
+      card.classList.remove('premium');
+      nameEl.innerHTML = '🆓 무료';
+      badgeEl.textContent = 'FREE';
+      badgeEl.className = 'plan-badge free';
+      benefitsEl.innerHTML = `
+        <li><span class="check">✓</span><span>AI 자동 추출 하루 3회</span></li>
+        <li><span class="check">✓</span><span>체험단 일정 무제한 등록</span></li>
+        <li><span class="lock">🔒</span><span style="opacity:0.7;">AI 무제한 추출 — 프리미엄</span></li>
+      `;
+      if (upgradeArea) upgradeArea.style.display = '';
+      if (activeArea) activeArea.style.display = 'none';
+    }
+  }
+
+  // 프리미엄 신청 (서버 API 호출)
+  async function activatePremium() {
+    const btn = document.getElementById('btnUpgrade');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '신청 처리 중...';
+    }
+
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        showToast('세션이 만료되었습니다. 다시 로그인해주세요', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '⚡ 프리미엄 시작하기'; }
+        return;
+      }
+
+      const res = await fetch('/api/activate-premium', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        // 구독 정보 새로고침 후 UI 갱신
+        await fetchSubscription();
+        updatePlanUI();
+        // AI 사용량 표시도 갱신 (프리미엄이면 무제한 표시)
+        await fetchTodayUsage();
+        if (result.alreadyPremium) {
+          showToast('이미 프리미엄 이용 중이에요 💎', 'success');
+        } else {
+          showToast('프리미엄이 활성화되었어요! 🎉', 'success');
+        }
+      } else {
+        throw new Error(result.error || '알 수 없는 오류');
+      }
+    } catch (err) {
+      console.error('프리미엄 활성화 오류:', err);
+      showToast(`프리미엄 신청 실패: ${err.message}`, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '⚡ 프리미엄 시작하기'; }
+    }
+  }
+
+  // 프리미엄 해제 (무료 플랜으로 전환) — 베타 기간 셀프 해제용
+  async function deactivatePremium() {
+    if (!confirm('무료 플랜으로 전환하시겠어요?\n\nAI 자동 추출이 하루 3회로 제한됩니다.\n언제든 다시 프리미엄으로 전환할 수 있어요.')) {
+      return;
+    }
+
+    const btn = document.getElementById('btnDowngrade');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '처리 중...';
+    }
+
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        showToast('세션이 만료되었습니다. 다시 로그인해주세요', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '무료 플랜으로 전환'; }
+        return;
+      }
+
+      const res = await fetch('/api/deactivate-premium', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        await fetchSubscription();
+        updatePlanUI();
+        await fetchTodayUsage();
+        if (result.alreadyFree) {
+          showToast('이미 무료 플랜이에요', 'success');
+        } else {
+          showToast('무료 플랜으로 전환되었어요', 'success');
+        }
+      } else {
+        throw new Error(result.error || result.message || '알 수 없는 오류');
+      }
+    } catch (err) {
+      console.error('프리미엄 해제 오류:', err);
+      showToast(`전환 실패: ${err.message}`, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '무료 플랜으로 전환'; }
+    }
+  }
+
+  // ============== 카톡 알림 설정 (Kakao Notify) ==============
+  // localStorage 기반 상태 관리 (v3.x에서 실제 발송 기능 추가 시 서버 검증으로 업그레이드 예정)
+  // 키: notify_kakao_status_{userId} = 'enabled' | 'disabled'
+  //     notify_onboarding_{userId} = '1' (온보딩 노출 완료 표시)
+
+  function getNotifyKey(suffix) {
+    if (!currentUser) return null;
+    return `notify_${suffix}_${currentUser.id}`;
+  }
+
+  function getNotifyStatus() {
+    const key = getNotifyKey('kakao_status');
+    if (!key) return null;
+    return localStorage.getItem(key) || null;
+  }
+
+  function setNotifyStatus(status) {
+    const key = getNotifyKey('kakao_status');
+    if (!key) return;
+    if (status) localStorage.setItem(key, status);
+    else localStorage.removeItem(key);
+  }
+
+  function hasShownOnboarding() {
+    const key = getNotifyKey('onboarding');
+    if (!key) return false;
+    return localStorage.getItem(key) === '1';
+  }
+
+  function markOnboardingShown() {
+    const key = getNotifyKey('onboarding');
+    if (!key) return;
+    localStorage.setItem(key, '1');
+  }
+
+  function updateNotifyUI() {
+    const status = getNotifyStatus();
+    const card = document.getElementById('notifyStatusCard');
+    const icon = document.getElementById('notifyStatusIcon');
+    const label = document.getElementById('notifyStatusLabel');
+    const badge = document.getElementById('notifyStatusBadge');
+    const btn = document.getElementById('btnNotifyToggle');
+
+    if (!card || !label || !badge || !btn) return;
+
+    // 부팅/페이지 복귀 시 disabled 상태 항상 초기화 (bfcache 대응)
+    btn.disabled = false;
+
+    if (status === 'enabled') {
+      card.classList.add('enabled');
+      icon.textContent = '💬';
+      label.textContent = '카카오톡 알림';
+      badge.textContent = '켜짐';
+      badge.className = 'badge on';
+      btn.textContent = '끄기';
+      btn.classList.add('off-mode');
+    } else {
+      card.classList.remove('enabled');
+      icon.textContent = '🔕';
+      label.textContent = '카카오톡 알림';
+      badge.textContent = '꺼짐';
+      badge.className = 'badge off';
+      btn.textContent = '켜기';
+      btn.classList.remove('off-mode');
+    }
+  }
+
+  // 카카오 OAuth 재인증으로 talk_message 동의 받기
+  async function enableKakaoNotify(buttonEl) {
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      buttonEl.textContent = '카카오로 이동 중...';
+    }
+
+    // 동의 화면 강제 표시 (prompt=consent)
+    // 성공 시 localStorage를 'enabled'로 표시할 거라는 의도를 미리 기록
+    setNotifyStatus('pending_enable');
+
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: {
+        redirectTo: window.location.origin,
+        scopes: 'profile_nickname,profile_image,account_email,talk_message',
+        queryParams: { prompt: 'consent' }
+      }
+    });
+
     if (error) {
-      let reason = "";
-      try { const b = await error.context.json(); reason = b && b.reason; } catch (_) {}
-      if (reason === "not_premium") { show($("premiumGate")); return; }
-      if (reason === "login_required") { show($("authGate")); return; }
-      showBootError("도구를 불러오지 못했어요. 잠시 후 다시 시도하거나 새로고침해 주세요.");
-      return;
+      setNotifyStatus(null);
+      if (buttonEl) {
+        buttonEl.disabled = false;
+        buttonEl.textContent = '켜기';
+      }
+      showToast('카카오 동의 요청 실패: ' + error.message, 'error');
     }
-    if (!data || !data.ok || !data.token) { showBootError("토큰 발급에 실패했어요. 잠시 후 다시 시도해 주세요."); return; }
-    setupInstall(data.token);
+    // 성공 시 페이지가 카카오로 리디렉트됨
   }
 
-  // ====== 초기화: 라이브러리 → 클라이언트 → 로그인 세션 → 토큰 ======
-  async function init() {
-    if (isMobile()) { show($("mobileGate")); return; }
-    if (!window.supabase || !window.supabase.createClient) {
-      showBootError("로그인 모듈을 불러오지 못했어요. 새로고침하거나, 광고/추적 차단 확장 프로그램을 잠시 끄고 다시 시도해 주세요.");
+  function disableKakaoNotify() {
+    if (!confirm('카카오톡 알림을 끄시겠어요?\n\n카카오 계정 자체의 권한을 완전히 해제하려면\n카카오 계정 관리(accounts.kakao.com)에서 추가로 해제해주세요.')) {
       return;
     }
-    try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
-    catch (e) { showBootError("초기화 오류: " + (e && e.message ? e.message : e)); return; }
-
-    let session = null;
-    try { session = (await sb.auth.getSession()).data.session; } catch (_) {}
-    if (!session) { show($("authGate")); return; }
-
-    loadToken();
+    setNotifyStatus('disabled');
+    updateNotifyUI();
+    showToast('카카오톡 알림을 껐어요');
   }
-  init();
+
+  function handleNotifyToggle() {
+    const status = getNotifyStatus();
+    if (status === 'enabled') {
+      disableKakaoNotify();
+    } else {
+      enableKakaoNotify(document.getElementById('btnNotifyToggle'));
+    }
+  }
+
+  // 온보딩 모달 표시 여부 결정
+  function showOnboardingIfNeeded() {
+    if (!currentUser) return;
+
+    // 'pending_enable' 상태(OAuth 후 막 돌아온 상태)는 항상 'enabled'로 승격
+    // hasShownOnboarding 여부와 무관하게 처리되어야 함 (설정 메뉴에서 켜는 경우 포함)
+    if (getNotifyStatus() === 'pending_enable') {
+      setNotifyStatus('enabled');
+      markOnboardingShown();
+      updateNotifyUI();
+      showToast('카카오톡 알림이 켜졌어요 🔔', 'success');
+      return;
+    }
+
+    // 이미 온보딩을 본 적 있으면 모달 표시 X
+    if (hasShownOnboarding()) return;
+
+    // 첫 가입자에게 온보딩 모달 표시
+    setTimeout(() => {
+      const bg = document.getElementById('onboardingBg');
+      if (bg) bg.classList.add('active');
+    }, 800);
+  }
+
+  // bfcache로 돌아온 경우 (카카오에서 뒤로가기 등) 멈춰있는 상태 복구
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      // pending_enable이 남아있으면 취소로 간주하고 정리
+      if (getNotifyStatus() === 'pending_enable') {
+        setNotifyStatus(null);
+      }
+      updateNotifyUI();
+    }
+  });
+
+  function closeOnboarding() {
+    const bg = document.getElementById('onboardingBg');
+    if (bg) bg.classList.remove('active');
+  }
+
+  async function signOut() {
+    if (!confirm('로그아웃하시겠어요?')) return;
+    await sb.auth.signOut();
+    // 데이터 비우기
+    entries = [];
+    currentUser = null;
+    // 로그인 화면 대신 게스트 모드로 전환 (로그아웃 후에도 사이트는 계속 둘러볼 수 있음)
+    isGuestMode = true;
+    await loadAll();
+    renderActiveList();
+    renderStats();
+    updateUserUI(null);
+    applyGuestModeUI(); // 업로드 영역 안내 메시지 갱신
+    showToast('로그아웃했어요');
+  }
+
+  // ============== 회원 탈퇴 ==============
+  async function deleteAccount() {
+    // 1단계: 1차 안내 및 확인
+    const firstConfirm = confirm(
+      '⚠️ 회원 탈퇴 안내\n\n' +
+      '• 모든 일정 데이터가 영구 삭제됩니다\n' +
+      '• 카카오 앱 연결이 해제됩니다\n' +
+      '• 이 작업은 되돌릴 수 없습니다\n\n' +
+      '계속하시겠습니까?'
+    );
+    if (!firstConfirm) return;
+
+    // 2단계: 텍스트 입력 확인 (실수 방지)
+    const text = prompt('탈퇴를 진행하시려면 "탈퇴"를 입력해주세요');
+    if (text !== '탈퇴') {
+      if (text !== null) showToast('입력이 일치하지 않아 취소되었습니다', 'error');
+      return;
+    }
+
+    // 3단계: 버튼 비활성화 + 로딩
+    const btn = document.getElementById('btnDeleteAccount');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '처리 중...';
+    }
+    setLoading(true, '회원 탈퇴 처리 중...');
+
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        setLoading(false);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🗑️ 회원탈퇴';
+        }
+        showToast('세션이 만료되었습니다. 다시 로그인해주세요', 'error');
+        return;
+      }
+
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await res.json();
+      setLoading(false);
+
+      if (res.ok) {
+        // 클라이언트 측 정리
+        await sb.auth.signOut();
+        entries = [];
+        currentUser = null;
+        alert('회원 탈퇴가 완료되었습니다.\n그동안 이용해주셔서 감사합니다.');
+        location.href = '/';
+      } else {
+        throw new Error(result.error || '알 수 없는 오류');
+      }
+    } catch (err) {
+      console.error('탈퇴 오류:', err);
+      setLoading(false);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '🗑️ 회원탈퇴';
+      }
+      showToast(`탈퇴 처리 실패: ${err.message}`, 'error');
+    }
+  }
+
+  // ============== 로그인 화면 이벤트 ==============
+  // 카카오 로그인 단독 지원
+  // talk_message scope: 카카오톡 '나에게 메시지' 발송용 (체험단 마감/방문일 알림)
+  // 카카오 콘솔 > 카카오 로그인 > 동의항목 > 접근권한 > 카카오톡 메시지 전송 = 선택 동의
+
+  // 카카오 OAuth 호출 (로그인 화면/모달 공통)
+  async function triggerKakaoLogin(buttonEl) {
+    if (buttonEl) {
+      buttonEl.disabled = true;
+      const original = buttonEl.dataset.originalText || buttonEl.textContent;
+      buttonEl.dataset.originalText = original;
+      buttonEl.textContent = '카카오로 이동 중...';
+    }
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: {
+        redirectTo: window.location.origin,
+        scopes: 'profile_nickname,profile_image,account_email,talk_message'
+      }
+    });
+    if (error) {
+      showToast('카카오 로그인 실패: ' + error.message, 'error');
+      if (buttonEl) {
+        buttonEl.disabled = false;
+        buttonEl.textContent = buttonEl.dataset.originalText || buttonEl.textContent;
+      }
+    }
+    // 성공 시 카카오로 리디렉트
+  }
+
+  // 로그인 모달 열기/닫기
+  function openLoginModal() {
+    const bg = document.getElementById('loginModalBg');
+    if (bg) bg.classList.add('active');
+  }
+  function closeLoginModal() {
+    const bg = document.getElementById('loginModalBg');
+    if (bg) bg.classList.remove('active');
+  }
+
+  function initLogin() {
+    // 기존 로그인 화면(.login-screen)의 카카오 버튼
+    const loginKakao = document.getElementById('loginKakao');
+    if (loginKakao) {
+      loginKakao.addEventListener('click', (e) => triggerKakaoLogin(e.currentTarget));
+    }
+
+    // 로그인 모달 (게스트 모드용)
+    const modalKakao = document.getElementById('btnModalLoginKakao');
+    if (modalKakao) {
+      modalKakao.addEventListener('click', (e) => triggerKakaoLogin(e.currentTarget));
+    }
+    const modalClose = document.getElementById('loginModalClose');
+    if (modalClose) {
+      modalClose.addEventListener('click', closeLoginModal);
+    }
+    // 배경 클릭으로 모달 닫기
+    const modalBg = document.getElementById('loginModalBg');
+    if (modalBg) {
+      modalBg.addEventListener('click', (e) => {
+        if (e.target === modalBg) closeLoginModal();
+      });
+    }
+
+    // 헤더의 [로그인] 버튼 → 모달 열기
+    const headerLogin = document.getElementById('btnHeaderLogin');
+    if (headerLogin) {
+      headerLogin.addEventListener('click', openLoginModal);
+    }
+    // 배너의 [카카오로 시작하기] 버튼 → 모달 열기
+    const bannerLogin = document.getElementById('btnGuestBannerLogin');
+    if (bannerLogin) {
+      bannerLogin.addEventListener('click', openLoginModal);
+    }
+
+    // 푸터 [문의] — 문의 모달 열기
+    const footerContact = document.getElementById('footerContact');
+    if (footerContact) {
+      footerContact.addEventListener('click', (e) => {
+        e.preventDefault();
+        const bg = document.getElementById('contactModalBg');
+        if (bg) bg.classList.add('active');
+      });
+    }
+
+    // 문의 모달 — 이메일 복사 버튼
+    const contactCopyBtn = document.getElementById('contactCopyBtn');
+    if (contactCopyBtn) {
+      contactCopyBtn.addEventListener('click', async () => {
+        const email = document.getElementById('contactEmailText').textContent.trim();
+        let copied = false;
+        // 모던 Clipboard API 시도
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(email);
+            copied = true;
+          }
+        } catch (_) { /* 폴백 */ }
+        // 폴백: 임시 textarea (iOS Safari 등)
+        if (!copied) {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = email;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            copied = true;
+          } catch (_) { copied = false; }
+        }
+        if (copied) {
+          // 버튼 텍스트 일시 변경으로 시각 피드백
+          const original = contactCopyBtn.textContent;
+          contactCopyBtn.textContent = '✓ 복사됨';
+          contactCopyBtn.classList.add('copied');
+          setTimeout(() => {
+            contactCopyBtn.textContent = original;
+            contactCopyBtn.classList.remove('copied');
+          }, 1800);
+        } else {
+          showToast('복사에 실패했어요. 직접 복사해주세요', 'error');
+        }
+      });
+    }
+
+    // 문의 모달 닫기 (✕ 버튼, [닫기] 버튼)
+    // 배경 클릭으로는 닫히지 않음 — 사용자가 명시적으로 닫아야 함
+    const contactClose = document.getElementById('contactModalClose');
+    const contactCloseBtn = document.getElementById('contactCloseBtn');
+    function closeContactModal() {
+      const bg = document.getElementById('contactModalBg');
+      if (bg) bg.classList.remove('active');
+    }
+    if (contactClose) contactClose.addEventListener('click', closeContactModal);
+    if (contactCloseBtn) contactCloseBtn.addEventListener('click', closeContactModal);
+  }
+
+  // ============== Boot ==============
+  (async function() {
+    initLogin();
+    initHelp();
+    initTools();
+    initCalendar();
+    updateFooterYear();
+
+    let appInitialized = false;
+    let bootInProgress = false;
+
+    async function bootApp(user) {
+      // 동시 호출 방지
+      if (bootInProgress) {
+        console.warn('[BOOT] bootApp already in progress, skipping');
+        return;
+      }
+      bootInProgress = true;
+      try {
+        // user가 null이면 게스트 모드로 부팅
+        currentUser = user;
+        isGuestMode = !user;
+
+        updateUserUI(currentUser);
+        applyGuestModeUI(); // 게스트 모드일 때 안내 텍스트/UI 조정
+        showApp();
+
+        if (!appInitialized) {
+          try {
+            init();
+            appInitialized = true;
+          } catch (e) {
+            console.error('[BOOT] init() FAILED:', e);
+            alert('초기화 실패: ' + (e?.message || e));
+          }
+        }
+
+        try {
+          await loadAll();
+        } catch (e) {
+          console.error('[BOOT] loadAll FAILED:', e);
+        }
+        renderActiveList();
+        renderStats();
+
+        // 게스트 모드는 구독/사용량/알림 서버 호출 모두 스킵 (로그인 안 됨)
+        if (!isGuestMode) {
+          // 구독 정보 먼저 가져온 뒤 AI 사용량 표시 (프리미엄이면 무제한 표시)
+          await fetchSubscription();
+          updatePlanUI();
+          fetchTodayUsage().catch(e => console.warn('Usage fetch failed:', e));
+
+          // 카톡 알림 설정 UI 갱신 + 온보딩 모달 표시 여부 결정
+          updateNotifyUI();
+          showOnboardingIfNeeded();
+        }
+
+        // 처음 보는 사용자에게 사용법 자동 표시 (로그인/게스트 모두)
+        showHelpIfFirstTime();
+
+        // URL ?view=tools 로 들어온 경우 (도구 페이지에서 '도구 목록'으로 돌아온 경우)
+        // 도구 탭을 열어줌. 게스트 차단 우회 위해 switchView 대신 직접 전환.
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const wantView = params.get('view');
+          if (wantView === 'tools') {
+            // 탭 활성화
+            document.querySelectorAll('.tab').forEach(t => {
+              t.classList.toggle('active', t.dataset.view === 'tools');
+            });
+            // 뷰 전환
+            ['active','map','completed','tools','news'].forEach(v => {
+              const el = document.getElementById('view' + v.charAt(0).toUpperCase() + v.slice(1));
+              if (el) el.style.display = (v === 'tools') ? '' : 'none';
+            });
+            currentView = 'tools';
+            // 주소창에서 쿼리 제거 (새로고침/뒤로가기 시 깔끔)
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        } catch (e) { /* 파라미터 처리 실패 무시 */ }
+      } finally {
+        bootInProgress = false;
+      }
+    }
+
+    // 인증 상태 변화 감지 (등록 시 INITIAL_SESSION 이벤트도 한 번 자동 발생)
+    // IMPORTANT: Supabase의 알려진 이슈로, 이 콜백 안에서 직접 await sb.from(...)을 호출하면
+    // 인증 토큰 갱신과 쿼리 검증이 서로 대기하다 deadlock이 발생함.
+    // queueMicrotask로 별도 마이크로태스크로 분리해야 안전함.
+    sb.auth.onAuthStateChange((event, session) => {
+      queueMicrotask(async () => {
+        try {
+          if (session?.user) {
+            // 로그인 상태: 본인 데이터로 부팅
+            await bootApp(session.user);
+          } else {
+            // 비로그인: 로그인 화면 대신 게스트 모드로 부팅
+            currentUser = null;
+            await bootApp(null);
+          }
+        } catch (e) {
+          console.error('[BOOT] authStateChange handler failed:', e);
+        }
+      });
+    });
+  })();
+})();
 </script>
+
+</div><!-- /mainApp -->
+
 </body>
 </html>
