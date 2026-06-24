@@ -148,6 +148,16 @@
   </div>
 </div>
 
+<!-- ============== 모바일 안내 (PC 전용) ============== -->
+<div class="auth-gate hidden" id="mobileGate">
+  <div class="auth-gate-inner">
+    <span class="auth-gate-badge">💻 PC 전용</span>
+    <div class="auth-gate-title">PC에서 이용해 주세요</div>
+    <p class="auth-gate-desc">이 도구는 PC(컴퓨터) 브라우저의 북마크바에 설치해서, 네이버 블로그 <b>PC 관리 페이지</b>에서 실행돼요. 모바일에서는 설치도 실행도 되지 않아요.<br><br>컴퓨터에서 체험단 매니저에 접속해 이 페이지를 다시 열어 주세요.</p>
+    <a href="/" class="auth-gate-btn">체험단 매니저 홈</a>
+  </div>
+</div>
+
 <!-- ============== 메인 (설치) ============== -->
 <main class="tool-main hidden" id="toolMain">
   <div class="panel">
@@ -243,6 +253,16 @@
   const show = (el) => el.classList.remove("hidden");
   function showBootError(msg) { $("bootErrorText").textContent = msg; show($("bootError")); }
 
+  // 이 도구는 PC 북마크바 + 네이버 PC 관리페이지가 필요 → 모바일 미지원
+  function isMobile() {
+    try {
+      const uad = navigator.userAgentData;
+      if (uad && typeof uad.mobile === "boolean" && uad.mobile) return true;
+    } catch (_) {}
+    const ua = navigator.userAgent || "";
+    return /Android|iPhone|iPod|Mobile|Opera Mini|IEMobile|BlackBerry|webOS|Windows Phone/i.test(ua);
+  }
+
   let toastTimer;
   function toast(msg, kind) {
     const t = $("toast");
@@ -318,6 +338,7 @@
 
   // ====== 초기화: 라이브러리 → 클라이언트 → 로그인 세션 → 토큰 ======
   async function init() {
+    if (isMobile()) { show($("mobileGate")); return; }
     if (!window.supabase || !window.supabase.createClient) {
       showBootError("로그인 모듈을 불러오지 못했어요. 새로고침하거나, 광고/추적 차단 확장 프로그램을 잠시 끄고 다시 시도해 주세요.");
       return;
