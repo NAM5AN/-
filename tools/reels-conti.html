@@ -13,7 +13,6 @@
   /* ============================================
      reels-conti.html (릴스 콘티 생성기)
      - 다른 도구와 동일한 톤: base.css 토큰 + 인라인 스타일
-     - [substep 1] 구조 + 스타일 (JS는 다음 단계)
      ============================================ */
 
   body { background: var(--bg); min-height: 100vh; overflow-x: hidden; }
@@ -137,6 +136,12 @@
   .ai-usage-mini strong { color: var(--terra); font-weight: 600; }
   .ai-usage-mini.exhausted strong { color: var(--rose); }
 
+  /* ---- 프리미엄 게이트 안내 ---- */
+  .premium-gate { margin-top: 14px; background: rgba(194,84,43,0.07); border: 1px solid var(--terra-soft); border-radius: 12px; padding: 14px 16px; text-align: center; }
+  .premium-gate p { margin: 0 0 8px; font-size: 13.5px; color: var(--ink); line-height: 1.55; word-break: keep-all; }
+  .premium-gate-cta { display: inline-block; font-size: 13px; font-weight: 700; color: var(--terra); text-decoration: none; }
+  .premium-gate-cta:hover { text-decoration: underline; }
+
   /* ---- 결과 ---- */
   .results { max-width: 720px; margin: 26px auto 0; padding: 0 20px; }
   .results-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -256,8 +261,7 @@
 </div>
 
 <!-- ============== 메인 작업 영역 ============== -->
-<!-- [substep 1] 미리보기를 위해 보이게 둠 — 부팅 단계에서 hidden + 세션 토글 적용 -->
-<main class="tool-main" id="toolMain">
+<main class="tool-main hidden" id="toolMain">
   <div class="panel">
     <div class="panel-title">🎬 릴스 콘티 만들기</div>
 
@@ -297,19 +301,19 @@
     <!-- 2. 상호명 -->
     <div class="field-group">
       <label class="field-group-label" for="brandInput">상호명</label>
-      <input type="text" id="brandInput" placeholder="예) 하누야 부천점" />
+      <input type="text" id="brandInput" placeholder="예) 체험단 매니저" />
     </div>
 
     <!-- 3. 지역 -->
     <div class="field-group">
       <label class="field-group-label" for="locationInput">지역</label>
-      <input type="text" id="locationInput" placeholder="예) 부천역" />
+      <input type="text" id="locationInput" placeholder="예) 온라인" />
     </div>
 
     <!-- 4. 제공 내용 -->
     <div class="field-group">
       <label class="field-group-label" for="offerInput">제공 내용</label>
-      <input type="text" id="offerInput" placeholder="예) 한우 2인 식사권" />
+      <input type="text" id="offerInput" placeholder="예) 프리미엄 1개월 이용권" />
     </div>
 
     <!-- 5. 강조 포인트 (+ AI 추천) -->
@@ -318,14 +322,14 @@
         <label class="field-group-label" for="pointsInput" style="margin-bottom:0;">강조 포인트</label>
         <button class="btn-ai-mini" id="btnAiPoints" type="button">✨ AI 추천 💎</button>
       </div>
-      <input type="text" id="pointsInput" placeholder="예) 고기 질, 분위기, 데이트" />
+      <input type="text" id="pointsInput" placeholder="예) AI 일정 관리, 자동 등록, 편리함" />
       <p class="field-helper">쉼표로 구분해서 적어 주세요.</p>
     </div>
 
     <!-- 6. 필수 미션 -->
     <div class="field-group">
       <label class="field-group-label" for="missionInput">필수 미션</label>
-      <textarea id="missionInput" placeholder="예) 릴스 15초 이상, 계정 태그, 위치 태그, 해시태그 5개"></textarea>
+      <textarea id="missionInput" placeholder="예) 릴스 15초 이상, 계정 태그, 해시태그 5개"></textarea>
     </div>
 
     <!-- 7. 톤 -->
@@ -354,6 +358,10 @@
     <button class="btn-generate" id="btnGenerate">🎬 콘티 만들기</button>
     <p class="field-error hidden" id="genError" style="text-align:center;"></p>
     <p class="ai-usage-mini hidden" id="usageMini"></p>
+    <div class="premium-gate hidden" id="premiumGate">
+      <p id="premiumGateText"></p>
+      <a href="/?open=settings" class="premium-gate-cta">설정에서 프리미엄 켜기 →</a>
+    </div>
   </div>
 </main>
 
@@ -387,7 +395,345 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- [substep 2~3] 여기에 JS(불러오기·자동채움·생성·렌더)와 이벤트·부팅이 들어갑니다. -->
+<script>
+  // ====== 설정 ======
+  const SUPABASE_URL = "https://wvwoqqfizgbhvdzlqscc.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU";
+  const FN_GENERATE = "generate-reels";
+  const FN_AUTOFILL = "reels-autofill";
+  const ADMIN_USER_IDS = ["00712584-e37a-46c3-ac31-387f73b6523c"];
+  const PREMIUM_DURATIONS = [30, 60];
+
+  // 업종별 촬영 체크리스트 (정적 — AI 안 씀)
+  const CHECKLISTS = {
+    "맛집": ["매장 외관/간판","입구","내부 분위기","메뉴판","기본 상차림","대표 메뉴 클로즈업","조리 장면","한입 장면","전체 테이블샷","위치 태그용 주변 컷","마무리 빈 접시/만족 컷"],
+    "카페": ["외관","입구 감성 컷","주문대","메뉴판","디저트 쇼케이스","음료 제조 장면","음료+디저트 테이블샷","창가/좌석 분위기","포토존","컵홀더/영수증 디테일"],
+    "숙소": ["외관","로비","객실 문 여는 장면","침대","욕실","어메니티","창밖 뷰","조식","부대시설","체크아웃 전 정리 컷"],
+    "뷰티": ["매장 외관","상담 장면","시술 공간","시술 과정 일부","결과 컷","주의사항 안내","마무리 총평 컷"],
+    "제품": ["택배 개봉(언박싱)","구성품 펼치기","제품 디테일","사용 장면","장점 보여주기","보관/휴대 모습","추천 대상 마무리"],
+    "전시": ["외관/입구","티켓/안내","대표 작품·공간","디테일 컷","관람 동선","포토존","인상적인 순간","마무리 총평"]
+  };
+
+  // ====== 상태 ======
+  let sb = null, me = null, isPremium = false;
+  let category = "맛집", tone = "자연스러운 후기형", duration = 15;
+  let allCampaigns = [];
+  let currentCopy = { conti: "", subs: "", caption: "" };
+
+  // ====== 엘리먼트 ======
+  const $ = (id) => document.getElementById(id);
+  const elBootError = $("bootError"), elBootErrorText = $("bootErrorText");
+  const elAuthGate = $("authGate"), elToolMain = $("toolMain");
+  const elLoadStatusChips = $("loadStatusChips"), elCampaignSelect = $("campaignSelect");
+  const elBtnAiFill = $("btnAiFill"), elBtnAiPoints = $("btnAiPoints");
+  const elCategoryChips = $("categoryChips"), elToneChips = $("toneChips"), elLenPresets = $("lenPresets");
+  const elBrand = $("brandInput"), elLocation = $("locationInput"), elOffer = $("offerInput");
+  const elPoints = $("pointsInput"), elMission = $("missionInput");
+  const elBtnGenerate = $("btnGenerate"), elGenError = $("genError"), elUsageMini = $("usageMini");
+  const elPremiumGate = $("premiumGate"), elPremiumGateText = $("premiumGateText");
+  const elResultsWrap = $("resultsWrap"), elResultTabs = $("resultTabs"), elBtnRedo = $("btnRedo");
+  const elResultsLoadingWrap = $("resultsLoadingWrap"), elToast = $("toast");
+  const PANELS = { conti: $("panel-conti"), subs: $("panel-subs"), caption: $("panel-caption"), check: $("panel-check"), mission: $("panel-mission") };
+
+  // ====== 유틸 ======
+  function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function toast(msg, type){
+    elToast.textContent = msg;
+    elToast.className = "toast show" + (type ? " " + type : "");
+    setTimeout(() => { elToast.className = "toast" + (type ? " " + type : ""); }, 1800);
+  }
+  function showErr(el, msg){ el.textContent = msg; el.classList.remove("hidden"); }
+  function hideErr(el){ el.classList.add("hidden"); }
+  function showBootError(msg){
+    elBootErrorText.textContent = msg;
+    elBootError.classList.remove("hidden");
+    elAuthGate.classList.add("hidden");
+    elToolMain.classList.add("hidden");
+  }
+  function showPremiumGate(msg){
+    elPremiumGateText.textContent = msg || "프리미엄 기능이에요. 베타 기간엔 무료로 켤 수 있어요.";
+    elPremiumGate.classList.remove("hidden");
+    elPremiumGate.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  // ====== 프리미엄 판별 (extract.js 로직과 동일) ======
+  function isAdminUser(user){
+    if (!user) return false;
+    if (user.app_metadata && user.app_metadata.is_admin === true) return true;
+    return ADMIN_USER_IDS.includes(user.id);
+  }
+  function isPremiumActive(sub){
+    if (!sub) return false;
+    if (sub.plan !== "premium") return false;
+    if (sub.status !== "active") return false;
+    if (sub.expires_at && Date.now() > new Date(sub.expires_at).getTime()) return false;
+    return true;
+  }
+  async function detectPremium(user){
+    if (isAdminUser(user)) return true;
+    try {
+      const { data } = await sb.from("subscriptions").select("plan, status, expires_at").eq("user_id", user.id).maybeSingle();
+      return isPremiumActive(data);
+    } catch (_) { return false; }
+  }
+
+  // ====== Edge Function 호출 (게이트/에러 본문까지 안전하게 파싱) ======
+  async function invokeFn(fn, body){
+    const { data, error } = await sb.functions.invoke(fn, { body });
+    if (error) {
+      let payload = null;
+      try { if (error.context && typeof error.context.json === "function") payload = await error.context.json(); } catch (_) {}
+      return payload || { ok: false, error: "요청에 실패했어요. 잠시 후 다시 시도해 주세요." };
+    }
+    return data || { ok: false, error: "응답이 비어 있어요." };
+  }
+
+  // ====== 칩/프리셋 선택 ======
+  function setActive(container, el){
+    [...container.children].forEach(c => c.classList.remove("active"));
+    el.classList.add("active");
+  }
+  function setCategory(cat){
+    const btn = [...elCategoryChips.children].find(b => b.dataset.cat === cat);
+    if (btn) { setActive(elCategoryChips, btn); category = cat; }
+  }
+
+  // ====== 불러오기 (entries) ======
+  async function loadCampaigns(){
+    try {
+      const { data, error } = await sb.from("entries")
+        .select("id, store_name, region, content, completed")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      allCampaigns = data || [];
+    } catch (_) { allCampaigns = []; }
+    renderCampaignOptions(currentStatus());
+  }
+  function currentStatus(){
+    const active = elLoadStatusChips.querySelector(".chip.active");
+    return active ? active.dataset.status : "active";
+  }
+  function renderCampaignOptions(status){
+    const list = allCampaigns.filter(c => status === "all" ? true : (status === "completed" ? !!c.completed : !c.completed));
+    const opts = list.map(c =>
+      '<option value="' + esc(String(c.id)) + '">' + esc(c.store_name || "(이름 없음)") + (c.region ? " · " + esc(c.region) : "") + "</option>"
+    ).join("");
+    elCampaignSelect.innerHTML = '<option value="">체험단을 선택하면 정보를 채워드려요</option>' + opts;
+  }
+  function fillFromCampaign(id){
+    const c = allCampaigns.find(x => String(x.id) === String(id));
+    if (!c) return;
+    if (c.store_name) elBrand.value = c.store_name;
+    if (c.region) elLocation.value = c.region;
+    if (c.content) elOffer.value = c.content;
+    toast("불러왔어요", "success");
+  }
+
+  // ====== AI 자동 채움 / 추천 (reels-autofill, 프리미엄) ======
+  function aiBody(){
+    return { brand_name: elBrand.value.trim(), location: elLocation.value.trim(), category: category };
+  }
+  function setBusy(btn, on, busyText){
+    btn.disabled = on;
+    if (on) { btn.dataset.label = btn.textContent; btn.textContent = busyText || "찾는 중…"; }
+    else if (btn.dataset.label) { btn.textContent = btn.dataset.label; }
+  }
+  async function onAiFill(){
+    if (!isPremium) { showPremiumGate("AI 자동 채움은 프리미엄 기능이에요. 베타 기간엔 무료로 켤 수 있어요."); return; }
+    if (!elBrand.value.trim() && !elLocation.value.trim()) { toast("상호명이나 지역을 먼저 넣어 주세요.", "error"); return; }
+    setBusy(elBtnAiFill, true, "✨ 찾는 중…");
+    const res = await invokeFn(FN_AUTOFILL, aiBody());
+    setBusy(elBtnAiFill, false);
+    if (!res.ok) { if (res.gate) showPremiumGate(res.error); else toast(res.error, "error"); return; }
+    if (res.suggested_brand && !elBrand.value.trim()) elBrand.value = res.suggested_brand;
+    if (res.category) setCategory(res.category);
+    if (res.location && !elLocation.value.trim()) elLocation.value = res.location;
+    if (res.offer && !elOffer.value.trim()) elOffer.value = res.offer;
+    if (res.selling_points) elPoints.value = res.selling_points;
+    if (res.mission && !elMission.value.trim()) elMission.value = res.mission;
+    toast("AI가 채웠어요. 확인하고 수정해 주세요.", "success");
+  }
+  async function onAiPoints(){
+    if (!isPremium) { showPremiumGate("AI 추천은 프리미엄 기능이에요. 베타 기간엔 무료로 켤 수 있어요."); return; }
+    if (!elBrand.value.trim()) { toast("상호명을 먼저 넣어 주세요.", "error"); return; }
+    setBusy(elBtnAiPoints, true, "찾는 중…");
+    const res = await invokeFn(FN_AUTOFILL, aiBody());
+    setBusy(elBtnAiPoints, false);
+    if (!res.ok) { if (res.gate) showPremiumGate(res.error); else toast(res.error, "error"); return; }
+    if (res.selling_points) { elPoints.value = res.selling_points; toast("강조 포인트를 채웠어요.", "success"); }
+    else toast("추천할 내용을 못 찾았어요. 직접 입력해 주세요.", "error");
+  }
+
+  // ====== 콘티 생성 (generate-reels) ======
+  function setGenerating(on){
+    elBtnGenerate.disabled = on; elBtnRedo.disabled = on;
+    if (on) {
+      elResultsLoadingWrap.classList.remove("hidden");
+      elResultsWrap.classList.add("hidden");
+      hideErr(elGenError);
+      elPremiumGate.classList.add("hidden");
+    } else {
+      elResultsLoadingWrap.classList.add("hidden");
+    }
+  }
+  function showUsage(data){
+    if (data.limit == null) { elUsageMini.classList.add("hidden"); return; }
+    const used = data.used || 0, limit = data.limit;
+    elUsageMini.innerHTML = "오늘 <strong>" + used + "</strong> / " + limit + "회 사용";
+    elUsageMini.classList.toggle("exhausted", used >= limit);
+    elUsageMini.classList.remove("hidden");
+  }
+  async function onGenerate(){
+    const brand = elBrand.value.trim();
+    if (!brand) { showErr(elGenError, "상호명을 입력해 주세요."); return; }
+    hideErr(elGenError);
+    if (PREMIUM_DURATIONS.includes(duration) && !isPremium) {
+      showPremiumGate("30초·60초 상세 콘티는 프리미엄 기능이에요. 베타 기간엔 무료로 켤 수 있어요.");
+      return;
+    }
+    const body = {
+      category: category, brand_name: brand,
+      location: elLocation.value.trim(), offer: elOffer.value.trim(),
+      selling_points: elPoints.value.trim(), mission: elMission.value.trim(),
+      tone: tone, duration: duration
+    };
+    setGenerating(true);
+    const res = await invokeFn(FN_GENERATE, body);
+    setGenerating(false);
+    if (!res.ok) {
+      if (res.gate === "premium") showPremiumGate(res.error);
+      else showErr(elGenError, res.error || "콘티를 만들지 못했어요.");
+      return;
+    }
+    renderResults(res);
+    showUsage(res);
+  }
+
+  // ====== 결과 렌더 ======
+  function renderResults(data){
+    const cuts = Array.isArray(data.cuts) ? data.cuts : [];
+    const titles = Array.isArray(data.titles) ? data.titles : [];
+    const hashtags = Array.isArray(data.hashtags) ? data.hashtags : [];
+
+    // 콘티 탭
+    let conti = "";
+    if (data.direction) conti += '<p class="result-sub-title">추천 방향</p><div class="result-block" style="margin-bottom:12px;"><div class="result-text">' + esc(data.direction) + "</div></div>";
+    if (data.hook) conti += '<p class="result-sub-title">첫 2초 훅</p><div class="result-block" style="margin-bottom:14px;"><div class="result-text" style="font-weight:600;color:var(--terra);">' + esc(data.hook) + "</div></div>";
+    conti += '<p class="result-sub-title">컷별 콘티</p>';
+    cuts.forEach(c => {
+      conti += '<div class="cut-card"><div class="cut-time">' + esc(c.time) + '</div><div class="cut-scene">' + esc(c.scene) + "</div>";
+      if (c.tip) conti += '<div class="cut-tip">📷 ' + esc(c.tip) + "</div>";
+      if (c.subtitle) conti += '<div class="cut-sub"><b>자막</b>' + esc(c.subtitle) + "</div>";
+      conti += "</div>";
+    });
+    if (titles.length) conti += '<p class="result-sub-title" style="margin-top:14px;">제목 후보</p><div class="result-block"><div class="result-text">' + titles.map(t => "· " + esc(t)).join("<br>") + "</div></div>";
+    conti += '<div class="copy-bar"><button class="btn-copy" data-copy="conti">전체 복사</button></div>';
+    PANELS.conti.innerHTML = conti;
+
+    // 자막 탭
+    const subs = cuts.map(c => c.subtitle).filter(Boolean);
+    PANELS.subs.innerHTML = '<p class="result-sub-title">릴스 자막</p><div class="result-block"><div class="result-text">' + subs.map(esc).join("\n") + '</div></div><div class="copy-bar"><button class="btn-copy" data-copy="subs">자막만 복사</button></div>';
+
+    // 캡션 탭
+    PANELS.caption.innerHTML = '<p class="result-sub-title">인스타 캡션</p><div class="result-block"><div class="result-text">' + esc(data.caption || "") + "</div>" + (hashtags.length ? '<div class="hashtag-line">' + esc(hashtags.join(" ")) + "</div>" : "") + '</div><div class="copy-bar"><button class="btn-copy" data-copy="caption">캡션 복사</button></div>';
+
+    // 체크리스트 탭 (정적, 선택한 업종 기준)
+    const items = CHECKLISTS[category] || CHECKLISTS["맛집"];
+    PANELS.check.innerHTML = '<p class="result-sub-title">' + esc(category) + ' 촬영 체크리스트</p><ul class="check-list">' + items.map(i => '<li class="check-item"><span class="check-box"></span><span class="check-text">' + esc(i) + "</span></li>").join("") + "</ul>";
+
+    // 미션 탭 (입력값 분해)
+    const missionRaw = elMission.value.trim();
+    if (missionRaw) {
+      const mItems = missionRaw.split(/[,\n·]/).map(s => s.trim()).filter(Boolean);
+      PANELS.mission.innerHTML = '<p class="result-sub-title">필수 미션 체크</p><ul class="check-list">' + mItems.map(i => '<li class="check-item"><span class="check-box"></span><span class="check-text">' + esc(i) + "</span></li>").join("") + "</ul>";
+    } else {
+      PANELS.mission.innerHTML = '<p class="field-helper">입력한 필수 미션이 없어요. 위 입력칸에 적으면 여기서 체크할 수 있어요.</p>';
+    }
+
+    // 복사용 평문
+    const contiLines = [];
+    if (data.direction) contiLines.push("[추천 방향] " + data.direction);
+    if (data.hook) contiLines.push("[훅] " + data.hook);
+    cuts.forEach(c => { contiLines.push((c.time || "") + " · " + (c.scene || "") + (c.subtitle ? " / 자막: " + c.subtitle : "")); });
+    if (titles.length) contiLines.push("\n[제목 후보]\n" + titles.map(t => "· " + t).join("\n"));
+    currentCopy.conti = contiLines.join("\n");
+    currentCopy.subs = subs.join("\n");
+    currentCopy.caption = (data.caption || "") + (hashtags.length ? "\n\n" + hashtags.join(" ") : "");
+
+    switchTab("conti");
+    elResultsWrap.classList.remove("hidden");
+    elResultsWrap.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function switchTab(name){
+    [...elResultTabs.children].forEach(t => t.classList.toggle("active", t.dataset.panel === name));
+    Object.keys(PANELS).forEach(k => PANELS[k].classList.toggle("active", k === name));
+  }
+
+  async function copyText(text, btn){
+    try { await navigator.clipboard.writeText(text); }
+    catch (_) {
+      const ta = document.createElement("textarea"); ta.value = text;
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (btn) { const o = btn.textContent; btn.textContent = "복사됨"; btn.classList.add("done"); setTimeout(() => { btn.textContent = o; btn.classList.remove("done"); }, 1400); }
+    toast("복사했어요", "success");
+  }
+
+  // ====== 이벤트 ======
+  function bindEvents(){
+    elLoadStatusChips.addEventListener("click", (e) => {
+      const b = e.target.closest(".chip"); if (!b) return;
+      setActive(elLoadStatusChips, b);
+      renderCampaignOptions(b.dataset.status);
+      elCampaignSelect.value = "";
+    });
+    elCampaignSelect.addEventListener("change", () => { if (elCampaignSelect.value) fillFromCampaign(elCampaignSelect.value); });
+
+    elBtnAiFill.addEventListener("click", onAiFill);
+    elBtnAiPoints.addEventListener("click", onAiPoints);
+
+    elCategoryChips.addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (!b) return; setActive(elCategoryChips, b); category = b.dataset.cat; });
+    elToneChips.addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (!b) return; setActive(elToneChips, b); tone = b.dataset.tone; });
+    elLenPresets.addEventListener("click", (e) => { const b = e.target.closest(".len-preset"); if (!b) return; setActive(elLenPresets, b); duration = Number(b.dataset.len); });
+
+    elBtnGenerate.addEventListener("click", onGenerate);
+    elBtnRedo.addEventListener("click", onGenerate);
+
+    elResultTabs.addEventListener("click", (e) => { const t = e.target.closest(".result-tab"); if (t) switchTab(t.dataset.panel); });
+    elResultsWrap.addEventListener("click", (e) => {
+      const copyBtn = e.target.closest("[data-copy]");
+      if (copyBtn) { copyText(currentCopy[copyBtn.dataset.copy] || "", copyBtn); return; }
+      const item = e.target.closest(".check-item");
+      if (item) item.classList.toggle("checked");
+    });
+  }
+
+  // ====== 초기화: 라이브러리 → 클라이언트 → 세션 → 프리미엄 ======
+  async function init(){
+    if (!window.supabase || !window.supabase.createClient) {
+      showBootError("로그인 모듈을 불러오지 못했어요. 페이지를 새로고침하거나, 광고/추적 차단 확장 프로그램을 잠시 끄고 다시 시도해 주세요.");
+      return;
+    }
+    try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
+    catch (e) { showBootError("초기화 오류: " + (e && e.message ? e.message : e)); return; }
+
+    let session = null;
+    try { session = (await sb.auth.getSession()).data.session; } catch (_) {}
+    if (!session) { elAuthGate.classList.remove("hidden"); return; }
+    me = session.user;
+
+    isPremium = await detectPremium(me);
+
+    elToolMain.classList.remove("hidden");
+    bindEvents();
+    loadCampaigns();
+  }
+
+  init();
+</script>
 
 </body>
 </html>
