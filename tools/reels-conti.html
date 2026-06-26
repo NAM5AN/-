@@ -279,12 +279,6 @@
       <p class="field-helper">등록한 체험단에서 상호명·지역·제공 내용을 불러와요. (업종·필수 미션은 직접 채워 주세요)</p>
     </div>
 
-    <!-- 0-1. AI 자동 채우기 (프리미엄) -->
-    <div class="field-group">
-      <button class="btn-ai-fill" id="btnAiFill" type="button">✨ AI로 자동 채우기<span class="premium-badge">💎 프리미엄</span></button>
-      <p class="ai-fill-note">업체를 웹에서 찾아 업종·강조 포인트까지 채워드려요. 채운 내용은 직접 수정할 수 있어요.</p>
-    </div>
-
     <!-- 1. 업종 -->
     <div class="field-group">
       <label class="field-group-label">업종</label>
@@ -425,7 +419,7 @@
   const elBootError = $("bootError"), elBootErrorText = $("bootErrorText");
   const elAuthGate = $("authGate"), elToolMain = $("toolMain");
   const elLoadStatusChips = $("loadStatusChips"), elCampaignSelect = $("campaignSelect");
-  const elBtnAiFill = $("btnAiFill"), elBtnAiPoints = $("btnAiPoints");
+  const elBtnAiPoints = $("btnAiPoints");
   const elCategoryChips = $("categoryChips"), elToneChips = $("toneChips"), elLenPresets = $("lenPresets");
   const elBrand = $("brandInput"), elLocation = $("locationInput"), elOffer = $("offerInput");
   const elPoints = $("pointsInput"), elMission = $("missionInput");
@@ -538,21 +532,6 @@
     if (on) { btn.dataset.label = btn.textContent; btn.textContent = busyText || "찾는 중…"; }
     else if (btn.dataset.label) { btn.textContent = btn.dataset.label; }
   }
-  async function onAiFill(){
-    if (!isPremium) { showPremiumGate("AI 자동 채움은 프리미엄 기능이에요. 베타 기간엔 무료로 켤 수 있어요."); return; }
-    if (!elBrand.value.trim() && !elLocation.value.trim()) { toast("상호명이나 지역을 먼저 넣어 주세요.", "error"); return; }
-    setBusy(elBtnAiFill, true, "✨ 찾는 중…");
-    const res = await invokeFn(FN_AUTOFILL, aiBody());
-    setBusy(elBtnAiFill, false);
-    if (!res.ok) { if (res.gate) showPremiumGate(res.error); else toast(res.error, "error"); return; }
-    if (res.suggested_brand && !elBrand.value.trim()) elBrand.value = res.suggested_brand;
-    if (res.category) setCategory(res.category);
-    if (res.location && !elLocation.value.trim()) elLocation.value = res.location;
-    if (res.offer && !elOffer.value.trim()) elOffer.value = res.offer;
-    if (res.selling_points) elPoints.value = res.selling_points;
-    if (res.mission && !elMission.value.trim()) elMission.value = res.mission;
-    toast("AI가 채웠어요. 확인하고 수정해 주세요.", "success");
-  }
   async function onAiPoints(){
     if (!isPremium) { showPremiumGate("AI 추천은 프리미엄 기능이에요. 베타 기간엔 무료로 켤 수 있어요."); return; }
     if (!elBrand.value.trim()) { toast("상호명을 먼저 넣어 주세요.", "error"); return; }
@@ -632,7 +611,11 @@
 
     // 자막 탭
     const subs = cuts.map(c => c.subtitle).filter(Boolean);
-    PANELS.subs.innerHTML = '<p class="result-sub-title">릴스 자막</p><div class="result-block"><div class="result-text">' + subs.map(esc).join("\n") + '</div></div><div class="copy-bar"><button class="btn-copy" data-copy="subs">자막만 복사</button></div>';
+    if (data.premium) {
+      PANELS.subs.innerHTML = '<p class="result-sub-title">릴스 자막 (고급)</p><div class="result-block"><div class="result-text">' + subs.map(esc).join("\n") + '</div></div><div class="copy-bar"><button class="btn-copy" data-copy="subs">자막만 복사</button></div>';
+    } else {
+      PANELS.subs.innerHTML = '<div class="premium-gate" style="margin-top:0;"><p>화면에 맞는 후킹 자막은 프리미엄 기능이에요. 컷마다 장면에 어울리는 자막을 만들어 드려요. (베타 기간엔 무료)</p><a href="/?open=settings" class="premium-gate-cta">설정에서 프리미엄 켜기 →</a></div>';
+    }
 
     // 캡션 탭
     PANELS.caption.innerHTML = '<p class="result-sub-title">인스타 캡션</p><div class="result-block"><div class="result-text">' + esc(data.caption || "") + "</div>" + (hashtags.length ? '<div class="hashtag-line">' + esc(hashtags.join(" ")) + "</div>" : "") + '</div><div class="copy-bar"><button class="btn-copy" data-copy="caption">캡션 복사</button></div>';
@@ -692,7 +675,6 @@
     });
     elCampaignSelect.addEventListener("change", () => { if (elCampaignSelect.value) fillFromCampaign(elCampaignSelect.value); });
 
-    elBtnAiFill.addEventListener("click", onAiFill);
     elBtnAiPoints.addEventListener("click", onAiPoints);
 
     elCategoryChips.addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (!b) return; setActive(elCategoryChips, b); category = b.dataset.cat; });
