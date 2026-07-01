@@ -227,6 +227,17 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.success { background: var(--sage); }
   .toast.error { background: var(--rose); }
+  /* ---- v2: 커버·배지·샷·세부자막 ---- */
+  .cover-card { background: linear-gradient(135deg, rgba(194,84,43,0.10), rgba(194,84,43,0.04)); border: 1px solid var(--terra-soft); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .cover-lines { font-size: 19px; font-weight: 800; color: var(--ink); line-height: 1.4; letter-spacing: -0.3px; word-break: keep-all; }
+  .cover-tip { font-size: 12px; color: var(--ink-soft); margin-top: 8px; line-height: 1.5; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .badge { display: inline-block; font-size: 11.5px; font-weight: 700; color: var(--terra); background: rgba(194,84,43,0.08); border: 1px solid var(--terra-soft); border-radius: 999px; padding: 3px 10px; }
+  .badge-sm { font-size: 10.5px; padding: 2px 8px; vertical-align: middle; margin-left: 4px; }
+  .cut-shot { font-size: 11.5px; font-weight: 700; color: var(--sage, #6f8f6b); margin: 2px 0 4px; }
+  .sub-row { font-size: 14px; color: var(--ink); line-height: 1.6; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+  .sub-row:last-child { border-bottom: none; }
+  .sub-pos { display: inline-block; font-size: 10.5px; font-weight: 700; color: var(--terra); background: rgba(194,84,43,0.08); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
 </style>
 </head>
 <body>
@@ -338,6 +349,26 @@
       </div>
     </div>
 
+    <!-- 7-b. 어투 -->
+    <div class="field-group">
+      <label class="field-group-label">어투</label>
+      <div class="chips" id="speechChips">
+        <button class="chip active" data-speech="반말" type="button">반말체</button>
+        <button class="chip" data-speech="존댓말" type="button">존댓말체</button>
+      </div>
+      <p class="field-helper">개인 리뷰어는 반말체, 업체 공식 계정은 존댓말체를 추천해요.</p>
+    </div>
+
+    <!-- 7-c. 협찬 여부 -->
+    <div class="field-group">
+      <label class="field-group-label">협찬 여부</label>
+      <div class="chips" id="sponsoredChips">
+        <button class="chip active" data-sponsored="yes" type="button">협찬·제공받음</button>
+        <button class="chip" data-sponsored="no" type="button">일반 후기</button>
+      </div>
+      <p class="field-helper">협찬이면 캡션 첫 줄에 표기하고 #광고를 넣어요.</p>
+    </div>
+
     <!-- 8. 릴스 길이 -->
     <div class="field-group">
       <label class="field-group-label">릴스 길이</label>
@@ -411,6 +442,7 @@
   // ====== 상태 ======
   let sb = null, me = null, isPremium = false;
   let category = "맛집", tone = "자연스러운 후기형", duration = 15;
+  let speech = "반말", sponsored = true;
   let allCampaigns = [];
   let currentCopy = { conti: "", subs: "", caption: "" };
 
@@ -421,6 +453,7 @@
   const elLoadStatusChips = $("loadStatusChips"), elCampaignSelect = $("campaignSelect");
   const elBtnAiPoints = $("btnAiPoints");
   const elCategoryChips = $("categoryChips"), elToneChips = $("toneChips"), elLenPresets = $("lenPresets");
+  const elSpeechChips = $("speechChips"), elSponsoredChips = $("sponsoredChips");
   const elBrand = $("brandInput"), elLocation = $("locationInput"), elOffer = $("offerInput");
   const elPoints = $("pointsInput"), elMission = $("missionInput");
   const elBtnGenerate = $("btnGenerate"), elGenError = $("genError"), elUsageMini = $("usageMini");
@@ -574,7 +607,7 @@
       category: category, brand_name: brand,
       location: elLocation.value.trim(), offer: elOffer.value.trim(),
       selling_points: elPoints.value.trim(), mission: elMission.value.trim(),
-      tone: tone, duration: duration
+      tone: tone, speech: speech, sponsored: sponsored, duration: duration
     };
     setGenerating(true);
     const res = await invokeFn(FN_GENERATE, body);
@@ -593,38 +626,96 @@
     const cuts = Array.isArray(data.cuts) ? data.cuts : [];
     const titles = Array.isArray(data.titles) ? data.titles : [];
     const hashtags = Array.isArray(data.hashtags) ? data.hashtags : [];
+    const editTips = Array.isArray(data.editTips) ? data.editTips : [];
+    const hook  = (data.hook && typeof data.hook === "object") ? data.hook : { type: "", text: data.hook || "" };
+    const cta   = (data.cta && typeof data.cta === "object") ? data.cta : { type: "", text: data.cta || "" };
+    const cover = (data.cover && typeof data.cover === "object") ? data.cover : { sourceCut: 0, lines: [], styleTip: "" };
+    const coverLines = Array.isArray(cover.lines) ? cover.lines.filter(Boolean) : [];
+    const fixedTop = data.fixedTopSubtitle || "";
 
-    // 콘티 탭
+    const AXIS = { food: "🍽️ 맛·먹방형", product: "🧴 제품·효과형", space: "🏠 분위기·공간형" };
+    const FMT  = { flowing: "내레이션 흐름형", fixed: "고정 자막+무드형", "product-demo": "제품 데모형" };
+
+    // ---------- 콘티 탭 ----------
     let conti = "";
+
+    // 썸네일(커버)
+    if (coverLines.length || cover.styleTip) {
+      conti += '<p class="result-sub-title">📸 썸네일(커버)</p><div class="cover-card">';
+      if (coverLines.length) conti += '<div class="cover-lines">' + coverLines.map(esc).join("<br>") + "</div>";
+      const bits = [];
+      if (cover.sourceCut) bits.push(esc(String(cover.sourceCut)) + "번 컷을 커버로");
+      if (cover.styleTip) bits.push(esc(cover.styleTip));
+      if (bits.length) conti += '<div class="cover-tip">' + bits.join(" · ") + "</div>";
+      conti += "</div>";
+    }
+
+    // 판매축/포맷 배지
+    const badges = [];
+    if (data.salesAxis && AXIS[data.salesAxis]) badges.push(AXIS[data.salesAxis]);
+    if (data.format && FMT[data.format]) badges.push(FMT[data.format]);
+    if (badges.length) conti += '<div class="badge-row">' + badges.map(b => '<span class="badge">' + esc(b) + "</span>").join("") + "</div>";
+
+    // 추천 방향
     if (data.direction) conti += '<p class="result-sub-title">추천 방향</p><div class="result-block" style="margin-bottom:12px;"><div class="result-text">' + esc(data.direction) + "</div></div>";
-    if (data.hook) conti += '<p class="result-sub-title">첫 2초 훅</p><div class="result-block" style="margin-bottom:14px;"><div class="result-text" style="font-weight:600;color:var(--terra);">' + esc(data.hook) + "</div></div>";
+
+    // 첫 훅
+    if (hook.text) conti += '<p class="result-sub-title">첫 2초 훅' + (hook.type ? ' <span class="badge badge-sm">' + esc(hook.type) + "</span>" : "") + '</p><div class="result-block" style="margin-bottom:12px;"><div class="result-text" style="font-weight:600;color:var(--terra);">' + esc(hook.text) + "</div></div>";
+
+    // 상단 고정 자막 (무료도 제공)
+    if (fixedTop) conti += '<p class="result-sub-title">상단 고정 자막</p><div class="result-block" style="margin-bottom:14px;"><div class="result-text" style="font-weight:600;">' + esc(fixedTop) + '</div><p class="field-helper" style="margin-top:6px;">영상 내내 위쪽에 띄우는 한 줄이에요.</p></div>';
+
+    // 컷별 콘티
     conti += '<p class="result-sub-title">컷별 콘티</p>';
-    cuts.forEach(c => {
-      conti += '<div class="cut-card"><div class="cut-time">' + esc(c.time) + '</div><div class="cut-scene">' + esc(c.scene) + "</div>";
+    cuts.forEach((c, i) => {
+      const no = c.no || (i + 1);
+      const dur = c.durationSec ? " · " + esc(String(c.durationSec)) + "초" : "";
+      conti += '<div class="cut-card"><div class="cut-time">' + esc(c.time || ("컷 " + no)) + dur + "</div>";
+      if (c.shotType) conti += '<div class="cut-shot">🎥 ' + esc(c.shotType) + "</div>";
+      conti += '<div class="cut-scene">' + esc(c.scene) + "</div>";
       if (c.tip) conti += '<div class="cut-tip">📷 ' + esc(c.tip) + "</div>";
-      if (c.subtitle) conti += '<div class="cut-sub"><b>자막</b>' + esc(c.subtitle) + "</div>";
+      if (c.subtitle) conti += '<div class="cut-sub"><b>자막' + (c.subtitlePosition ? "·" + esc(c.subtitlePosition) : "") + "</b>" + esc(c.subtitle) + "</div>";
       conti += "</div>";
     });
+
+    // 제목 후보
     if (titles.length) conti += '<p class="result-sub-title" style="margin-top:14px;">제목 후보</p><div class="result-block"><div class="result-text">' + titles.map(t => "· " + esc(t)).join("<br>") + "</div></div>";
+
+    // CTA
+    if (cta.text) conti += '<p class="result-sub-title" style="margin-top:14px;">CTA (마무리 유도)' + (cta.type ? ' <span class="badge badge-sm">' + esc(cta.type) + "</span>" : "") + '</p><div class="result-block"><div class="result-text">' + esc(cta.text) + "</div></div>";
+
+    // 음악 무드 + 편집 팁
+    if (data.bgm) conti += '<p class="result-sub-title" style="margin-top:14px;">🎵 음악 무드</p><div class="result-block"><div class="result-text">' + esc(data.bgm) + "</div></div>";
+    if (editTips.length) conti += '<p class="result-sub-title" style="margin-top:14px;">✂️ 편집 팁</p><div class="result-block"><div class="result-text">' + editTips.map(t => "· " + esc(t)).join("<br>") + "</div></div>";
+
     conti += '<div class="copy-bar"><button class="btn-copy" data-copy="conti">전체 복사</button></div>';
     PANELS.conti.innerHTML = conti;
 
-    // 자막 탭
+    // ---------- 자막 탭 ----------
+    let subsHtml = "";
+    if (fixedTop) subsHtml += '<p class="result-sub-title">상단 고정 자막</p><div class="result-block" style="margin-bottom:12px;"><div class="result-text" style="font-weight:600;">' + esc(fixedTop) + "</div></div>";
     const subs = cuts.map(c => c.subtitle).filter(Boolean);
     if (data.premium) {
-      PANELS.subs.innerHTML = '<p class="result-sub-title">릴스 자막 (고급)</p><div class="result-block"><div class="result-text">' + subs.map(esc).join("\n") + '</div></div><div class="copy-bar"><button class="btn-copy" data-copy="subs">자막만 복사</button></div>';
+      if (subs.length) {
+        subsHtml += '<p class="result-sub-title">컷별 세부 자막</p><div class="result-block">' +
+          cuts.filter(c => c.subtitle).map(c => '<div class="sub-row">' + (c.subtitlePosition ? '<span class="sub-pos">' + esc(c.subtitlePosition) + "</span>" : "") + esc(c.subtitle) + "</div>").join("") +
+          '</div><div class="copy-bar"><button class="btn-copy" data-copy="subs">자막만 복사</button></div>';
+      } else {
+        subsHtml += '<p class="field-helper">이 포맷은 상단 고정 자막 위주라 컷별 세부 자막이 적어요.</p>';
+      }
     } else {
-      PANELS.subs.innerHTML = '<div class="premium-gate" style="margin-top:0;"><p>화면에 맞는 후킹 자막은 프리미엄 기능이에요. 컷마다 장면에 어울리는 자막을 만들어 드려요. (베타 기간엔 무료)</p><a href="/?open=settings" class="premium-gate-cta">설정에서 프리미엄 켜기 →</a></div>';
+      subsHtml += '<div class="premium-gate" style="margin-top:0;"><p>컷마다 화면에 맞춘 <b>세부 자막(내레이션 스크립트)</b>은 프리미엄 기능이에요. 위 <b>상단 고정 자막</b>은 무료로 제공돼요. (베타 기간엔 프리미엄도 무료)</p><a href="/?open=settings" class="premium-gate-cta">설정에서 프리미엄 켜기 →</a></div>';
     }
+    PANELS.subs.innerHTML = subsHtml;
 
-    // 캡션 탭
+    // ---------- 캡션 탭 ----------
     PANELS.caption.innerHTML = '<p class="result-sub-title">인스타 캡션</p><div class="result-block"><div class="result-text">' + esc(data.caption || "") + "</div>" + (hashtags.length ? '<div class="hashtag-line">' + esc(hashtags.join(" ")) + "</div>" : "") + '</div><div class="copy-bar"><button class="btn-copy" data-copy="caption">캡션 복사</button></div>';
 
-    // 체크리스트 탭 (정적, 선택한 업종 기준)
+    // ---------- 체크리스트 탭 (정적, 선택한 업종 기준) ----------
     const items = CHECKLISTS[category] || CHECKLISTS["맛집"];
     PANELS.check.innerHTML = '<p class="result-sub-title">' + esc(category) + ' 촬영 체크리스트</p><ul class="check-list">' + items.map(i => '<li class="check-item"><span class="check-box"></span><span class="check-text">' + esc(i) + "</span></li>").join("") + "</ul>";
 
-    // 미션 탭 (입력값 분해)
+    // ---------- 미션 탭 (입력값 분해) ----------
     const missionRaw = elMission.value.trim();
     if (missionRaw) {
       const mItems = missionRaw.split(/[,\n·]/).map(s => s.trim()).filter(Boolean);
@@ -633,14 +724,27 @@
       PANELS.mission.innerHTML = '<p class="field-helper">입력한 필수 미션이 없어요. 위 입력칸에 적으면 여기서 체크할 수 있어요.</p>';
     }
 
-    // 복사용 평문
+    // ---------- 복사용 평문 ----------
     const contiLines = [];
+    if (coverLines.length) contiLines.push("[썸네일] " + coverLines.join(" / ") + (cover.styleTip ? " (" + cover.styleTip + ")" : ""));
     if (data.direction) contiLines.push("[추천 방향] " + data.direction);
-    if (data.hook) contiLines.push("[훅] " + data.hook);
-    cuts.forEach(c => { contiLines.push((c.time || "") + " · " + (c.scene || "") + (c.subtitle ? " / 자막: " + c.subtitle : "")); });
+    if (hook.text) contiLines.push("[훅] " + hook.text);
+    if (fixedTop) contiLines.push("[상단 고정 자막] " + fixedTop);
+    cuts.forEach((c, i) => {
+      const no = c.no || (i + 1);
+      contiLines.push(
+        (c.time || ("컷 " + no)) + (c.durationSec ? " (" + c.durationSec + "초)" : "") +
+        (c.shotType ? " [" + c.shotType + "]" : "") + " · " + (c.scene || "") +
+        (c.tip ? " / 팁: " + c.tip : "") +
+        (c.subtitle ? " / 자막" + (c.subtitlePosition ? "(" + c.subtitlePosition + ")" : "") + ": " + c.subtitle : "")
+      );
+    });
+    if (cta.text) contiLines.push("[CTA] " + cta.text);
+    if (data.bgm) contiLines.push("[음악] " + data.bgm);
+    if (editTips.length) contiLines.push("[편집 팁]\n" + editTips.map(t => "· " + t).join("\n"));
     if (titles.length) contiLines.push("\n[제목 후보]\n" + titles.map(t => "· " + t).join("\n"));
     currentCopy.conti = contiLines.join("\n");
-    currentCopy.subs = subs.join("\n");
+    currentCopy.subs = (fixedTop ? "[상단 고정] " + fixedTop + "\n" : "") + subs.join("\n");
     currentCopy.caption = (data.caption || "") + (hashtags.length ? "\n\n" + hashtags.join(" ") : "");
 
     switchTab("conti");
@@ -680,6 +784,8 @@
     elCategoryChips.addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (!b) return; setActive(elCategoryChips, b); category = b.dataset.cat; });
     elToneChips.addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (!b) return; setActive(elToneChips, b); tone = b.dataset.tone; });
     elLenPresets.addEventListener("click", (e) => { const b = e.target.closest(".len-preset"); if (!b) return; setActive(elLenPresets, b); duration = Number(b.dataset.len); });
+    elSpeechChips.addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (!b) return; setActive(elSpeechChips, b); speech = b.dataset.speech; });
+    elSponsoredChips.addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (!b) return; setActive(elSponsoredChips, b); sponsored = (b.dataset.sponsored === "yes"); });
 
     elBtnGenerate.addEventListener("click", onGenerate);
     elBtnRedo.addEventListener("click", onGenerate);
