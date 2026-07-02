@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>말랑쫀득 슬랑이 가챠 V5 - 완벽한 덩어리 & 모션블러</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+        
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #f4eaef;
+            font-family: 'Jua', sans-serif; touch-action: none;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        #ui {
+            position: absolute; top: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            pointer-events: none;
+        }
+        .btn {
+            background: #ff4081; color: white; border: none;
+            padding: 12px 20px; border-radius: 30px; font-size: 16px;
+            font-family: 'Jua', sans-serif; cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); pointer-events: auto;
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.95); }
+        
+        #inventory-container { pointer-events: auto; text-align: right; width: 220px; }
+        #mileage-box {
+            background: #fff; border-radius: 15px; padding: 8px; margin-bottom: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 14px;
+            border: 2px solid #ff4081; color: #ff4081; text-align: center;
+        }
+        #inventory {
+            background: rgba(255, 255, 255, 0.9); padding: 15px;
+            border-radius: 20px; max-height: 50vh; overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: left;
+        }
+        .slime-item {
+            padding: 8px 10px; margin-bottom: 8px; border-radius: 10px;
+            cursor: pointer; font-size: 15px; border: 2px solid transparent;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .slime-item.active { border-color: #ff4081; background: #fff0f5; }
+        .lv-badge { background: #ff4081; color: white; border-radius: 10px; padding: 2px 6px; font-size: 12px; }
+        
+        #modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none;
+            justify-content: center; align-items: center; flex-direction: column;
+            color: white; z-index: 100; pointer-events: auto; text-align: center;
+        }
+        #modal h1 { font-size: 32px; margin-bottom: 10px; }
+        #modal p { font-size: 18px; margin-bottom: 20px; color: #ffeb3b; }
+        #ad-box {
+            width: 300px; height: 150px; background: #444; border-radius: 10px;
+            display: flex; justify-content: center; align-items: center; margin-bottom: 20px;
+        }
+        .close-btn { background: #ccc; color: black; margin-top: 20px; font-size: 18px; padding: 10px 30px; }
+        
+        .grade-C { color: #757575; font-weight: bold; }
+        .grade-R { color: #4caf50; font-weight: bold; }
+        .grade-E { color: #e91e63; font-weight: bold; }
+        .grade-L { color: #ffeb3b; font-weight: bold; text-shadow: 0 0 5px rgba(255,235,59,0.5); }
+
+        #hint {
+            position: absolute; bottom: 30px; width: 100%; text-align: center;
+            font-size: 18px; color: #888; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <svg width="0" height="0" style="position: absolute; z-index: -1;">
+        <defs>
+            <filter id="gooey">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10" result="gooey" />
+                <feComposite in="SourceGraphic" in2="gooey" operator="atop"/>
+            </filter>
+        </defs>
+    </svg>
+
+    <canvas id="slimeCanvas"></canvas>
+    
+    <div id="ui">
+        <button class="btn" onclick="startGacha()">🎁 뽑기 (광고)<br><span style="font-size: 12px;">마일리지 적립</span></button>
+        <div id="inventory-container">
+            <div id="mileage-box">✨ 마일리지: <span id="mileageText">0</span> / 100</div>
+            <div id="inventory">
+                <div style="margin-bottom: 10px; color: #ff4081; font-weight:bold; text-align: center;">보유 슬라임 목록</div>
+                <div id="slimeList"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="hint">화면을 드래그하여 슬라임을 만져보세요!</div>
+
+    <div id="modal">
+        <div id="ad-box">광고 재생 중... (1초)</div>
+        <h1 id="gachaResult"></h1>
+        <p id="gachaSubResult"></p>
+        <button class="btn close-btn" id="closeModalBtn" style="display:none;" onclick="closeGacha()">확인</button>
+    </div>
+
+<script>
+    const slimeDB = [
+        { id: 1, name: "물젤리 슬랑이", grade: "C", color: "#64c8ff", k: 0.05, damping: 0.8, type: "normal", rate: 40 },
+        { id: 2, name: "우유 생크림 폼", grade: "C", color: "#ffffff", k: 0.08, damping: 0.85, type: "normal", rate: 30 },
+        { id: 3, name: "폼볼 크런치 팝", grade: "R", color: "#ffb6c1", k: 0.1, damping: 0.75, type: "crunch", rate: 18 },
+        { id: 4, name: "바사삭 리얼 왁뿌볼", grade: "E", color: "#d81b60", waxColor: "#f8bbd0", k: 0.12, damping: 0.8, type: "wax", rate: 10 },
+        // 우주 덩어리 물리 연산 조정: 덜 미친듯이 튀도록 수정
+        { id: 5, name: "✨우주 덩어리✨", grade: "L", color: "#4b0082", k: 0.06, damping: 0.88, type: "normal", rate: 2 }
+    ];
+
+    let mySlimes = [{ ...slimeDB[0], level: 1 }]; 
+    let currentSlime = mySlimes[0];
+    let mileage = 0;
+
+    function updateInventoryUI() {
+        const list = document.getElementById("slimeList");
+        list.innerHTML = "";
+        mySlimes.forEach(s => {
+            const div = document.createElement("div");
+            div.className = `slime-item ${s === currentSlime ? 'active' : ''}`;
+            div.innerHTML = `<span class="grade-${s.grade}">[${s.grade}] ${s.name}</span> <span class="lv-badge">Lv.${s.level}</span>`;
+            div.onclick = () => { currentSlime = s; initSlime(); updateInventoryUI(); };
+            list.appendChild(div);
+        });
+        document.getElementById("mileageText").innerText = mileage;
+    }
+    updateInventoryUI();
+
+    function startGacha() {
+        document.getElementById("modal").style.display = "flex";
+        document.getElementById("ad-box").style.display = "flex";
+        document.getElementById("gachaResult").innerText = "";
+        document.getElementById("gachaSubResult").innerText = "";
+        document.getElementById("closeModalBtn").style.display = "none";
+        
+        let timeLeft = 1;
+        document.getElementById("ad-box").innerText = `광고 재생 중... (${timeLeft}초)`;
+        const timer = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                document.getElementById("ad-box").style.display = "none";
+                rollGacha();
+            }
+        }, 1000);
+    }
+
+    function rollGacha() {
+        let pulled;
+        const result = document.getElementById("gachaResult");
+        const subResult = document.getElementById("gachaSubResult");
+
+        if (mileage >= 100) {
+            pulled = slimeDB.find(s => s.grade === "L");
+            mileage = 0;
+            subResult.innerText = "🎉 마일리지 100 달성! 전설 확정! 🎉";
+        } else {
+            const rand = Math.random() * 100;
+            let sum = 0; pulled = slimeDB[0];
+            for (let s of slimeDB) { sum += s.rate; if (rand <= sum) { pulled = s; break; } }
+            subResult.innerText = "";
+        }
+        
+        let existing = mySlimes.find(s => s.id === pulled.id);
+        if (existing) {
+            existing.level++; mileage += 15;
+            result.innerHTML = `<span class="grade-${pulled.grade}">[${pulled.grade}] ${pulled.name}</span><br>중복 획득!`;
+            if(!subResult.innerText) subResult.innerText = `레벨업 (Lv.${existing.level}) 크기 증가! (마일리지 +15)`;
+            if(currentSlime.id === existing.id) { currentSlime = existing; initSlime(); }
+        } else {
+            let newSlime = { ...pulled, level: 1 };
+            mySlimes.push(newSlime); mileage += 5;
+            result.innerHTML = `<span class="grade-${pulled.grade}">[${pulled.grade}] ${pulled.name}</span><br>신규 획득!`;
+            if(!subResult.innerText) subResult.innerText = `마일리지 +5 적립!`;
+        }
+        document.getElementById("closeModalBtn").style.display = "block";
+        updateInventoryUI();
+    }
+    function closeGacha() { document.getElementById("modal").style.display = "none"; }
+
+    let audioCtx;
+    function initAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playSquishSound(velocity) {
+        if (!audioCtx || velocity < 5) return;
+        const vol = Math.min(velocity / 80, 0.4);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.type = currentSlime.type === "crunch" ? "sawtooth" : "sine";
+        osc.frequency.setValueAtTime(150 + Math.random() * 100, now);
+        osc.start(now); osc.stop(now + 0.2);
+    }
+
+    function playCrackSound() {
+        if (!audioCtx) return;
+        for(let i=0; i<3; i++) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            osc.type = "square";
+            osc.frequency.setValueAtTime(1000 + Math.random()*2000, now + i*0.05);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1 + i*0.05);
+            gain.gain.setValueAtTime(0.5, now + i*0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1 + i*0.05);
+            osc.start(now + i*0.05); osc.stop(now + 0.1 + i*0.05);
+        }
+    }
+
+    const canvas = document.getElementById("slimeCanvas");
+    const ctx = canvas.getContext("2d");
+    
+    let width, height;
+    let core = { x: 0, y: 0, vx: 0, vy: 0 };
+    let nodes = [];
+    const numNodes = 14;
+    
+    let waxIntact = true;
+    let waxShards = [];
+
+    function getRadius() {
+        return Math.min(100 + ((currentSlime.level || 1) - 1) * 10, 220);
+    }
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+        initSlime();
+    }
+    window.addEventListener("resize", resize);
+
+    function initSlime() {
+        nodes = [];
+        waxShards = [];
+        waxIntact = currentSlime.type === "wax"; 
+        
+        if(waxIntact) document.getElementById("hint").innerText = "화면을 강하게 쥐거나 꼬집어서 왁스를 부수세요!";
+        else document.getElementById("hint").innerText = "드래그하여 슬라임을 만져보세요!";
+
+        core = { x: width / 2, y: height / 2, vx: 0, vy: 0 };
+        const radius = getRadius();
+        
+        for (let i = 0; i < numNodes; i++) {
+            const angle = (i / numNodes) * Math.PI * 2;
+            nodes.push({
+                x: core.x + Math.cos(angle) * (radius * 0.7),
+                y: core.y + Math.sin(angle) * (radius * 0.7),
+                baseDist: radius * 0.7,
+                baseAngle: angle,
+                vx: 0, vy: 0, touchId: null
+            });
+        }
+    }
+
+    function breakWax() {
+        if (!waxIntact) return;
+        waxIntact = false;
+        playCrackSound();
+        document.getElementById("hint").innerText = "부서진 왁스 속 쫀득한 슬라임!";
+        
+        const radius = getRadius();
+        for(let i = 0; i < 25; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * radius;
+            waxShards.push({
+                x: core.x + Math.cos(angle) * dist,
+                y: core.y + Math.sin(angle) * dist,
+                vx: (Math.random() - 0.5) * 15,
+                vy: (Math.random() - 0.5) * 15,
+                rot: Math.random() * Math.PI,
+                vRot: (Math.random() - 0.5) * 0.5,
+                size: radius * (0.1 + Math.random() * 0.2)
+            });
+        }
+    }
+
+    function animate() {
+        // 모션 블러 효과: 배경을 반투명하게 덮어 이전 프레임의 잔상을 남김
+        ctx.fillStyle = 'rgba(244, 234, 239, 0.4)'; // 배경색(#f4eaef)과 동일한 RGB 값에 Alpha 0.4
+        ctx.fillRect(0, 0, width, height);
+        
+        const k = waxIntact ? 0.3 : currentSlime.k;       
+        const damp = waxIntact ? 0.6 : currentSlime.damping; 
+        const radius = getRadius();
+
+        // 1. 중심 코어 이동: 무조건 제자리로 가는게 아니라 노드들에게 약간 끌려가도록 유연성 추가
+        core.vx *= damp; core.vy *= damp;
+        core.vx += (width/2 - core.x) * 0.01; // 중앙 복귀력을 약하게 설정
+        core.vy += (height/2 - core.y) * 0.01;
+        core.x += core.vx; core.y += core.vy;
+
+        // 2. 노드 물리 연산
+        let maxDeformation = 0;
+        let avgX = 0, avgY = 0;
+
+        nodes.forEach((n, i) => {
+            if (n.touchId === null) {
+                // 중앙 고정 위치(원형)로 돌아가려는 힘 (기존보다 약하게 설정하여 원형에 갇히지 않게 함)
+                const targetX = core.x + Math.cos(n.baseAngle) * n.baseDist;
+                const targetY = core.y + Math.sin(n.baseAngle) * n.baseDist;
+                
+                n.vx += (targetX - n.x) * (k * 0.5); 
+                n.vy += (targetY - n.y) * (k * 0.5);
+                
+                // 이웃한 노드들끼리의 스프링 힘 (이걸 강하게 줘서 늘어날 때 전체가 딸려가는 덩어리 구현)
+                const prev = nodes[(i - 1 + numNodes) % numNodes];
+                const next = nodes[(i + 1) % numNodes];
+                
+                n.vx += ((prev.x + next.x) / 2 - n.x) * (k * 2.5);
+                n.vy += ((prev.y + next.y) / 2 - n.y) * (k * 2.5);
+                
+                n.vx *= damp; n.vy *= damp;
+                n.x += n.vx; n.y += n.vy;
+            }
+            
+            avgX += n.x; avgY += n.y;
+
+            const distToCore = Math.hypot(n.x - core.x, n.y - core.y);
+            if (Math.abs(distToCore - n.baseDist) > maxDeformation) {
+                maxDeformation = Math.abs(distToCore - n.baseDist);
+            }
+        });
+
+        // 중심 코어가 노드들의 평균 위치로 약간씩 끌려가도록 (뼈대 고정 느낌 해제)
+        if (!waxIntact) {
+            core.vx += ((avgX / numNodes) - core.x) * 0.05;
+            core.vy += ((avgY / numNodes) - core.y) * 0.05;
+        }
+
+        if (waxIntact && maxDeformation > radius * 0.8) breakWax();
+
+        // 3. 그리기: 뼈대 느낌을 없애고 외곽선(노드) 위주로 볼륨을 채움
+        ctx.save();
+        ctx.filter = 'url(#gooey)';
+        ctx.fillStyle = waxIntact ? currentSlime.waxColor : currentSlime.color;
+
+        ctx.beginPath();
+        // 중앙에 너무 큰 원을 그리지 않게 크기 대폭 축소 (원형 실루엣 고정 방지)
+        ctx.arc(core.x, core.y, radius * 0.2, 0, Math.PI * 2); 
+        
+        nodes.forEach(n => {
+            ctx.moveTo(core.x, core.y);
+            // 외곽 노드 쪽의 부피를 키워서 슬라임 질감을 살림
+            ctx.arc(n.x, n.y, radius * 0.55, 0, Math.PI * 2);
+        });
+        
+        ctx.lineWidth = radius * 0.8;
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(nodes[0].x, nodes[0].y);
+        for(let i=1; i<numNodes; i++) ctx.lineTo(nodes[i].x, nodes[i].y);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+        ctx.restore(); 
+
+        // 4. 왁스 파편 렌더링
+        if (!waxIntact && currentSlime.type === "wax") {
+            ctx.fillStyle = currentSlime.waxColor;
+            ctx.strokeStyle = "#ffffff"; 
+            ctx.lineWidth = 1;
+
+            for(let i = waxShards.length - 1; i >= 0; i--) {
+                const s = waxShards[i];
+                s.vy += 0.5;
+                s.x += s.vx; s.y += s.vy;
+                s.rot += s.vRot;
+                
+                ctx.save();
+                ctx.translate(s.x, s.y);
+                ctx.rotate(s.rot);
+                ctx.beginPath();
+                ctx.moveTo(-s.size/2, -s.size/2);
+                ctx.lineTo(s.size/2, -s.size*0.3);
+                ctx.lineTo(s.size*0.4, s.size/2);
+                ctx.lineTo(-s.size*0.3, s.size*0.4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                if(s.y > height + 100) waxShards.splice(i, 1);
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    function getNearestNode(x, y) {
+        let minDist = Infinity;
+        let nearest = null;
+        const catchRadius = waxIntact ? getRadius() : getRadius() * 1.5;
+        
+        nodes.forEach(n => {
+            if (n.touchId !== null) return;
+            const dist = Math.hypot(n.x - x, n.y - y);
+            if (dist < minDist) { minDist = dist; nearest = n; }
+        });
+        
+        const coreDist = Math.hypot(core.x - x, core.y - y);
+        if (coreDist < minDist && core.touchId == null) {
+            minDist = coreDist; nearest = core;
+        }
+
+        return minDist < catchRadius ? nearest : null;
+    }
+
+    function handleStart(id, x, y) {
+        initAudio();
+        if(waxIntact) {
+            core.vx += (Math.random()-0.5)*20;
+            core.vy += (Math.random()-0.5)*20;
+        }
+        const n = getNearestNode(x, y);
+        if (n) {
+            n.touchId = id;
+            n.x = x; n.y = y;
+        }
+    }
+
+    function handleMove(id, x, y) {
+        const n = nodes.find(pt => pt.touchId === id) || (core.touchId === id ? core : null);
+        if (n) {
+            const vel = Math.hypot(x - n.x, y - n.y);
+            playSquishSound(vel);
+            
+            n.x = x; n.y = y;
+            
+            // 잡고 당길 때 뼈대(Core)가 노드를 더 빠르게 따라가도록 설정
+            if(n !== core && !waxIntact) {
+                core.vx += (x - core.x) * 0.05;
+                core.vy += (y - core.y) * 0.05;
+            }
+        }
+    }
+
+    function handleEnd(id) {
+        if(core.touchId === id) core.touchId = null;
+        const n = nodes.find(pt => pt.touchId === id);
+        if (n) n.touchId = null;
+    }
+
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); Array.from(e.changedTouches).forEach(t => handleStart(t.identifier, t.clientX, t.clientY)); });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); Array.from(e.changedTouches).forEach(t => handleMove(t.identifier, t.clientX, t.clientY)); });
+    canvas.addEventListener('touchend', e => { e.preventDefault(); Array.from(e.changedTouches).forEach(t => handleEnd(t.identifier)); });
+    canvas.addEventListener('touchcancel', e => { e.preventDefault(); Array.from(e.changedTouches).forEach(t => handleEnd(t.identifier)); });
+
+    let isMouseDown = false;
+    canvas.addEventListener('mousedown', e => { isMouseDown = true; handleStart('mouse', e.clientX, e.clientY); });
+    canvas.addEventListener('mousemove', e => { if (isMouseDown) handleMove('mouse', e.clientX, e.clientY); });
+    canvas.addEventListener('mouseup', e => { isMouseDown = false; handleEnd('mouse'); });
+    canvas.addEventListener('mouseleave', e => { isMouseDown = false; handleEnd('mouse'); });
+
+    resize();
+    animate();
+</script>
+</body>
+</html>
