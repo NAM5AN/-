@@ -80,6 +80,10 @@
         .grade-R { color: #2196f3; font-weight: bold; }
         .grade-E { color: #e91e63; font-weight: bold; }
         .grade-L { color: #ffeb3b; font-weight: bold; text-shadow: 0 0 5px rgba(255,235,59,0.6); }
+
+        /* 뽑기 결과창: 내용 길이와 무관하게 크기 고정, 긴 이름은 줄바꿈 */
+        #gachaResult { font-size: 24px; margin: 8px 0; word-break: keep-all; line-height: 1.35; }
+        #gachaSubResult { min-height: 20px; margin: 4px 0; }
     </style>
 </head>
 <body>
@@ -114,11 +118,13 @@
         </div>
     </div>
     
+    <div id="toast" style="position:absolute; bottom:90px; left:50%; transform:translateX(-50%); background:rgba(40,40,48,0.95); color:#fff; padding:10px 22px; border-radius:20px; font-size:14px; z-index:300; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.35); pointer-events:none; text-align:center; max-width:80%;"></div>
+
     <div id="hint">드래그하거나 꾹 눌러서 모양을 만들어보세요!</div>
 
     <!-- 가챠 모달 -->
     <div id="gachaModal" class="modal-overlay">
-        <div class="modal-card">
+        <div class="modal-card" style="width: 320px; min-height: 235px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center;">
             <div id="ad-box" style="margin-bottom:15px; color:#aaa;">상자를 여는 중... (1초)</div>
             <h1 id="gachaResult"></h1>
             <p id="gachaSubResult"></p>
@@ -180,7 +186,7 @@
         { id: 14, name: "유리알 리퀴드", grade: "R", color: "#4fc3f7", k: 0.03, damping: 0.86, type: "normal", rate: 7, gloss: 0.9, baseAlpha: 0.7, stretchAlpha: 0.22 },
         { id: 15, name: "포도알 톡톡", grade: "R", color: "#8e44ad", k: 0.15, damping: 0.7, type: "normal", rate: 6, gloss: 0.85, baseAlpha: 0.9, stretchAlpha: 0.55 },
         { id: 16, name: "황금 꿀 슬라임", grade: "E", color: "#e2b93b", k: 0.04, damping: 0.84, type: "normal", rate: 3, gloss: 0.95, baseAlpha: 0.78, stretchAlpha: 0.35 },
-        { id: 17, name: "몽실몽실 목화솜", grade: "E", color: "#f2eff6", k: 0.014, damping: 0.6, type: "cotton", lumpy: true, strokeF: 0.55, homeW: 2.0, nbrW: 0.25, rate: 3, gloss: 0.05, baseAlpha: 1, stretchAlpha: 1, puffs: true, plastic: 0.1 },
+        { id: 17, name: "몽실몽실 목화솜", grade: "E", color: "#c9c4d4", k: 0.014, damping: 0.6, type: "cotton", lumpy: true, strokeF: 0.55, homeW: 2.0, nbrW: 0.25, rate: 3, gloss: 0.05, baseAlpha: 1, stretchAlpha: 1, puffs: true, plastic: 0.1 },
         { id: 18, name: "🌈오로라 젤리🌈", grade: "L", color: "#b388ff", aurora: true, k: 0.035, damping: 0.86, type: "normal", rate: 1, gloss: 0.9, baseAlpha: 0.85, stretchAlpha: 0.4 }
     ];
 
@@ -304,6 +310,15 @@
     ================================================================= */
     const SHOP_PRICES = { C: 30, R: 70, E: 150, L: 300 };
 
+    let toastTimer = null;
+    function showToast(msg) {
+        const t = document.getElementById("toast");
+        t.innerText = msg;
+        t.style.display = "block";
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { t.style.display = "none"; }, 1800);
+    }
+
     function openShop() {
         document.getElementById("shopModal").style.display = "flex";
         renderShop();
@@ -331,16 +346,16 @@
     function buySlime(id) {
         const spec = slimeDB.find(s => s.id === id);
         const price = SHOP_PRICES[spec.grade];
-        if (mileage < price) { alert(`마일리지가 부족해요! (필요: ✨${price})`); return; }
+        if (mileage < price) { showToast(`마일리지가 부족해요! (필요: ✨${price})`); return; }
         mileage -= price;
         if (!unlockedIds.includes(id)) unlockedIds.push(id);
         const existing = mySlimes.find(s => s.id === id);
         if (existing) {
             existing.level++;
-            alert(`${existing.customName || spec.name} 레벨업! (Lv.${existing.level})`);
+            showToast(`${existing.customName || spec.name} 레벨업! (Lv.${existing.level})`);
         } else {
             mySlimes.push({ id: id, customName: spec.name, level: 1 });
-            alert(`${spec.name} 획득!`);
+            showToast(`${spec.name} 획득!`);
         }
         updateInventoryUI();
         renderShop();
@@ -596,18 +611,18 @@
             for (let j = 0; j < numNodes; j++) {
                 cottonPuffs.push({
                     ni: j,
-                    f: 0.95 + Math.random() * 0.18,
-                    r: 0.15 + Math.random() * 0.10,
+                    f: 0.9 + Math.random() * 0.18,
+                    r: 0.20 + Math.random() * 0.12,
                     ox: (Math.random() - 0.5) * 0.07,
                     oy: (Math.random() - 0.5) * 0.07
                 });
             }
-            const inner = 13 + Math.floor(Math.random() * 5);
+            const inner = 8 + Math.floor(Math.random() * 3);
             for (let j = 0; j < inner; j++) {
                 cottonPuffs.push({
                     ni: Math.floor(Math.random() * numNodes),
-                    f: 0.2 + Math.random() * 0.65,
-                    r: 0.12 + Math.random() * 0.11,
+                    f: 0.2 + Math.random() * 0.6,
+                    r: 0.18 + Math.random() * 0.12,
                     ox: 0, oy: 0
                 });
             }
@@ -1045,7 +1060,7 @@
         }
         bodyCtx.restore();
 
-        // 목화솜: 봉우리 그림자 → 흰 봉우리 2패스로 콜리플라워 같은 입체 요철
+        // 목화솜: 회색 감싸기 → 흰 봉우리 순서로 그려서 흰 알갱이가 항상 회색 안에 들어감
         if (spec.puffs && cottonPuffs.length) {
             const puffPos = cottonPuffs.map(P => {
                 const nd = nodes[P.ni];
@@ -1056,17 +1071,21 @@
                 };
             });
             bodyCtx.save();
-            // 1) 골 그림자 (오른쪽 아래로 살짝 밀어서)
-            bodyCtx.filter = 'blur(3px)';
-            bodyCtx.fillStyle = "#c8c3d3";
+            // 1) 회색 감싸기: 봉우리마다 한 치수 큰 회색 원 (몸통 회색과 합쳐져 완전한 테두리)
+            bodyCtx.filter = 'blur(2px)';
+            bodyCtx.fillStyle = "#c9c4d4";
             bodyCtx.beginPath();
-            puffPos.forEach(p => { bodyCtx.moveTo(p.x + 3 + p.r, p.y + 4); bodyCtx.arc(p.x + 3, p.y + 4, p.r, 0, Math.PI * 2); });
+            puffPos.forEach(p => {
+                const rr = p.r * 1.25 + 4;
+                bodyCtx.moveTo(p.x + rr, p.y);
+                bodyCtx.arc(p.x, p.y, rr, 0, Math.PI * 2);
+            });
             bodyCtx.fill();
-            // 2) 흰 솜봉우리
+            // 2) 흰 솜봉우리 (좌상단으로 살짝 치우쳐 아래쪽 회색 골이 두껍게 → 입체감)
             bodyCtx.filter = 'blur(1.5px)';
             bodyCtx.fillStyle = "#ffffff";
             bodyCtx.beginPath();
-            puffPos.forEach(p => { bodyCtx.moveTo(p.x + p.r, p.y); bodyCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2); });
+            puffPos.forEach(p => { bodyCtx.moveTo(p.x - 1 + p.r, p.y - 2); bodyCtx.arc(p.x - 1, p.y - 2, p.r, 0, Math.PI * 2); });
             bodyCtx.fill();
             bodyCtx.restore();
         }
