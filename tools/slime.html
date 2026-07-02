@@ -105,8 +105,7 @@
         </div>
         
         <div id="inventory-container">
-            <button class="btn" style="background:#607d8b; margin-right:6px;" onclick="document.getElementById('bgPicker').click()" title="배경색 바꾸기">🎨</button><button class="btn btn-sub" id="toggleInvBtn" onclick="toggleInventory()">🎒 가방 접기</button>
-            <input type="color" id="bgPicker" style="display:none;">
+            <button class="btn" style="background:#607d8b; margin-right:6px;" onclick="openBgModal()" title="배경색 바꾸기">🎨</button><button class="btn btn-sub" id="toggleInvBtn" onclick="toggleInventory()">🎒 가방 접기</button>
             <div id="mileage-box">✨ 마일리지: <span id="mileageText">0</span></div>
             <div id="inventory">
                 <div style="margin-bottom: 8px; color: #ff4081; font-weight:bold; text-align: center; font-size:13px;">보유 슬라임</div>
@@ -147,6 +146,16 @@
         </div>
     </div>
 
+    <!-- 배경색 모달 (뒤가 살짝 비쳐 색을 바로 확인 가능) -->
+    <div id="bgModal" class="modal-overlay" style="background: rgba(0,0,0,0.35);">
+        <div class="modal-card" style="width: 290px;">
+            <h2>🎨 배경색 설정</h2>
+            <p style="font-size:12px; color:#eee; margin:4px 0 14px;">어두운 색일수록 투명 말랑이가 잘 보여요</p>
+            <div id="bgSwatches" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:16px; justify-items:center;"></div>
+            <button class="btn" style="background:#555;" onclick="closeBgModal()">닫기</button>
+        </div>
+    </div>
+
 <script>
     /* =================================================================
        1. 다양해진 말랑이 라인업 DB 설정 
@@ -171,7 +180,7 @@
         { id: 14, name: "유리알 리퀴드", grade: "R", color: "#4fc3f7", k: 0.03, damping: 0.86, type: "normal", rate: 7, gloss: 0.9, baseAlpha: 0.7, stretchAlpha: 0.22 },
         { id: 15, name: "포도알 톡톡", grade: "R", color: "#8e44ad", k: 0.15, damping: 0.7, type: "normal", rate: 6, gloss: 0.85, baseAlpha: 0.9, stretchAlpha: 0.55 },
         { id: 16, name: "황금 꿀 슬라임", grade: "E", color: "#e2b93b", k: 0.04, damping: 0.84, type: "normal", rate: 3, gloss: 0.95, baseAlpha: 0.78, stretchAlpha: 0.35 },
-        { id: 17, name: "몽실몽실 목화솜", grade: "E", color: "#ffffff", k: 0.014, damping: 0.6, type: "cotton", lumpy: true, strokeF: 0.6, homeW: 1.4, nbrW: 1.2, rate: 3, gloss: 0.05, baseAlpha: 1, stretchAlpha: 1, rim: "#ccc8d8", rimW: 0.18 },
+        { id: 17, name: "몽실몽실 목화솜", grade: "E", color: "#f2eff6", k: 0.014, damping: 0.6, type: "cotton", lumpy: true, strokeF: 0.55, homeW: 2.0, nbrW: 0.25, rate: 3, gloss: 0.05, baseAlpha: 1, stretchAlpha: 1, puffs: true, plastic: 0.1 },
         { id: 18, name: "🌈오로라 젤리🌈", grade: "L", color: "#b388ff", aurora: true, k: 0.035, damping: 0.86, type: "normal", rate: 1, gloss: 0.9, baseAlpha: 0.85, stretchAlpha: 0.4 }
     ];
 
@@ -472,8 +481,35 @@
         const g = parseInt(bgColor.substr(3, 2), 16);
         const b = parseInt(bgColor.substr(5, 2), 16);
         bgFill = `rgba(${r}, ${g}, ${b}, 0.5)`;
-        const picker = document.getElementById("bgPicker");
-        if (picker) picker.value = bgColor;
+    }
+
+    const BG_PRESETS = [
+        "#f4eaef", "#ffffff", "#fdf6e3", "#efe6d8",
+        "#dbeafe", "#d1f5e0", "#e3ddf7", "#ffe4d6",
+        "#ffe783", "#ff9e9e", "#7fc8f8", "#b8e986",
+        "#3a3a44", "#1e2a4a", "#3b2a55", "#15151a"
+    ];
+    function openBgModal() {
+        document.getElementById("bgModal").style.display = "flex";
+        renderBgSwatches();
+    }
+    function closeBgModal() { document.getElementById("bgModal").style.display = "none"; }
+    function renderBgSwatches() {
+        const grid = document.getElementById("bgSwatches");
+        grid.innerHTML = "";
+        BG_PRESETS.forEach(c => {
+            const sw = document.createElement("div");
+            const sel = c.toLowerCase() === bgColor.toLowerCase();
+            sw.style.cssText = `width:46px;height:46px;border-radius:14px;background:${c};cursor:pointer;`
+                + `border:3px solid ${sel ? '#ffeb3b' : 'rgba(255,255,255,0.4)'};box-sizing:border-box;`;
+            sw.onclick = () => {
+                bgColor = c;
+                localStorage.setItem("slime_bg_color", bgColor);
+                applyBgColor();
+                renderBgSwatches();
+            };
+            grid.appendChild(sw);
+        });
     }
     
     let width, height;
@@ -490,6 +526,7 @@
     const touchStarts = {};      // touchId → 탭(짧은 터치) 판정용 시작 정보
     let waxChips = [];           // 금/구멍 조각 (코어 기준 상대좌표, 서로 겹치지 않게 배치)
     let decorShards = [];        // 껍질 장식(사과 꼭지+잎)이 떨어질 때의 파편
+    let cottonPuffs = [];        // 목화솜 표면 봉우리들 (노드에 앵커, 변형을 따라감)
 
     function getSpec() { return slimeDB.find(x => x.id === currentSlime.id); }
     function getRadius() { return Math.min(100 + ((currentSlime.level || 1) - 1) * 10, 220); }
@@ -510,6 +547,7 @@
         waxShards = [];
         waxChips = [];
         decorShards = [];
+        cottonPuffs = [];
         activePushes = [];
         const spec = getSpec();
         waxIntact = (spec.type === "wax" || spec.type === "crack_wax"); 
@@ -517,7 +555,7 @@
         if(spec.type === "wax") document.getElementById("hint").innerText = "강하게 잡아끌어 껍질을 부수세요!";
         else if(spec.type === "crack_wax") document.getElementById("hint").innerText = "톡 누르면 금! 금 간 곳을 한 번 더 건드리면 조각이 빠작 떨어져요!";
         else if(spec.type === "squishy") document.getElementById("hint").innerText = "구름 숨결 스퀴시: 묵직한 저항감과 불규칙한 리얼 반죽 피지컬!";
-        else if(spec.type === "cotton") document.getElementById("hint").innerText = "뭉게뭉게 솜구름: 울퉁불퉁 늘어나고 아주 천천히 돌아와요!";
+        else if(spec.type === "cotton") document.getElementById("hint").innerText = spec.plastic ? "진짜 목화솜: 늘리고 구긴 모양이 그대로 기억돼요!" : "뭉게뭉게 솜구름: 울퉁불퉁 늘어나고 아주 천천히 돌아와요!";
         else document.getElementById("hint").innerText = "드래그하거나 꾹 눌러서 만져보세요! 배경에서 밀고 들어오면 찌그러집니다.";
 
         core = { x: width / 2, y: height / 2, vx: 0, vy: 0 };
@@ -551,6 +589,28 @@
                 kMul: spec.type === "cotton" ? (0.35 + Math.random() * 0.95) : 1,
                 vx: 0, vy: 0, touchId: null
             });
+        }
+
+        // 목화솜 봉우리: 바깥 링(실루엣을 울퉁불퉁하게) + 안쪽 채움 (모두 노드에 앵커)
+        if (spec.puffs) {
+            for (let j = 0; j < numNodes; j++) {
+                cottonPuffs.push({
+                    ni: j,
+                    f: 0.95 + Math.random() * 0.18,
+                    r: 0.15 + Math.random() * 0.10,
+                    ox: (Math.random() - 0.5) * 0.07,
+                    oy: (Math.random() - 0.5) * 0.07
+                });
+            }
+            const inner = 13 + Math.floor(Math.random() * 5);
+            for (let j = 0; j < inner; j++) {
+                cottonPuffs.push({
+                    ni: Math.floor(Math.random() * numNodes),
+                    f: 0.2 + Math.random() * 0.65,
+                    r: 0.12 + Math.random() * 0.11,
+                    ox: 0, oy: 0
+                });
+            }
         }
     }
 
@@ -850,6 +910,17 @@
                 n.x += n.vx; n.y += n.vy;
             } else {
                 // 금 내기는 터치 핸들러(damageWax)에서 좌표 기반으로 처리
+                // 소성 슬라임: 잡은 노드가 이웃을 끌고 가서 덩어리째 성형됨
+                if (spec.plastic) {
+                    const prevN = nodes[(i - 1 + numNodes) % numNodes];
+                    const nextN = nodes[(i + 1) % numNodes];
+                    [prevN, nextN].forEach(m => {
+                        if (m.touchId === null) {
+                            m.vx += (n.x - m.x) * 0.05;
+                            m.vy += (n.y - m.y) * 0.05;
+                        }
+                    });
+                }
             }
 
             activePushes.forEach(p => {
@@ -888,6 +959,19 @@
                 }
             }
             
+            // 소성 기억: 현재 모양을 서서히 새 제자리로 기억 → 늘리거나 구긴 모양이 오래 유지됨
+            if (spec.plastic) {
+                const relX = n.x - core.x, relY = n.y - core.y;
+                const curD = Math.hypot(relX, relY) || 1;
+                const minB = radius * 0.25, maxB = radius * 2.0;
+                n.baseDist += (Math.min(maxB, Math.max(minB, curD)) - n.baseDist) * spec.plastic;
+                const curA = Math.atan2(relY, relX);
+                let dA = curA - n.baseAngle;
+                while (dA > Math.PI) dA -= Math.PI * 2;
+                while (dA < -Math.PI) dA += Math.PI * 2;
+                n.baseAngle += dA * spec.plastic;
+            }
+
             // 왁스 껍질이 있는 동안엔 단단한 상태: 제자리(홈)에서 어느 방향으로든 아주 약간만 밀림
             // (반지름만 제한하면 옆으로 끌려가 콩팥 모양으로 접히므로, 각도까지 홈 위치에 고정)
             if (waxIntact) {
@@ -960,6 +1044,32 @@
             traceAndFillBlob(bodyCtx, bodyColor, radius, spec.strokeF);
         }
         bodyCtx.restore();
+
+        // 목화솜: 봉우리 그림자 → 흰 봉우리 2패스로 콜리플라워 같은 입체 요철
+        if (spec.puffs && cottonPuffs.length) {
+            const puffPos = cottonPuffs.map(P => {
+                const nd = nodes[P.ni];
+                return {
+                    x: core.x + (nd.x - core.x) * P.f + P.ox * radius,
+                    y: core.y + (nd.y - core.y) * P.f + P.oy * radius,
+                    r: P.r * radius
+                };
+            });
+            bodyCtx.save();
+            // 1) 골 그림자 (오른쪽 아래로 살짝 밀어서)
+            bodyCtx.filter = 'blur(3px)';
+            bodyCtx.fillStyle = "#c8c3d3";
+            bodyCtx.beginPath();
+            puffPos.forEach(p => { bodyCtx.moveTo(p.x + 3 + p.r, p.y + 4); bodyCtx.arc(p.x + 3, p.y + 4, p.r, 0, Math.PI * 2); });
+            bodyCtx.fill();
+            // 2) 흰 솜봉우리
+            bodyCtx.filter = 'blur(1.5px)';
+            bodyCtx.fillStyle = "#ffffff";
+            bodyCtx.beginPath();
+            puffPos.forEach(p => { bodyCtx.moveTo(p.x + p.r, p.y); bodyCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2); });
+            bodyCtx.fill();
+            bodyCtx.restore();
+        }
 
         // 3-4. 개체별 광택 (gloss 0=무광 ~ 1=유리광)
         const gloss = spec.gloss !== undefined ? spec.gloss : 0.3;
@@ -1074,17 +1184,19 @@
         if (lastAcc) {
             const dx = a.x - lastAcc.x, dy = a.y - lastAcc.y;
             const mag = Math.hypot(dx, dy);
-            if (mag > 6) {
+            if (mag > 2.5) {
                 const spec = getSpec();
-                const shake = Math.min(2.5, mag / 8);
+                // 2단계 감도: 약하게 흔들면 제자리 잔출렁(soft), 세게 흔들 때만 이동(hard)
+                const soft = Math.min(1.6, (mag - 2.5) / 5);
+                const hard = Math.max(0, Math.min(2.2, (mag - 8) / 6));
                 if (!waxIntact) {
-                    const amp = Math.min(14, Math.max(3, 0.45 / spec.k)) * shake;
-                    nodes.forEach(n => { n.vx += -dx * amp * 0.12; n.vy += dy * amp * 0.12; });
-                    core.vx += -dx * 0.6 * shake; core.vy += dy * 0.6 * shake;
-                    if (Math.random() < 0.5) playSquishSound('squish');
+                    const amp = Math.min(14, Math.max(3, 0.45 / spec.k));
+                    nodes.forEach(n => { n.vx += -dx * amp * 0.1 * soft; n.vy += dy * amp * 0.1 * soft; });
+                    core.vx += -dx * 0.55 * hard; core.vy += dy * 0.55 * hard;
+                    if (soft > 0.5 && Math.random() < 0.4) playSquishSound('squish');
                 } else {
-                    // 왁스 상태: 단단해서 통째로만 흔들림
-                    core.vx += -dx * 0.8 * shake; core.vy += dy * 0.8 * shake;
+                    // 왁스 상태: 단단해서 세게 흔들 때만 통째로 이동
+                    core.vx += -dx * 0.7 * hard; core.vy += dy * 0.7 * hard;
                 }
             }
         }
@@ -1191,11 +1303,6 @@
     canvas.addEventListener('mouseup', e => { isMouseDown = false; handleEnd('mouse'); });
     canvas.addEventListener('mouseleave', e => { isMouseDown = false; handleEnd('mouse'); });
 
-    document.getElementById("bgPicker").addEventListener("input", e => {
-        bgColor = e.target.value;
-        localStorage.setItem("slime_bg_color", bgColor);
-        applyBgColor();
-    });
     applyBgColor();
 
     updateInventoryUI();
