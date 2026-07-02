@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>말랑쫀득 슬랑이 가챠 V5 - 완벽한 덩어리 & 모션블러</title>
+    <title>말랑쫀득 슬랑이 가챠 V6 - 도감 & 리얼 크랙 물리</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
         
@@ -11,73 +11,83 @@
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; background-color: #f4eaef;
             font-family: 'Jua', sans-serif; touch-action: none;
+            user-select: none; -webkit-user-select: none;
         }
-        canvas { display: block; width: 100%; height: 100%; }
+        canvas { display: block; width: 100%; height: 100%; position: absolute; top:0; left:0; }
         
+        /* UI 레이아웃 */
         #ui {
             position: absolute; top: 20px; left: 20px; right: 20px;
             display: flex; justify-content: space-between; align-items: flex-start;
-            pointer-events: none;
+            pointer-events: none; z-index: 10;
         }
         .btn {
             background: #ff4081; color: white; border: none;
-            padding: 12px 20px; border-radius: 30px; font-size: 16px;
+            padding: 10px 18px; border-radius: 30px; font-size: 15px;
             font-family: 'Jua', sans-serif; cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); pointer-events: auto;
-            transition: transform 0.1s;
+            transition: transform 0.1s; margin-bottom: 5px;
         }
         .btn:active { transform: scale(0.95); }
+        .btn-sub { background: #4caf50; }
+        .btn-book { background: #9c27b0; }
         
-        #inventory-container { pointer-events: auto; text-align: right; width: 220px; }
+        /* 인벤토리 창 접기/펴기 */
+        #inventory-container { pointer-events: auto; text-align: right; width: 240px; transition: all 0.3s; }
+        #inventory-container.collapsed { width: 50px; }
+        #inventory-container.collapsed #mileage-box, 
+        #inventory-container.collapsed #inventory { display: none; }
+        
         #mileage-box {
-            background: #fff; border-radius: 15px; padding: 8px; margin-bottom: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 14px;
+            background: #fff; border-radius: 15px; padding: 6px; margin-bottom: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-size: 13px;
             border: 2px solid #ff4081; color: #ff4081; text-align: center;
         }
         #inventory {
-            background: rgba(255, 255, 255, 0.9); padding: 15px;
-            border-radius: 20px; max-height: 50vh; overflow-y: auto;
+            background: rgba(255, 255, 255, 0.93); padding: 12px;
+            border-radius: 20px; max-height: 45vh; overflow-y: auto;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: left;
         }
         .slime-item {
-            padding: 8px 10px; margin-bottom: 8px; border-radius: 10px;
-            cursor: pointer; font-size: 15px; border: 2px solid transparent;
-            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 8px; margin-bottom: 6px; border-radius: 10px;
+            cursor: pointer; font-size: 13px; border: 2px solid transparent;
+            display: flex; justify-content: space-between; align-items: center; background: #fff;
         }
         .slime-item.active { border-color: #ff4081; background: #fff0f5; }
-        .lv-badge { background: #ff4081; color: white; border-radius: 10px; padding: 2px 6px; font-size: 12px; }
-        
-        #modal {
+        .lv-badge { background: #ff4081; color: white; border-radius: 8px; padding: 1px 5px; font-size: 11px; }
+        .rename-btn { background: #ccc; border:none; border-radius:4px; padding:2px 4px; font-size:10px; cursor:pointer; margin-left:5px;}
+
+        /* 전면 모달 스타일 */
+        .modal-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8); display: none;
             justify-content: center; align-items: center; flex-direction: column;
             color: white; z-index: 100; pointer-events: auto; text-align: center;
         }
-        #modal h1 { font-size: 32px; margin-bottom: 10px; }
-        #modal p { font-size: 18px; margin-bottom: 20px; color: #ffeb3b; }
-        #ad-box {
-            width: 300px; height: 150px; background: #444; border-radius: 10px;
-            display: flex; justify-content: center; align-items: center; margin-bottom: 20px;
-        }
-        .close-btn { background: #ccc; color: black; margin-top: 20px; font-size: 18px; padding: 10px 30px; }
+        .modal-card { background: rgba(255,255,255,0.15); padding: 30px; border-radius: 25px; backdrop-filter: blur(10px); max-width: 80%; }
         
-        .grade-C { color: #757575; font-weight: bold; }
-        .grade-R { color: #4caf50; font-weight: bold; }
-        .grade-E { color: #e91e63; font-weight: bold; }
-        .grade-L { color: #ffeb3b; font-weight: bold; text-shadow: 0 0 5px rgba(255,235,59,0.5); }
+        /* 도감 UI 스타일 */
+        #bookModal .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0; max-height: 50vh; overflow-y: auto; padding: 5px; }
+        .book-item { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; border: 2px solid transparent; font-size:12px; text-align:center;}
+        .book-item.unlocked { background: rgba(255,255,255,0.25); border-color: #ffeb3b; }
+        .book-item.locked { color: #aaa; }
 
-        #hint {
-            position: absolute; bottom: 30px; width: 100%; text-align: center;
-            font-size: 18px; color: #888; pointer-events: none;
-        }
+        #hint { position: absolute; bottom: 25px; width: 100%; text-align: center; font-size: 16px; color: #777; pointer-events: none; z-index: 5; }
+        
+        /* 등급별 색상 정의 */
+        .grade-C { color: #757575; font-weight: bold; }
+        .grade-R { color: #2196f3; font-weight: bold; }
+        .grade-E { color: #e91e63; font-weight: bold; }
+        .grade-L { color: #ffeb3b; font-weight: bold; text-shadow: 0 0 5px rgba(255,235,59,0.6); }
     </style>
 </head>
 <body>
 
+    <!-- 고무/액체 효과용 SVG 필터 -->
     <svg width="0" height="0" style="position: absolute; z-index: -1;">
         <defs>
             <filter id="gooey">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur" />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur" />
                 <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10" result="gooey" />
                 <feComposite in="SourceGraphic" in2="gooey" operator="atop"/>
             </filter>
@@ -87,69 +97,185 @@
     <canvas id="slimeCanvas"></canvas>
     
     <div id="ui">
-        <button class="btn" onclick="startGacha()">🎁 뽑기 (광고)<br><span style="font-size: 12px;">마일리지 적립</span></button>
+        <div>
+            <button class="btn" onclick="startGacha()">🎁 슬라임 뽑기</button><br>
+            <button class="btn btn-book" onclick="openBook()">📖 말랑이 도감</button>
+        </div>
+        
         <div id="inventory-container">
+            <button class="btn btn-sub" id="toggleInvBtn" onclick="toggleInventory()">🎒 가방 접기</button>
             <div id="mileage-box">✨ 마일리지: <span id="mileageText">0</span> / 100</div>
             <div id="inventory">
-                <div style="margin-bottom: 10px; color: #ff4081; font-weight:bold; text-align: center;">보유 슬라임 목록</div>
+                <div style="margin-bottom: 8px; color: #ff4081; font-weight:bold; text-align: center; font-size:13px;">보유 슬라임 (등급순)</div>
                 <div id="slimeList"></div>
             </div>
         </div>
     </div>
     
-    <div id="hint">화면을 드래그하여 슬라임을 만져보세요!</div>
+    <div id="hint">드래그하거나 꾹 눌러서 모양을 만들어보세요!</div>
 
-    <div id="modal">
-        <div id="ad-box">광고 재생 중... (1초)</div>
-        <h1 id="gachaResult"></h1>
-        <p id="gachaSubResult"></p>
-        <button class="btn close-btn" id="closeModalBtn" style="display:none;" onclick="closeGacha()">확인</button>
+    <!-- 가챠 모달 -->
+    <div id="gachaModal" class="modal-overlay">
+        <div class="modal-card">
+            <div id="ad-box" style="margin-bottom:15px; color:#aaa;">상자를 여는 중... (1초)</div>
+            <h1 id="gachaResult"></h1>
+            <p id="gachaSubResult"></p>
+            <button class="btn" id="closeGachaBtn" style="display:none; margin-top:15px;" onclick="closeGacha()">확인</button>
+        </div>
+    </div>
+
+    <!-- 도감 모달 -->
+    <div id="bookModal" class="modal-overlay">
+        <div class="modal-card" style="width: 320px;">
+            <h2>📖 말랑이 수집 도감</h2>
+            <div id="bookProgress" style="color:#ffeb3b; margin-bottom:10px;">0% 달성</div>
+            <div class="grid" id="bookGrid"></div>
+            <button class="btn" style="background:#555;" onclick="closeBook()">닫기</button>
+        </div>
     </div>
 
 <script>
+    /* =================================================================
+       1. 다양해진 말랑이 라인업 DB 설정 
+    ================================================================= */
     const slimeDB = [
-        { id: 1, name: "물젤리 슬랑이", grade: "C", color: "#64c8ff", k: 0.05, damping: 0.8, type: "normal", rate: 40 },
-        { id: 2, name: "우유 생크림 폼", grade: "C", color: "#ffffff", k: 0.08, damping: 0.85, type: "normal", rate: 30 },
-        { id: 3, name: "폼볼 크런치 팝", grade: "R", color: "#ffb6c1", k: 0.1, damping: 0.75, type: "crunch", rate: 18 },
+        { id: 1, name: "물젤리 슬랑이", grade: "C", color: "#64c8ff", k: 0.05, damping: 0.8, type: "normal", rate: 30 },
+        { id: 2, name: "우유 생크림 폼", grade: "C", color: "#ffffff", k: 0.08, damping: 0.85, type: "normal", rate: 25 },
+        { id: 3, name: "폼볼 크런치 팝", grade: "R", color: "#ffb6c1", k: 0.11, damping: 0.75, type: "crunch", rate: 15 },
         { id: 4, name: "바사삭 리얼 왁뿌볼", grade: "E", color: "#d81b60", waxColor: "#f8bbd0", k: 0.12, damping: 0.8, type: "wax", rate: 10 },
-        // 우주 덩어리 물리 연산 조정: 덜 미친듯이 튀도록 수정
-        { id: 5, name: "✨우주 덩어리✨", grade: "L", color: "#4b0082", k: 0.06, damping: 0.88, type: "normal", rate: 2 }
+        { id: 5, name: "바삭 크랙볼", grade: "E", color: "#ff5722", waxColor: "#ffe082", k: 0.10, damping: 0.8, type: "crack_wax", rate: 10 }, 
+        { id: 6, name: "쫀득 고무 찰떡", grade: "R", color: "#8bc34a", k: 0.18, damping: 0.65, type: "normal", rate: 8 },
+        { id: 7, name: "구름 숨결 스퀴시", grade: "E", color: "#e040fb", k: 0.02, damping: 0.55, type: "squishy", rate: 5 }, 
+        { id: 8, name: "✨우주 덩어리✨", grade: "L", color: "#4b0082", k: 0.06, damping: 0.88, type: "normal", rate: 2 }
     ];
 
-    let mySlimes = [{ ...slimeDB[0], level: 1 }]; 
-    let currentSlime = mySlimes[0];
-    let mileage = 0;
+    const gradeOrder = { "L": 0, "E": 1, "R": 2, "C": 3 };
+
+    let saveData = {
+        mySlimes: [{ id: 1, customName: "물젤리 슬랑이", level: 1 }],
+        currentSlimeId: 1,
+        mileage: 0,
+        unlockedIds: [1]
+    };
+
+    if(localStorage.getItem("slime_gacha_save")) {
+        try {
+            saveData = JSON.parse(localStorage.getItem("slime_gacha_save"));
+        } catch(e) { console.error(e); }
+    }
+
+    let mySlimes = saveData.mySlimes;
+    let currentSlime = mySlimes.find(s => s.id === saveData.currentSlimeId) || mySlimes[0];
+    let mileage = saveData.mileage;
+    let unlockedIds = saveData.unlockedIds || [1];
+
+    function saveGame() {
+        saveData.mySlimes = mySlimes;
+        saveData.currentSlimeId = currentSlime.id;
+        saveData.mileage = mileage;
+        saveData.unlockedIds = unlockedIds;
+        localStorage.setItem("slime_gacha_save", JSON.stringify(saveData));
+    }
 
     function updateInventoryUI() {
+        mySlimes.sort((a, b) => {
+            let specA = slimeDB.find(x => x.id === a.id);
+            let specB = slimeDB.find(x => x.id === b.id);
+            return gradeOrder[specA.grade] - gradeOrder[specB.grade];
+        });
+
         const list = document.getElementById("slimeList");
         list.innerHTML = "";
         mySlimes.forEach(s => {
+            const spec = slimeDB.find(x => x.id === s.id);
             const div = document.createElement("div");
-            div.className = `slime-item ${s === currentSlime ? 'active' : ''}`;
-            div.innerHTML = `<span class="grade-${s.grade}">[${s.grade}] ${s.name}</span> <span class="lv-badge">Lv.${s.level}</span>`;
-            div.onclick = () => { currentSlime = s; initSlime(); updateInventoryUI(); };
+            div.className = `slime-item ${s.id === currentSlime.id ? 'active' : ''}`;
+            
+            div.innerHTML = `
+                <span class="grade-${spec.grade}">[${spec.grade}] ${s.customName || spec.name}</span>
+                <div>
+                    <span class="lv-badge">Lv.${s.level}</span>
+                    <button class="rename-btn" onclick="renameSlime(${s.id}, event)">📝</button>
+                </div>
+            `;
+            div.onclick = () => { 
+                currentSlime = s; 
+                initSlime(); 
+                updateInventoryUI(); 
+                saveGame();
+            };
             list.appendChild(div);
         });
         document.getElementById("mileageText").innerText = mileage;
     }
-    updateInventoryUI();
 
+    function renameSlime(id, e) {
+        e.stopPropagation();
+        const s = mySlimes.find(x => x.id === id);
+        const spec = slimeDB.find(x => x.id === id);
+        const newName = prompt("슬라임의 새 이름을 입력하세요:", s.customName || spec.name);
+        if(newName && newName.trim().length > 0) {
+            s.customName = newName.trim();
+            updateInventoryUI();
+            saveGame();
+        }
+    }
+
+    let isInvCollapsed = false;
+    function toggleInventory() {
+        isInvCollapsed = !isInvCollapsed;
+        const container = document.getElementById("inventory-container");
+        const btn = document.getElementById("toggleInvBtn");
+        if(isInvCollapsed) {
+            container.classList.add("collapsed");
+            btn.innerText = "🎒"; 
+        } else {
+            container.classList.remove("collapsed");
+            btn.innerText = "🎒 가방 접기";
+        }
+    }
+
+    /* =================================================================
+       2. 도감 시스템 구현
+    ================================================================= */
+    function openBook() {
+        document.getElementById("bookModal").style.display = "flex";
+        const grid = document.getElementById("bookGrid");
+        grid.innerHTML = "";
+        let unlockCount = 0;
+
+        slimeDB.forEach(spec => {
+            const isUnlocked = unlockedIds.includes(spec.id);
+            const item = document.createElement("div");
+            item.className = `book-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+            
+            if(isUnlocked) {
+                unlockCount++;
+                item.innerHTML = `<span class="grade-${spec.grade}">[${spec.grade}]</span><br><b>${spec.name}</b><br><span style="font-size:10px; color:#eee;">${spec.type === 'squishy' ? '스퀴시형' : spec.type.includes('wax') ? '왁뿌형' : '일반형'}</span>`;
+            } else {
+                item.innerHTML = `❓<br><span style="color:#777;">미획득</span>`;
+            }
+            grid.appendChild(item);
+        });
+
+        const progress = Math.round((unlockCount / slimeDB.length) * 100);
+        document.getElementById("bookProgress").innerText = `수집률: ${progress}% (${unlockCount}/${slimeDB.length})`;
+    }
+    function closeBook() { document.getElementById("bookModal").style.display = "none"; }
+
+    /* =================================================================
+       3. 가챠 스크립트
+    ================================================================= */
     function startGacha() {
-        document.getElementById("modal").style.display = "flex";
-        document.getElementById("ad-box").style.display = "flex";
+        document.getElementById("gachaModal").style.display = "flex";
+        document.getElementById("ad-box").style.display = "block";
         document.getElementById("gachaResult").innerText = "";
         document.getElementById("gachaSubResult").innerText = "";
-        document.getElementById("closeModalBtn").style.display = "none";
+        document.getElementById("closeGachaBtn").style.display = "none";
         
-        let timeLeft = 1;
-        document.getElementById("ad-box").innerText = `광고 재생 중... (${timeLeft}초)`;
-        const timer = setInterval(() => {
-            timeLeft--;
-            if (timeLeft <= 0) {
-                clearInterval(timer);
-                document.getElementById("ad-box").style.display = "none";
-                rollGacha();
-            }
+        setTimeout(() => {
+            document.getElementById("ad-box").style.display = "none";
+            rollGacha();
         }, 1000);
     }
 
@@ -161,85 +287,122 @@
         if (mileage >= 100) {
             pulled = slimeDB.find(s => s.grade === "L");
             mileage = 0;
-            subResult.innerText = "🎉 마일리지 100 달성! 전설 확정! 🎉";
         } else {
             const rand = Math.random() * 100;
             let sum = 0; pulled = slimeDB[0];
             for (let s of slimeDB) { sum += s.rate; if (rand <= sum) { pulled = s; break; } }
-            subResult.innerText = "";
         }
         
+        if(!unlockedIds.includes(pulled.id)) unlockedIds.push(pulled.id);
+
         let existing = mySlimes.find(s => s.id === pulled.id);
         if (existing) {
             existing.level++; mileage += 15;
-            result.innerHTML = `<span class="grade-${pulled.grade}">[${pulled.grade}] ${pulled.name}</span><br>중복 획득!`;
-            if(!subResult.innerText) subResult.innerText = `레벨업 (Lv.${existing.level}) 크기 증가! (마일리지 +15)`;
-            if(currentSlime.id === existing.id) { currentSlime = existing; initSlime(); }
+            result.innerHTML = `<span class="grade-${pulled.grade}">[${pulled.grade}] ${existing.customName || pulled.name}</span><br>중복 획득!`;
+            subResult.innerText = `레벨업! (Lv.${existing.level}) (마일리지 +15)`;
         } else {
-            let newSlime = { ...pulled, level: 1 };
+            let newSlime = { id: pulled.id, customName: pulled.name, level: 1 };
             mySlimes.push(newSlime); mileage += 5;
             result.innerHTML = `<span class="grade-${pulled.grade}">[${pulled.grade}] ${pulled.name}</span><br>신규 획득!`;
-            if(!subResult.innerText) subResult.innerText = `마일리지 +5 적립!`;
+            subResult.innerText = `마일리지 +5 적립!`;
         }
-        document.getElementById("closeModalBtn").style.display = "block";
+        document.getElementById("closeGachaBtn").style.display = "block";
         updateInventoryUI();
+        saveGame();
     }
-    function closeGacha() { document.getElementById("modal").style.display = "none"; }
+    function closeGacha() { document.getElementById("gachaModal").style.display = "none"; }
 
+    /* =================================================================
+       4. Audio Engine (청량하고 바삭한 타격감 극대화)
+    ================================================================= */
     let audioCtx;
     function initAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    function playSquishSound(velocity) {
-        if (!audioCtx || velocity < 5) return;
-        const vol = Math.min(velocity / 80, 0.4);
+    function playSquishSound(type = 'squish') {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain); gain.connect(audioCtx.destination);
-        const now = audioCtx.currentTime;
-        gain.gain.setValueAtTime(vol, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-        osc.type = currentSlime.type === "crunch" ? "sawtooth" : "sine";
-        osc.frequency.setValueAtTime(150 + Math.random() * 100, now);
-        osc.start(now); osc.stop(now + 0.2);
-    }
 
-    function playCrackSound() {
-        if (!audioCtx) return;
-        for(let i=0; i<3; i++) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            const now = audioCtx.currentTime;
-            osc.type = "square";
-            osc.frequency.setValueAtTime(1000 + Math.random()*2000, now + i*0.05);
-            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1 + i*0.05);
-            gain.gain.setValueAtTime(0.5, now + i*0.05);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1 + i*0.05);
-            osc.start(now + i*0.05); osc.stop(now + 0.1 + i*0.05);
+        if (type === 'squish') {
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(200 + Math.random()*150, now);
+            osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'release') {
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(120, now);
+            osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'squishy_breath') {
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(2500 + Math.random()*800, now);
+            osc.frequency.linearRampToValueAtTime(300, now + 0.5);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.005, now + 0.5);
+            osc.start(now); osc.stop(now + 0.5);
         }
     }
 
+    function playCrackSound(isHeavy = false) {
+        if (!audioCtx) return;
+        const count = isHeavy ? 8 : 4;
+        for(let i=0; i<count; i++) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime + (i * 0.015);
+            
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(3500 + Math.random()*2500, now);
+            osc.frequency.exponentialRampToValueAtTime(500 + Math.random()*300, now + 0.03);
+            
+            gain.gain.setValueAtTime(isHeavy ? 0.45 : 0.22, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+            
+            osc.start(now); osc.stop(now + 0.04);
+        }
+    }
+
+    /* =================================================================
+       5. 물리 엔진 및 특수 이펙트
+    ================================================================= */
     const canvas = document.getElementById("slimeCanvas");
     const ctx = canvas.getContext("2d");
+
+    // 왁스 코팅 껍질 전용 오프스크린 레이어 (깨진 자리를 구멍으로 뚫기 위함)
+    const waxCanvas = document.createElement("canvas");
+    const waxCtx = waxCanvas.getContext("2d");
     
     let width, height;
     let core = { x: 0, y: 0, vx: 0, vy: 0 };
     let nodes = [];
-    const numNodes = 14;
+    const numNodes = 16;
     
     let waxIntact = true;
     let waxShards = [];
+    let crunchParticles = [];
+    let activePushes = []; 
+    let gestureSeq = 0;          // 터치/클릭 1회 = 제스처 1회
+    const touchGestures = {};    // touchId → 제스처 번호
+    let waxChips = [];           // 금/구멍 조각 (코어 기준 상대좌표, 서로 겹치지 않게 배치)
 
-    function getRadius() {
-        return Math.min(100 + ((currentSlime.level || 1) - 1) * 10, 220);
-    }
+    function getSpec() { return slimeDB.find(x => x.id === currentSlime.id); }
+    function getRadius() { return Math.min(100 + ((currentSlime.level || 1) - 1) * 10, 220); }
 
     function resize() {
         width = canvas.width = window.innerWidth;
         height = canvas.height = window.innerHeight;
+        waxCanvas.width = width;
+        waxCanvas.height = height;
         initSlime();
     }
     window.addEventListener("resize", resize);
@@ -247,10 +410,15 @@
     function initSlime() {
         nodes = [];
         waxShards = [];
-        waxIntact = currentSlime.type === "wax"; 
+        waxChips = [];
+        activePushes = [];
+        const spec = getSpec();
+        waxIntact = (spec.type === "wax" || spec.type === "crack_wax"); 
         
-        if(waxIntact) document.getElementById("hint").innerText = "화면을 강하게 쥐거나 꼬집어서 왁스를 부수세요!";
-        else document.getElementById("hint").innerText = "드래그하여 슬라임을 만져보세요!";
+        if(spec.type === "wax") document.getElementById("hint").innerText = "강하게 잡아끌어 껍질을 부수세요!";
+        else if(spec.type === "crack_wax") document.getElementById("hint").innerText = "톡 누르면 금! 금 간 곳을 한 번 더 건드리면 조각이 빠작 떨어져요!";
+        else if(spec.type === "squishy") document.getElementById("hint").innerText = "구름 숨결 스퀴시: 묵직한 저항감과 불규칙한 리얼 반죽 피지컬!";
+        else document.getElementById("hint").innerText = "드래그하거나 꾹 눌러서 만져보세요! 배경에서 밀고 들어오면 찌그러집니다.";
 
         core = { x: width / 2, y: height / 2, vx: 0, vy: 0 };
         const radius = getRadius();
@@ -267,57 +435,266 @@
         }
     }
 
-    function breakWax() {
-        if (!waxIntact) return;
-        waxIntact = false;
-        playCrackSound();
-        document.getElementById("hint").innerText = "부서진 왁스 속 쫀득한 슬라임!";
-        
-        const radius = getRadius();
-        for(let i = 0; i < 25; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const dist = Math.random() * radius;
+    // 왁스 플레이크(얇은 칩 조각) 파편 생성
+    function spawnWaxFlakes(x, y, count, baseSize, burst = false) {
+        for (let f = 0; f < count; f++) {
+            const size = baseSize * (0.6 + Math.random() * 0.8);
+            const vCount = 4 + Math.floor(Math.random() * 2); // 4~5각형 불규칙 칩
+            const verts = [];
+            for (let v = 0; v < vCount; v++) {
+                const a = (v / vCount) * Math.PI * 2;
+                const rr = size * (0.55 + Math.random() * 0.45);
+                verts.push({ x: Math.cos(a) * rr, y: Math.sin(a) * rr * 0.55 }); // 납작한 조각
+            }
             waxShards.push({
-                x: core.x + Math.cos(angle) * dist,
-                y: core.y + Math.sin(angle) * dist,
-                vx: (Math.random() - 0.5) * 15,
-                vy: (Math.random() - 0.5) * 15,
-                rot: Math.random() * Math.PI,
-                vRot: (Math.random() - 0.5) * 0.5,
-                size: radius * (0.1 + Math.random() * 0.2)
+                x: x + (Math.random() - 0.5) * 14,
+                y: y + (Math.random() - 0.5) * 14,
+                vx: (Math.random() - 0.5) * (burst ? 13 : 6),
+                vy: burst ? (Math.random() - 0.5) * 12 : (-2 - Math.random() * 2.5),
+                rot: Math.random() * Math.PI * 2,
+                vRot: (Math.random() - 0.5) * 0.35,
+                verts: verts
             });
         }
     }
 
+    // 데미지 1회 (좌표 기반): 빈 자리면 겹치지 않는 랜덤 크기 금,
+    // 금 간 조각을 건드리면 금 모양대로 낙하. 같은 제스처로는 한 조각에 한 번만.
+    function damageWax(x, y, gseq) {
+        if (!waxIntact || getSpec().type !== "crack_wax") return;
+        const radius = getRadius();
+        const now = performance.now();
+        if (Math.hypot(x - core.x, y - core.y) > radius * 1.05) return; // 공 밖
+
+        // 1) 금 간 조각을 건드렸으면 → 조각 낙하
+        for (const c of waxChips) {
+            if (c.state !== 1) continue;
+            const d = Math.hypot(core.x + c.ox - x, core.y + c.oy - y);
+            if (d < c.size * radius * 0.55 + radius * 0.06) {
+                if (c.lastHitGesture === gseq) return;
+                c.lastHitGesture = gseq;
+                if (now - c.crackAt > 120) breakWaxChip(c);
+                return;
+            }
+        }
+
+        // 2) 빈 자리 → 기존 금/구멍과 겹치지 않는 크기로만 새 금 (스트로크 겹침 방지)
+        let maxAllowed = 0.45 + Math.random() * 0.55;
+        for (const c of waxChips) {
+            const d = Math.hypot(core.x + c.ox - x, core.y + c.oy - y);
+            const room = (d - c.size * radius * 0.55 * 0.8) / (radius * 0.55);
+            if (room < maxAllowed) maxAllowed = room;
+        }
+        if (maxAllowed < 0.28) return; // 금을 낼 공간이 없는 자리
+
+        waxChips.push({
+            ox: x - core.x, oy: y - core.y,
+            size: maxAllowed,
+            seed: Math.random() * 100,
+            state: 1,               // 1=금 감, 2=구멍
+            crackAt: now,
+            lastHitGesture: gseq
+        });
+        playCrackSound(false);
+    }
+
+    // 금 간 조각이 파편으로 떨어져 나가며 구멍이 생김
+    function breakWaxChip(chip) {
+        if (chip.state !== 1) return;
+        chip.state = 2;
+        playCrackSound(false);
+        const radius = getRadius();
+        const cx = core.x + chip.ox, cy = core.y + chip.oy;
+        const holeR = chip.size * radius * 0.55;
+        const count = 3 + Math.floor(Math.random() * 3);
+        for (let f = 0; f < count; f++) {
+            const a = Math.random() * Math.PI * 2;
+            const d = Math.random() * holeR * 0.6;
+            spawnWaxFlakes(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1, holeR * (0.35 + Math.random() * 0.3));
+        }
+    }
+
+    function breakWaxAll() {
+        if (!waxIntact) return;
+        waxIntact = false;
+        waxChips = [];
+        playCrackSound(true);
+        const radius = getRadius();
+        for(let i = 0; i < 26; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * radius;
+            spawnWaxFlakes(core.x + Math.cos(angle) * dist, core.y + Math.sin(angle) * dist, 1, radius * (0.10 + Math.random() * 0.14), true);
+        }
+    }
+
+    // 말랑이 본체(blob) 그리기 — 속살/왁스 껍질 공용
+    function traceAndFillBlob(c, color, radius) {
+        c.fillStyle = color;
+        c.strokeStyle = color;
+        c.lineWidth = radius * 0.8;
+        c.lineCap = 'round'; c.lineJoin = 'round';
+        c.beginPath();
+        c.moveTo(nodes[0].x, nodes[0].y);
+        for(let i = 1; i < numNodes; i++) c.lineTo(nodes[i].x, nodes[i].y);
+        c.closePath();
+        c.stroke(); c.fill();
+    }
+
+    // 금/구멍 경계 모양 — 들쭉날쭉 다각형, 조각별 랜덤 시드라 매번 다르게 생김
+    function traceChipHole(c, chip, radius) {
+        const seed = chip.seed;
+        const r = chip.size * radius * 0.55;
+        const cx = core.x + chip.ox, cy = core.y + chip.oy;
+        const spikes = 9;
+        c.beginPath();
+        for (let s = 0; s < spikes; s++) {
+            const a = (s / spikes) * Math.PI * 2 + seed;
+            const jag = 0.55 + Math.abs(Math.sin(seed * 7.7 + s * 3.1)) * 0.45;
+            const wob = Math.sin(seed * 2.3 + s * 1.7) * 0.18;
+            const px = cx + Math.cos(a + wob) * r * jag;
+            const py = cy + Math.sin(a + wob) * r * jag;
+            if (s === 0) c.moveTo(px, py); else c.lineTo(px, py);
+        }
+        c.closePath();
+    }
+
+    // 금 패턴 그리기 (isHole=false: 금 간 상태 / true: 조각 떨어진 뒤 단면+잔여 실금)
+    function drawCrackPattern(c, chip, radius, isHole) {
+        const seed = chip.seed;
+        const r = chip.size * radius * 0.55;
+        const nx = core.x + chip.ox, ny = core.y + chip.oy;
+
+        // 조각 경계선 (금의 메인 라인 / 깨진 뒤엔 하얀 왁스 단면)
+        traceChipHole(c, chip, radius);
+        c.lineJoin = 'miter';
+        c.lineWidth = isHole ? 5 : 2.8;
+        c.strokeStyle = 'rgba(255,255,255,0.92)';
+        c.stroke();
+
+        if (!isHole) {
+            // 아직 안 떨어진 조각 내부를 가로지르는 균열
+            c.lineWidth = 1.8;
+            c.strokeStyle = 'rgba(255,255,255,0.8)';
+            c.beginPath();
+            for (let k = 0; k < 3; k++) {
+                const a = ((k * 3) / 9) * Math.PI * 2 + seed;
+                const jag = 0.55 + Math.abs(Math.sin(seed * 7.7 + (k * 3) * 3.1)) * 0.45;
+                const midA = a + Math.sin(seed * 3.1 + k) * 0.3;
+                c.moveTo(nx, ny);
+                c.lineTo(nx + Math.cos(midA) * r * 0.5, ny + Math.sin(midA) * r * 0.5);
+                c.lineTo(nx + Math.cos(a) * r * jag, ny + Math.sin(a) * r * jag);
+            }
+            c.stroke();
+        }
+
+        // 바깥으로 뻗는 실금 — 크고 두껍게 (조각이 떨어진 뒤에도 남음)
+        c.lineWidth = 2;
+        c.strokeStyle = 'rgba(255,255,255,0.7)';
+        c.beginPath();
+        for (let h = 0; h < 4; h++) {
+            const a = (h / 4) * Math.PI * 2 + seed * 1.3 + Math.sin(seed * 4.1 + h) * 0.5;
+            let px = nx + Math.cos(a) * r * 0.9;
+            let py = ny + Math.sin(a) * r * 0.9;
+            c.moveTo(px, py);
+            for (let s = 1; s <= 3; s++) {
+                const jit = Math.sin(seed * 9.1 + h * 3.7 + s * 2.3) * 0.55;
+                px += Math.cos(a + jit) * radius * 0.14;
+                py += Math.sin(a + jit) * radius * 0.14;
+                c.lineTo(px, py);
+            }
+        }
+        c.stroke();
+    }
+
+    // 왁스 코팅 껍질 렌더링: 광택 재질 + 깨진 구멍 + 하얀 단면/실금
+    function renderWaxShell(spec, radius) {
+        waxCtx.clearRect(0, 0, width, height);
+
+        // 1) 왁스 코팅 본체 (속살과 동일한 실루엣)
+        waxCtx.save();
+        waxCtx.filter = 'url(#gooey)';
+        traceAndFillBlob(waxCtx, spec.waxColor, radius);
+        waxCtx.restore();
+
+        // 2) 왁스 재질감: 가장자리 두께감 + 좌상단 글로시 하이라이트 (코팅 위에만)
+        waxCtx.save();
+        waxCtx.globalCompositeOperation = 'source-atop';
+        const edge = waxCtx.createRadialGradient(core.x, core.y, radius * 0.2, core.x, core.y, radius * 1.4);
+        edge.addColorStop(0, 'rgba(255,255,255,0.10)');
+        edge.addColorStop(0.7, 'rgba(0,0,0,0)');
+        edge.addColorStop(1, 'rgba(80,50,20,0.20)');
+        waxCtx.fillStyle = edge;
+        waxCtx.fillRect(0, 0, width, height);
+
+        const hl = waxCtx.createRadialGradient(
+            core.x - radius * 0.42, core.y - radius * 0.48, radius * 0.05,
+            core.x - radius * 0.42, core.y - radius * 0.48, radius * 0.95
+        );
+        hl.addColorStop(0, 'rgba(255,255,255,0.50)');
+        hl.addColorStop(0.4, 'rgba(255,255,255,0.14)');
+        hl.addColorStop(1, 'rgba(255,255,255,0)');
+        waxCtx.fillStyle = hl;
+        waxCtx.fillRect(0, 0, width, height);
+        waxCtx.restore();
+
+        if (spec.type === "crack_wax") {
+            // 3) 금 간 상태(조각 아직 안 떨어짐): 금 패턴만 그림 — source-atop이라 코팅 밖으로 절대 안 나감
+            waxCtx.save();
+            waxCtx.globalCompositeOperation = 'source-atop';
+            waxChips.forEach(c => {
+                if (c.state === 1) drawCrackPattern(waxCtx, c, radius, false);
+            });
+            waxCtx.restore();
+
+            // 4) 조각 떨어진 자리 뚫기 → 밑의 속 말랑이가 드러남
+            waxCtx.save();
+            waxCtx.globalCompositeOperation = 'destination-out';
+            waxChips.forEach(c => {
+                if (c.state === 2) { traceChipHole(waxCtx, c, radius); waxCtx.fill(); }
+            });
+            waxCtx.restore();
+
+            // 5) 구멍 단면 + 잔여 실금 — source-atop이라 남은 코팅 위에만 그려짐
+            waxCtx.save();
+            waxCtx.globalCompositeOperation = 'source-atop';
+            waxChips.forEach(c => {
+                if (c.state === 2) drawCrackPattern(waxCtx, c, radius, true);
+            });
+            waxCtx.restore();
+        }
+
+        ctx.drawImage(waxCanvas, 0, 0);
+    }
+
     function animate() {
-        // 모션 블러 효과: 배경을 반투명하게 덮어 이전 프레임의 잔상을 남김
-        ctx.fillStyle = 'rgba(244, 234, 239, 0.4)'; // 배경색(#f4eaef)과 동일한 RGB 값에 Alpha 0.4
+        const spec = getSpec();
+        
+        ctx.fillStyle = 'rgba(244, 234, 239, 0.5)';
         ctx.fillRect(0, 0, width, height);
         
-        const k = waxIntact ? 0.3 : currentSlime.k;       
-        const damp = waxIntact ? 0.6 : currentSlime.damping; 
+        const k = waxIntact ? 0.28 : spec.k;       
+        const damp = waxIntact ? 0.65 : spec.damping; 
         const radius = getRadius();
 
-        // 1. 중심 코어 이동: 무조건 제자리로 가는게 아니라 노드들에게 약간 끌려가도록 유연성 추가
+        // 1. 코어 물리연산
         core.vx *= damp; core.vy *= damp;
-        core.vx += (width/2 - core.x) * 0.01; // 중앙 복귀력을 약하게 설정
+        core.vx += (width/2 - core.x) * 0.01;
         core.vy += (height/2 - core.y) * 0.01;
         core.x += core.vx; core.y += core.vy;
 
-        // 2. 노드 물리 연산
         let maxDeformation = 0;
+        let maxPullOvershoot = 0; // 단단한 껍질을 한계 밖으로 잡아끈 정도
         let avgX = 0, avgY = 0;
+        let totalCracks = 0;
 
         nodes.forEach((n, i) => {
             if (n.touchId === null) {
-                // 중앙 고정 위치(원형)로 돌아가려는 힘 (기존보다 약하게 설정하여 원형에 갇히지 않게 함)
                 const targetX = core.x + Math.cos(n.baseAngle) * n.baseDist;
                 const targetY = core.y + Math.sin(n.baseAngle) * n.baseDist;
                 
                 n.vx += (targetX - n.x) * (k * 0.5); 
                 n.vy += (targetY - n.y) * (k * 0.5);
                 
-                // 이웃한 노드들끼리의 스프링 힘 (이걸 강하게 줘서 늘어날 때 전체가 딸려가는 덩어리 구현)
                 const prev = nodes[(i - 1 + numNodes) % numNodes];
                 const next = nodes[(i + 1) % numNodes];
                 
@@ -326,8 +703,56 @@
                 
                 n.vx *= damp; n.vy *= damp;
                 n.x += n.vx; n.y += n.vy;
+            } else {
+                // 금 내기는 터치 핸들러(damageWax)에서 좌표 기반으로 처리
+            }
+
+            activePushes.forEach(p => {
+                let dx = n.x - p.x;
+                let dy = n.y - p.y;
+                let dist = Math.hypot(dx, dy);
+                let pushRadius = 100;
+                if (dist < pushRadius) {
+                    let force = (pushRadius - dist) * 0.5;
+                    let angle = Math.atan2(dy, dx);
+                    n.vx += Math.cos(angle) * force;
+                    n.vy += Math.sin(angle) * force;
+                    
+                    // (배경 밀기 데미지는 아래에서 damageWax로 좌표 기반 처리)
+                }
+            });
+
+            if (spec.type === "squishy") {
+                let waveNoise = Math.sin(i * 2.5 + n.x * 0.04) * 7;
+                n.vx += Math.cos(n.baseAngle) * waveNoise * 0.08;
+
+                let dx = n.x - core.x;
+                let dy = n.y - core.y;
+                let dist = Math.hypot(dx, dy);
+                let maxStretchLimit = radius * 1.45; 
+                if (dist > maxStretchLimit) {
+                    n.x = core.x + (dx / dist) * maxStretchLimit;
+                    n.y = core.y + (dy / dist) * maxStretchLimit;
+                    n.vx *= 0.3; n.vy *= 0.3;
+                }
             }
             
+            // 왁스 껍질이 있는 동안엔 단단한 상태: 제자리(홈)에서 어느 방향으로든 아주 약간만 밀림
+            // (반지름만 제한하면 옆으로 끌려가 콩팥 모양으로 접히므로, 각도까지 홈 위치에 고정)
+            if (waxIntact) {
+                const hx = core.x + Math.cos(n.baseAngle) * n.baseDist;
+                const hy = core.y + Math.sin(n.baseAngle) * n.baseDist;
+                const dxw = n.x - hx, dyw = n.y - hy;
+                const dw = Math.hypot(dxw, dyw);
+                const give = n.baseDist * 0.1; // 허용 유격
+                if (dw > give) {
+                    if (dw - give > maxPullOvershoot) maxPullOvershoot = dw - give;
+                    n.x = hx + (dxw / dw) * give;
+                    n.y = hy + (dyw / dw) * give;
+                    n.vx *= 0.2; n.vy *= 0.2;
+                }
+            }
+
             avgX += n.x; avgY += n.y;
 
             const distToCore = Math.hypot(n.x - core.x, n.y - core.y);
@@ -336,66 +761,63 @@
             }
         });
 
-        // 중심 코어가 노드들의 평균 위치로 약간씩 끌려가도록 (뼈대 고정 느낌 해제)
         if (!waxIntact) {
             core.vx += ((avgX / numNodes) - core.x) * 0.05;
             core.vy += ((avgY / numNodes) - core.y) * 0.05;
         }
 
-        if (waxIntact && maxDeformation > radius * 0.8) breakWax();
+        // 배경에서 밀고 들어오는 손끝도 껍질 데미지 (좌표 기반)
+        if (waxIntact && spec.type === "crack_wax") {
+            activePushes.forEach(p => damageWax(p.x, p.y, touchGestures[p.id]));
+            waxChips.forEach(c => { totalCracks += c.state === 2 ? 1 : 0.5; });
+        }
 
-        // 3. 그리기: 뼈대 느낌을 없애고 외곽선(노드) 위주로 볼륨을 채움
+        // 껍질은 안 늘어나지만, 한계 이상 세게 잡아끌면 통째로 와장창
+        if (waxIntact && spec.type === "wax" && maxPullOvershoot > radius * 0.55) {
+            breakWaxAll();
+        }
+        if (waxIntact && spec.type === "crack_wax" && (totalCracks >= 4 || maxPullOvershoot > radius * 0.7)) {
+            breakWaxAll();
+        }
+
+        // 3. 렌더링 파트
+        const showWaxShell = waxIntact && spec.type.includes("wax");
+
+        // 3-1. 본체 (왁스형은 속 말랑이가 먼저 깔리고 그 위에 코팅이 덮임)
         ctx.save();
         ctx.filter = 'url(#gooey)';
-        ctx.fillStyle = waxIntact ? currentSlime.waxColor : currentSlime.color;
+        traceAndFillBlob(ctx, spec.color, radius);
+        ctx.restore();
 
-        ctx.beginPath();
-        // 중앙에 너무 큰 원을 그리지 않게 크기 대폭 축소 (원형 실루엣 고정 방지)
-        ctx.arc(core.x, core.y, radius * 0.2, 0, Math.PI * 2); 
-        
-        nodes.forEach(n => {
-            ctx.moveTo(core.x, core.y);
-            // 외곽 노드 쪽의 부피를 키워서 슬라임 질감을 살림
-            ctx.arc(n.x, n.y, radius * 0.55, 0, Math.PI * 2);
-        });
-        
-        ctx.lineWidth = radius * 0.8;
-        ctx.strokeStyle = ctx.fillStyle;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(nodes[0].x, nodes[0].y);
-        for(let i=1; i<numNodes; i++) ctx.lineTo(nodes[i].x, nodes[i].y);
-        ctx.closePath();
-        ctx.stroke();
-        ctx.fill();
-        ctx.restore(); 
+        // 3-2. 왁스 코팅 껍질 (광택 재질 + 깨진 자리 구멍)
+        if (showWaxShell) renderWaxShell(spec, radius);
 
-        // 4. 왁스 파편 렌더링
-        if (!waxIntact && currentSlime.type === "wax") {
-            ctx.fillStyle = currentSlime.waxColor;
-            ctx.strokeStyle = "#ffffff"; 
-            ctx.lineWidth = 1;
+        // 4. 크런치 알갱이 연산
+        if (spec.type === "crunch" && crunchParticles.length > 0) {
+            crunchParticles.forEach((p, index) => {
+                p.x += p.vx; p.y += p.vy;
+                p.alpha -= 0.02;
+                ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                ctx.fill();
+                if(p.alpha <= 0) crunchParticles.splice(index, 1);
+            });
+        }
 
+        // 5. 왁스 플레이크(얇은 칩) 낙하 연산
+        if (spec.type.includes("wax") && waxShards.length > 0) {
+            ctx.fillStyle = spec.waxColor;
+            ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 1.5;
             for(let i = waxShards.length - 1; i >= 0; i--) {
                 const s = waxShards[i];
-                s.vy += 0.5;
-                s.x += s.vx; s.y += s.vy;
-                s.rot += s.vRot;
-                
-                ctx.save();
-                ctx.translate(s.x, s.y);
-                ctx.rotate(s.rot);
+                s.vy += 0.5; s.vx *= 0.985;
+                s.x += s.vx; s.y += s.vy; s.rot += s.vRot;
+                ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot);
                 ctx.beginPath();
-                ctx.moveTo(-s.size/2, -s.size/2);
-                ctx.lineTo(s.size/2, -s.size*0.3);
-                ctx.lineTo(s.size*0.4, s.size/2);
-                ctx.lineTo(-s.size*0.3, s.size*0.4);
+                s.verts.forEach((v, vi) => { vi === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y); });
                 ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-                ctx.restore();
-
+                ctx.fill(); ctx.stroke(); ctx.restore();
                 if(s.y > height + 100) waxShards.splice(i, 1);
             }
         }
@@ -403,64 +825,88 @@
         requestAnimationFrame(animate);
     }
 
+    /* =================================================================
+       6. 인터랙션 처리
+    ================================================================= */
     function getNearestNode(x, y) {
-        let minDist = Infinity;
-        let nearest = null;
-        const catchRadius = waxIntact ? getRadius() : getRadius() * 1.5;
+        let minDist = Infinity; let nearest = null;
+        const catchRadius = waxIntact ? getRadius() : getRadius() * 1.4;
         
         nodes.forEach(n => {
             if (n.touchId !== null) return;
             const dist = Math.hypot(n.x - x, n.y - y);
             if (dist < minDist) { minDist = dist; nearest = n; }
         });
-        
         const coreDist = Math.hypot(core.x - x, core.y - y);
-        if (coreDist < minDist && core.touchId == null) {
-            minDist = coreDist; nearest = core;
-        }
-
+        if (coreDist < minDist && core.touchId == null) { minDist = coreDist; nearest = core; }
         return minDist < catchRadius ? nearest : null;
     }
 
     function handleStart(id, x, y) {
         initAudio();
-        if(waxIntact) {
-            core.vx += (Math.random()-0.5)*20;
-            core.vy += (Math.random()-0.5)*20;
+        touchGestures[id] = ++gestureSeq;
+        const spec = getSpec();
+
+        if (spec.type === "squishy") {
+            playSquishSound('squishy_breath');
         }
+
         const n = getNearestNode(x, y);
         if (n) {
             n.touchId = id;
             n.x = x; n.y = y;
+        } else {
+            activePushes.push({ id: id, x: x, y: y });
         }
+        // 왁뿌볼: 누른 좌표에 데미지 1회 — 빈 자리면 금, 금 간 조각이면 낙하
+        if (waxIntact) damageWax(x, y, touchGestures[id]);
     }
 
     function handleMove(id, x, y) {
+        const spec = getSpec();
         const n = nodes.find(pt => pt.touchId === id) || (core.touchId === id ? core : null);
+        
         if (n) {
             const vel = Math.hypot(x - n.x, y - n.y);
-            playSquishSound(vel);
-            
+            if (vel > 1) {
+                if (spec.type === "crunch" && Math.random() < 0.4) {
+                    playCrackSound(false);
+                    crunchParticles.push({
+                        x: x, y: y,
+                        vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
+                        size: 3 + Math.random()*4, alpha: 1
+                    });
+                } else if (spec.type !== "squishy" && !spec.type.includes("wax")) {
+                    if(Math.random() < 0.15) playSquishSound('squish');
+                }
+            }
+            // 왁뿌볼: 문지르는 손끝이 지나가는 좌표마다 데미지 (금 → 다른 제스처에 낙하)
+            if (waxIntact && spec.type === "crack_wax" && vel > 2) {
+                damageWax(x, y, touchGestures[id]);
+            }
             n.x = x; n.y = y;
-            
-            // 잡고 당길 때 뼈대(Core)가 노드를 더 빠르게 따라가도록 설정
             if(n !== core && !waxIntact) {
                 core.vx += (x - core.x) * 0.05;
                 core.vy += (y - core.y) * 0.05;
             }
+        } else {
+            let p = activePushes.find(pt => pt.id === id);
+            if (p) { p.x = x; p.y = y; }
         }
     }
 
     function handleEnd(id) {
-        if(core.touchId === id) core.touchId = null;
+        delete touchGestures[id];
+        if(core.touchId === id) { core.touchId = null; playSquishSound('release'); }
         const n = nodes.find(pt => pt.touchId === id);
-        if (n) n.touchId = null;
+        if (n) { n.touchId = null; playSquishSound('release'); }
+        
+        activePushes = activePushes.filter(pt => pt.id !== id);
     }
 
     canvas.addEventListener('touchstart', e => { e.preventDefault(); Array.from(e.changedTouches).forEach(t => handleStart(t.identifier, t.clientX, t.clientY)); });
     canvas.addEventListener('touchmove', e => { e.preventDefault(); Array.from(e.changedTouches).forEach(t => handleMove(t.identifier, t.clientX, t.clientY)); });
     canvas.addEventListener('touchend', e => { e.preventDefault(); Array.from(e.changedTouches).forEach(t => handleEnd(t.identifier)); });
-    canvas.addEventListener('touchcancel', e => { e.preventDefault(); Array.from(e.changedTouches).forEach(t => handleEnd(t.identifier)); });
 
     let isMouseDown = false;
     canvas.addEventListener('mousedown', e => { isMouseDown = true; handleStart('mouse', e.clientX, e.clientY); });
@@ -468,6 +914,7 @@
     canvas.addEventListener('mouseup', e => { isMouseDown = false; handleEnd('mouse'); });
     canvas.addEventListener('mouseleave', e => { isMouseDown = false; handleEnd('mouse'); });
 
+    updateInventoryUI();
     resize();
     animate();
 </script>
