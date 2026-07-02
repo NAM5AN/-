@@ -31,6 +31,7 @@
         .btn:active { transform: scale(0.95); }
         .btn-sub { background: #4caf50; }
         .btn-book { background: #9c27b0; }
+        .btn-shop { background: #ff9800; }
         
         /* 인벤토리 창 접기/펴기 */
         #inventory-container { pointer-events: auto; text-align: right; width: 240px; transition: all 0.3s; }
@@ -67,7 +68,7 @@
         .modal-card { background: rgba(255,255,255,0.15); padding: 30px; border-radius: 25px; backdrop-filter: blur(10px); max-width: 80%; }
         
         /* 도감 UI 스타일 */
-        #bookModal .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0; max-height: 50vh; overflow-y: auto; padding: 5px; }
+        #bookModal .grid, #shopModal .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 15px 0; max-height: 50vh; overflow-y: auto; padding: 5px; }
         .book-item { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; border: 2px solid transparent; font-size:12px; text-align:center;}
         .book-item.unlocked { background: rgba(255,255,255,0.25); border-color: #ffeb3b; }
         .book-item.locked { color: #aaa; }
@@ -99,14 +100,15 @@
     <div id="ui">
         <div>
             <button class="btn" onclick="startGacha()">🎁 슬라임 뽑기</button><br>
-            <button class="btn btn-book" onclick="openBook()">📖 말랑이 도감</button>
+            <button class="btn btn-book" onclick="openBook()">📖 말랑이 도감</button><br>
+            <button class="btn btn-shop" onclick="openShop()">🛒 말랑이 상점</button>
         </div>
         
         <div id="inventory-container">
             <button class="btn btn-sub" id="toggleInvBtn" onclick="toggleInventory()">🎒 가방 접기</button>
-            <div id="mileage-box">✨ 마일리지: <span id="mileageText">0</span> / 100</div>
+            <div id="mileage-box">✨ 마일리지: <span id="mileageText">0</span></div>
             <div id="inventory">
-                <div style="margin-bottom: 8px; color: #ff4081; font-weight:bold; text-align: center; font-size:13px;">보유 슬라임 (등급순)</div>
+                <div style="margin-bottom: 8px; color: #ff4081; font-weight:bold; text-align: center; font-size:13px;">보유 슬라임</div>
                 <div id="slimeList"></div>
             </div>
         </div>
@@ -134,19 +136,40 @@
         </div>
     </div>
 
+    <!-- 상점 모달 -->
+    <div id="shopModal" class="modal-overlay">
+        <div class="modal-card" style="width: 320px;">
+            <h2>🛒 말랑이 상점</h2>
+            <div id="shopMileage" style="color:#ffeb3b; margin-bottom:10px;"></div>
+            <div class="grid" id="shopGrid"></div>
+            <button class="btn" style="background:#555;" onclick="closeShop()">닫기</button>
+        </div>
+    </div>
+
 <script>
     /* =================================================================
        1. 다양해진 말랑이 라인업 DB 설정 
     ================================================================= */
+    // gloss: 광택 세기(0~1), baseAlpha: 평소 투명도, stretchAlpha: 최대로 늘렸을 때 투명도
+    // shape: "heart"면 하트형, strokeF: 몸통 두께 배율, kMul은 cotton 타입에서 노드별 랜덤 부여
     const slimeDB = [
-        { id: 1, name: "물젤리 슬랑이", grade: "C", color: "#64c8ff", k: 0.05, damping: 0.8, type: "normal", rate: 30 },
-        { id: 2, name: "우유 생크림 폼", grade: "C", color: "#ffffff", k: 0.08, damping: 0.85, type: "normal", rate: 25 },
-        { id: 3, name: "폼볼 크런치 팝", grade: "R", color: "#ffb6c1", k: 0.11, damping: 0.75, type: "crunch", rate: 15 },
-        { id: 4, name: "바사삭 리얼 왁뿌볼", grade: "E", color: "#d81b60", waxColor: "#f8bbd0", k: 0.12, damping: 0.8, type: "wax", rate: 10 },
-        { id: 5, name: "바삭 크랙볼", grade: "E", color: "#ff5722", waxColor: "#ffe082", k: 0.10, damping: 0.8, type: "crack_wax", rate: 10 }, 
-        { id: 6, name: "쫀득 고무 찰떡", grade: "R", color: "#8bc34a", k: 0.18, damping: 0.65, type: "normal", rate: 8 },
-        { id: 7, name: "구름 숨결 스퀴시", grade: "E", color: "#e040fb", k: 0.02, damping: 0.55, type: "squishy", rate: 5 }, 
-        { id: 8, name: "✨우주 덩어리✨", grade: "L", color: "#4b0082", k: 0.06, damping: 0.88, type: "normal", rate: 2 }
+        { id: 1, name: "물젤리 슬랑이", grade: "C", color: "#64c8ff", k: 0.05, damping: 0.8, type: "normal", rate: 16, gloss: 0.55, baseAlpha: 0.9, stretchAlpha: 0.35 },
+        { id: 2, name: "우유 생크림 폼", grade: "C", color: "#ffffff", k: 0.08, damping: 0.85, type: "normal", rate: 13, gloss: 0.08, baseAlpha: 1, stretchAlpha: 0.95 },
+        { id: 3, name: "폼볼 크런치 팝", grade: "R", color: "#ffb6c1", k: 0.11, damping: 0.75, type: "crunch", rate: 8, gloss: 0.3, baseAlpha: 1, stretchAlpha: 0.85 },
+        { id: 4, name: "바사삭 리얼 왁뿌볼", grade: "E", color: "#d81b60", waxColor: "#f8bbd0", k: 0.12, damping: 0.8, type: "wax", rate: 4, gloss: 0.5, baseAlpha: 1, stretchAlpha: 0.8 },
+        { id: 5, name: "바삭 크랙볼", grade: "E", color: "#ff5722", waxColor: "#ffe082", k: 0.10, damping: 0.8, type: "crack_wax", rate: 4, gloss: 0.45, baseAlpha: 1, stretchAlpha: 0.8 }, 
+        { id: 6, name: "쫀득 고무 찰떡", grade: "R", color: "#8bc34a", k: 0.18, damping: 0.65, type: "normal", rate: 7, gloss: 0.7, baseAlpha: 1, stretchAlpha: 0.9 },
+        { id: 7, name: "구름 숨결 스퀴시", grade: "E", color: "#e040fb", k: 0.02, damping: 0.55, type: "squishy", rate: 3, gloss: 0.2, baseAlpha: 0.95, stretchAlpha: 0.75 }, 
+        { id: 8, name: "✨우주 덩어리✨", grade: "L", color: "#4b0082", k: 0.06, damping: 0.88, type: "normal", rate: 2, gloss: 0.85, baseAlpha: 0.85, stretchAlpha: 0.5 },
+        // ── 신규 & 파생 라인업 ──
+        { id: 9, name: "코랄 하트젤리", grade: "E", color: "#ff7f6e", k: 0.07, damping: 0.8, type: "normal", shape: "heart", strokeF: 0.5, rate: 3, gloss: 0.6, baseAlpha: 0.95, stretchAlpha: 0.5 },
+        { id: 10, name: "뭉게구름 솜슬라임", grade: "E", color: "#eceae6", k: 0.012, damping: 0.62, type: "cotton", rate: 4, gloss: 0.08, baseAlpha: 1, stretchAlpha: 0.96 },
+        { id: 11, name: "청량 민트젤리", grade: "C", color: "#5fd7c5", k: 0.05, damping: 0.8, type: "normal", rate: 11, gloss: 0.5, baseAlpha: 0.85, stretchAlpha: 0.3 },
+        { id: 12, name: "아그작 청사과 왁뿌볼", grade: "E", color: "#7cb342", waxColor: "#d7ec9a", k: 0.10, damping: 0.8, type: "crack_wax", rate: 3, gloss: 0.5, baseAlpha: 1, stretchAlpha: 0.8 },
+        { id: 13, name: "멜론 푸딩젤리", grade: "R", color: "#58d668", k: 0.06, damping: 0.82, type: "normal", rate: 7, gloss: 0.75, baseAlpha: 0.8, stretchAlpha: 0.45 },
+        { id: 14, name: "유리알 리퀴드", grade: "R", color: "#4fc3f7", k: 0.03, damping: 0.86, type: "normal", rate: 7, gloss: 0.9, baseAlpha: 0.7, stretchAlpha: 0.22 },
+        { id: 15, name: "포도알 톡톡", grade: "R", color: "#8e44ad", k: 0.15, damping: 0.7, type: "normal", rate: 6, gloss: 0.85, baseAlpha: 0.9, stretchAlpha: 0.55 },
+        { id: 16, name: "황금 꿀 슬라임", grade: "E", color: "#e2b93b", k: 0.04, damping: 0.84, type: "normal", rate: 3, gloss: 0.95, baseAlpha: 0.78, stretchAlpha: 0.35 }
     ];
 
     const gradeOrder = { "L": 0, "E": 1, "R": 2, "C": 3 };
@@ -244,14 +267,15 @@
         grid.innerHTML = "";
         let unlockCount = 0;
 
-        slimeDB.forEach(spec => {
+        const sortedDB = [...slimeDB].sort((a, b) => gradeOrder[a.grade] - gradeOrder[b.grade] || a.id - b.id);
+        sortedDB.forEach(spec => {
             const isUnlocked = unlockedIds.includes(spec.id);
             const item = document.createElement("div");
             item.className = `book-item ${isUnlocked ? 'unlocked' : 'locked'}`;
             
             if(isUnlocked) {
                 unlockCount++;
-                item.innerHTML = `<span class="grade-${spec.grade}">[${spec.grade}]</span><br><b>${spec.name}</b><br><span style="font-size:10px; color:#eee;">${spec.type === 'squishy' ? '스퀴시형' : spec.type.includes('wax') ? '왁뿌형' : '일반형'}</span>`;
+                item.innerHTML = `<span class="grade-${spec.grade}">[${spec.grade}]</span><br><b>${spec.name}</b><br><span style="font-size:10px; color:#eee;">${spec.type === 'squishy' ? '스퀴시형' : spec.type === 'cotton' ? '솜뭉치형' : spec.type === 'crunch' ? '크런치형' : spec.type.includes('wax') ? '왁뿌형' : spec.shape === 'heart' ? '하트형' : '일반형'}</span>`;
             } else {
                 item.innerHTML = `❓<br><span style="color:#777;">미획득</span>`;
             }
@@ -262,6 +286,54 @@
         document.getElementById("bookProgress").innerText = `수집률: ${progress}% (${unlockCount}/${slimeDB.length})`;
     }
     function closeBook() { document.getElementById("bookModal").style.display = "none"; }
+
+    /* =================================================================
+       2.5 상점 시스템 — 마일리지로 원하는 말랑이 구매
+    ================================================================= */
+    const SHOP_PRICES = { C: 30, R: 70, E: 150, L: 300 };
+
+    function openShop() {
+        document.getElementById("shopModal").style.display = "flex";
+        renderShop();
+    }
+    function closeShop() { document.getElementById("shopModal").style.display = "none"; }
+
+    function renderShop() {
+        document.getElementById("shopMileage").innerText = `✨ 보유 마일리지: ${mileage}`;
+        const grid = document.getElementById("shopGrid");
+        grid.innerHTML = "";
+        const sorted = [...slimeDB].sort((a, b) => gradeOrder[a.grade] - gradeOrder[b.grade] || a.id - b.id);
+        sorted.forEach(spec => {
+            const price = SHOP_PRICES[spec.grade];
+            const owned = mySlimes.find(s => s.id === spec.id);
+            const afford = mileage >= price;
+            const item = document.createElement("div");
+            item.className = "book-item unlocked";
+            item.innerHTML = `<span class="grade-${spec.grade}">[${spec.grade}]</span><br><b>${spec.name}</b><br>`
+                + `<span style="font-size:10px; color:#eee;">${owned ? 'Lv.' + owned.level + ' 보유중' : '미보유'}</span><br>`
+                + `<button class="btn" style="padding:4px 12px; font-size:12px; margin-top:6px;${afford ? '' : ' background:#777;'}" onclick="buySlime(${spec.id})">✨ ${price}</button>`;
+            grid.appendChild(item);
+        });
+    }
+
+    function buySlime(id) {
+        const spec = slimeDB.find(s => s.id === id);
+        const price = SHOP_PRICES[spec.grade];
+        if (mileage < price) { alert(`마일리지가 부족해요! (필요: ✨${price})`); return; }
+        mileage -= price;
+        if (!unlockedIds.includes(id)) unlockedIds.push(id);
+        const existing = mySlimes.find(s => s.id === id);
+        if (existing) {
+            existing.level++;
+            alert(`${existing.customName || spec.name} 레벨업! (Lv.${existing.level})`);
+        } else {
+            mySlimes.push({ id: id, customName: spec.name, level: 1 });
+            alert(`${spec.name} 획득!`);
+        }
+        updateInventoryUI();
+        renderShop();
+        saveGame();
+    }
 
     /* =================================================================
        3. 가챠 스크립트
@@ -284,14 +356,9 @@
         const result = document.getElementById("gachaResult");
         const subResult = document.getElementById("gachaSubResult");
 
-        if (mileage >= 100) {
-            pulled = slimeDB.find(s => s.grade === "L");
-            mileage = 0;
-        } else {
-            const rand = Math.random() * 100;
-            let sum = 0; pulled = slimeDB[0];
-            for (let s of slimeDB) { sum += s.rate; if (rand <= sum) { pulled = s; break; } }
-        }
+        const rand = Math.random() * 100;
+        let sum = 0; pulled = slimeDB[0];
+        for (let s of slimeDB) { sum += s.rate; if (rand <= sum) { pulled = s; break; } }
         
         if(!unlockedIds.includes(pulled.id)) unlockedIds.push(pulled.id);
 
@@ -381,6 +448,10 @@
     // 왁스 코팅 껍질 전용 오프스크린 레이어 (깨진 자리를 구멍으로 뚫기 위함)
     const waxCanvas = document.createElement("canvas");
     const waxCtx = waxCanvas.getContext("2d");
+    // 본체 전용 오프스크린 (gooey 필터는 반투명을 못 그리므로, 여기 그린 뒤 알파를 입혀 합성)
+    const bodyCanvas = document.createElement("canvas");
+    const bodyCtx = bodyCanvas.getContext("2d");
+    let stretchSmooth = 0; // 늘어남 정도(부드럽게 따라오는 값) → 투명도 연출용
     
     let width, height;
     let core = { x: 0, y: 0, vx: 0, vy: 0 };
@@ -403,6 +474,8 @@
         height = canvas.height = window.innerHeight;
         waxCanvas.width = width;
         waxCanvas.height = height;
+        bodyCanvas.width = width;
+        bodyCanvas.height = height;
         initSlime();
     }
     window.addEventListener("resize", resize);
@@ -418,18 +491,33 @@
         if(spec.type === "wax") document.getElementById("hint").innerText = "강하게 잡아끌어 껍질을 부수세요!";
         else if(spec.type === "crack_wax") document.getElementById("hint").innerText = "톡 누르면 금! 금 간 곳을 한 번 더 건드리면 조각이 빠작 떨어져요!";
         else if(spec.type === "squishy") document.getElementById("hint").innerText = "구름 숨결 스퀴시: 묵직한 저항감과 불규칙한 리얼 반죽 피지컬!";
+        else if(spec.type === "cotton") document.getElementById("hint").innerText = "뭉게뭉게 솜구름: 울퉁불퉁 늘어나고 아주 천천히 돌아와요!";
         else document.getElementById("hint").innerText = "드래그하거나 꾹 눌러서 만져보세요! 배경에서 밀고 들어오면 찌그러집니다.";
 
         core = { x: width / 2, y: height / 2, vx: 0, vy: 0 };
+        stretchSmooth = 0;
         const radius = getRadius();
         
         for (let i = 0; i < numNodes; i++) {
-            const angle = (i / numNodes) * Math.PI * 2;
+            const t = (i / numNodes) * Math.PI * 2;
+            let bx = Math.cos(t), by = Math.sin(t), bd = radius * 0.7;
+
+            // 하트형: 파라메트릭 하트 곡선 위에 노드 배치
+            if (spec.shape === "heart") {
+                const hx = 16 * Math.pow(Math.sin(t), 3);
+                const hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+                const hl = Math.hypot(hx, hy) || 1;
+                bd = (hl / 17) * radius * 0.85;
+                bx = hx / hl; by = hy / hl;
+            }
+
             nodes.push({
-                x: core.x + Math.cos(angle) * (radius * 0.7),
-                y: core.y + Math.sin(angle) * (radius * 0.7),
-                baseDist: radius * 0.7,
-                baseAngle: angle,
+                x: core.x + bx * bd,
+                y: core.y + by * bd,
+                baseDist: bd,
+                baseAngle: Math.atan2(by, bx),
+                // 솜슬라임: 노드마다 복원 탄성이 제각각 → 울퉁불퉁하게 늘어나고 뭉게뭉게 복귀
+                kMul: spec.type === "cotton" ? (0.35 + Math.random() * 0.95) : 1,
                 vx: 0, vy: 0, touchId: null
             });
         }
@@ -528,10 +616,10 @@
     }
 
     // 말랑이 본체(blob) 그리기 — 속살/왁스 껍질 공용
-    function traceAndFillBlob(c, color, radius) {
+    function traceAndFillBlob(c, color, radius, strokeF) {
         c.fillStyle = color;
         c.strokeStyle = color;
-        c.lineWidth = radius * 0.8;
+        c.lineWidth = radius * (strokeF || 0.8);
         c.lineCap = 'round'; c.lineJoin = 'round';
         c.beginPath();
         c.moveTo(nodes[0].x, nodes[0].y);
@@ -692,8 +780,9 @@
                 const targetX = core.x + Math.cos(n.baseAngle) * n.baseDist;
                 const targetY = core.y + Math.sin(n.baseAngle) * n.baseDist;
                 
-                n.vx += (targetX - n.x) * (k * 0.5); 
-                n.vy += (targetY - n.y) * (k * 0.5);
+                const kEff = k * (n.kMul || 1);
+                n.vx += (targetX - n.x) * (kEff * 0.5); 
+                n.vy += (targetY - n.y) * (kEff * 0.5);
                 
                 const prev = nodes[(i - 1 + numNodes) % numNodes];
                 const next = nodes[(i + 1) % numNodes];
@@ -721,6 +810,12 @@
                     // (배경 밀기 데미지는 아래에서 damageWax로 좌표 기반 처리)
                 }
             });
+
+            if (spec.type === "cotton") {
+                const lump = Math.sin(i * 3.7 + performance.now() * 0.0011 + n.x * 0.01) * 5;
+                n.vx += Math.cos(n.baseAngle) * lump * 0.06;
+                n.vy += Math.sin(n.baseAngle) * lump * 0.06;
+            }
 
             if (spec.type === "squishy") {
                 let waveNoise = Math.sin(i * 2.5 + n.x * 0.04) * 7;
@@ -783,13 +878,47 @@
         // 3. 렌더링 파트
         const showWaxShell = waxIntact && spec.type.includes("wax");
 
-        // 3-1. 본체 (왁스형은 속 말랑이가 먼저 깔리고 그 위에 코팅이 덮임)
+        // 3-1. 늘어남 정도(0~1) — 늘어날수록 커지고 원형 복귀하면 서서히 0으로
+        let stretchTarget = 0;
+        if (!waxIntact) {
+            stretchTarget = Math.min(1, Math.max(0, maxDeformation - radius * 0.12) / (radius * 0.6));
+        }
+        stretchSmooth += (stretchTarget - stretchSmooth) * 0.15;
+
+        // 3-2. 개체별 투명도: 평소 baseAlpha ↔ 최대 스트레치 stretchAlpha 보간
+        const baseA = spec.baseAlpha !== undefined ? spec.baseAlpha : 1;
+        const stA = spec.stretchAlpha !== undefined ? spec.stretchAlpha : baseA;
+        const bodyAlpha = showWaxShell ? 1 : (baseA + (stA - baseA) * stretchSmooth);
+
+        // 3-3. 본체를 오프스크린에 불투명하게 그린 뒤, 알파를 입혀 합성
+        bodyCtx.clearRect(0, 0, width, height);
+        bodyCtx.save();
+        bodyCtx.filter = 'url(#gooey)';
+        traceAndFillBlob(bodyCtx, spec.color, radius, spec.strokeF);
+        bodyCtx.restore();
+
+        // 3-4. 개체별 광택 (gloss 0=무광 ~ 1=유리광)
+        const gloss = spec.gloss !== undefined ? spec.gloss : 0.3;
+        if (gloss > 0.02 && !showWaxShell) {
+            bodyCtx.save();
+            bodyCtx.globalCompositeOperation = 'source-atop';
+            const hl = bodyCtx.createRadialGradient(
+                core.x - radius * 0.4, core.y - radius * 0.45, radius * 0.05,
+                core.x - radius * 0.4, core.y - radius * 0.45, radius * 1.0);
+            hl.addColorStop(0, `rgba(255,255,255,${0.65 * gloss})`);
+            hl.addColorStop(0.4, `rgba(255,255,255,${0.2 * gloss})`);
+            hl.addColorStop(1, 'rgba(255,255,255,0)');
+            bodyCtx.fillStyle = hl;
+            bodyCtx.fillRect(0, 0, width, height);
+            bodyCtx.restore();
+        }
+
         ctx.save();
-        ctx.filter = 'url(#gooey)';
-        traceAndFillBlob(ctx, spec.color, radius);
+        ctx.globalAlpha = bodyAlpha;
+        ctx.drawImage(bodyCanvas, 0, 0);
         ctx.restore();
 
-        // 3-2. 왁스 코팅 껍질 (광택 재질 + 깨진 자리 구멍)
+        // 3-5. 왁스 코팅 껍질 (광택 재질 + 깨진 자리 구멍)
         if (showWaxShell) renderWaxShell(spec, radius);
 
         // 4. 크런치 알갱이 연산
