@@ -106,6 +106,12 @@
                 <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10" result="gooey" />
                 <feComposite in="SourceGraphic" in2="gooey" operator="atop"/>
             </filter>
+            <!-- 정밀 모양(SVG 커스텀)용: 블러가 작아 오목한 노치/커스프가 안 메워짐 -->
+            <filter id="gooeyFine">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 25 -10" result="gooey" />
+                <feComposite in="SourceGraphic" in2="gooey" operator="atop"/>
+            </filter>
         </defs>
     </svg>
 
@@ -179,7 +185,7 @@
     // gloss: 광택 세기(0~1), baseAlpha: 평소 투명도, stretchAlpha: 최대로 늘렸을 때 투명도
     // shape: "heart"면 하트형, strokeF: 몸통 두께 배율, kMul은 cotton 타입에서 노드별 랜덤 부여
     const slimeDB = [
-        { id: 1, name: "물젤리 슬랑이", grade: "C", color: "#64c8ff", k: 0.05, damping: 0.8, type: "normal", rate: 6, gloss: 0.55, baseAlpha: 0.9, stretchAlpha: 0.35 },
+        { id: 1, name: "물젤리 슬랑이", grade: "C", color: "#64c8ff", k: 0.05, damping: 0.8, type: "normal", rate: 5, gloss: 0.55, baseAlpha: 0.9, stretchAlpha: 0.35 },
         { id: 2, name: "우유 생크림 폼", grade: "C", color: "#ffffff", k: 0.08, damping: 0.85, type: "normal", rate: 5, gloss: 0.08, baseAlpha: 1, stretchAlpha: 0.95 },
         { id: 3, name: "폼볼 크런치 팝", grade: "R", color: "#ffb6c1", k: 0.11, damping: 0.75, type: "crunch", beads: true, bumpy: 0.09, rate: 3, gloss: 0.3, baseAlpha: 1, stretchAlpha: 0.85 },
         { id: 4, name: "바사삭 리얼 왁뿌볼", grade: "E", color: "#d81b60", waxColor: "#f8bbd0", k: 0.12, damping: 0.8, type: "wax", rate: 3, gloss: 0.5, baseAlpha: 1, stretchAlpha: 0.8 },
@@ -188,7 +194,7 @@
         { id: 7, name: "구름 숨결 스퀴시", grade: "E", color: "#e040fb", k: 0.02, damping: 0.55, type: "squishy", rate: 2, gloss: 0.2, baseAlpha: 0.95, stretchAlpha: 0.75 }, 
         { id: 8, name: "✨우주 덩어리✨", grade: "L", color: "#4b0082", k: 0.06, damping: 0.88, type: "normal", rate: 1, gloss: 0.85, baseAlpha: 0.85, stretchAlpha: 0.5 },
         // ── 신규 & 파생 라인업 ──
-        { id: 9, name: "코랄 하트젤리", grade: "E", color: "#ff7f6e", k: 0.07, damping: 0.8, type: "normal", shape: "heart", strokeF: 0.5, rate: 3, gloss: 0.6, baseAlpha: 0.95, stretchAlpha: 0.5 },
+        { id: 9, name: "코랄 하트젤리", grade: "E", color: "#ff7f6e", k: 0.07, damping: 0.8, type: "normal", fineGoo: true, shapePts: [[-0.0,1.0],[0.036,0.946],[0.147,0.82],[0.331,0.662],[0.547,0.487],[0.727,0.338],[0.838,0.21],[0.907,0.084],[0.939,-0.041],[0.936,-0.166],[0.9,-0.281],[0.829,-0.392],[0.732,-0.483],[0.622,-0.541],[0.515,-0.562],[0.404,-0.55],[0.284,-0.502],[0.16,-0.412],[0.046,-0.288],[0.011,-0.239],[-0.0,-0.222],[-0.029,-0.265],[-0.139,-0.393],[-0.263,-0.489],[-0.388,-0.546],[-0.499,-0.562],[-0.606,-0.546],[-0.715,-0.494],[-0.816,-0.408],[-0.892,-0.299],[-0.933,-0.181],[-0.941,-0.061],[-0.916,0.061],[-0.851,0.19],[-0.747,0.318],[-0.582,0.459],[-0.362,0.637],[-0.168,0.8],[-0.052,0.923],[-0.009,0.986]], svgScale: 1.02, strokeF: 0.2, maxStretch: 1.5, homeW: 2.2, nbrW: 0.5, rate: 3, gloss: 0.6, baseAlpha: 0.95, stretchAlpha: 0.5 },
         { id: 10, name: "뭉게구름 솜슬라임", grade: "E", color: "#eceae6", k: 0.012, damping: 0.62, type: "cotton", rate: 2, gloss: 0.08, baseAlpha: 1, stretchAlpha: 0.96 },
         { id: 11, name: "청량 민트젤리", grade: "C", color: "#5fd7c5", k: 0.05, damping: 0.8, type: "normal", rate: 5, gloss: 0.5, baseAlpha: 0.85, stretchAlpha: 0.3 },
         { id: 12, name: "아그작 청사과 왁뿌볼", grade: "E", color: "#7cb342", waxColor: "#d7ec9a", k: 0.10, damping: 0.8, type: "crack_wax", decor: "apple", rate: 3, gloss: 0.5, baseAlpha: 1, stretchAlpha: 0.8 },
@@ -220,7 +226,9 @@
         { id: 34, name: "설탕 코팅 딸기볼", grade: "C", color: "#ff5f7e", waxColor: "#ffe3ec", type: "crack_wax", waxHits: 1, breakScore: 2, waxTough: 0.5, chipScale: 1.1, beads: true, beadColors: ["#ffe9a8", "#fff4d6", "#f7c948"], bumpy: 0.06, k: 0.1, damping: 0.72, rate: 3, gloss: 0.55, baseAlpha: 1, stretchAlpha: 0.6 },
         { id: 35, name: "두툼 초코 코팅볼", grade: "R", color: "#f6e7c8", waxColor: "#6b4a2f", type: "crack_wax", waxHits: 3, breakScore: 3, chipScale: 1.35, plastic: 0.04, homeW: 1.2, nbrW: 0.5, maxStretch: 1.6, beads: true, beadColors: ["#8a5a33", "#a8763f", "#fff3e0"], k: 0.03, damping: 0.62, rate: 2, gloss: 0.5, baseAlpha: 1, stretchAlpha: 0.85 },
         { id: 36, name: "쨍그랑 아이스볼", grade: "E", color: "#4fb6e8", waxColor: "#d9f1fc", type: "crack_wax", waxHits: 1, breakScore: 6, chipScale: 0.7, waxTough: 1.4, fizz: true, k: 0.045, damping: 0.84, rate: 1, gloss: 0.85, baseAlpha: 0.8, stretchAlpha: 0.35 },
-        { id: 37, name: "✨미지의 황금 오브✨", grade: "L", color: "#ffffff", waxColor: "#e8c04a", type: "crack_wax", mysteryCore: true, waxHits: 3, breakScore: 6, chipScale: 0.85, waxTough: 1.6, sparkle: true, k: 0.04, damping: 0.85, rate: 1, gloss: 0.95, baseAlpha: 0.9, stretchAlpha: 0.35 }
+        { id: 37, name: "✨미지의 황금 오브✨", grade: "L", color: "#ffffff", waxColor: "#e8c04a", type: "crack_wax", mysteryCore: true, waxHits: 3, breakScore: 6, chipScale: 0.85, waxTough: 1.6, sparkle: true, k: 0.04, damping: 0.85, rate: 1, gloss: 0.95, baseAlpha: 0.9, stretchAlpha: 0.35 },
+        // ── SVG 커스텀 모양 데모: svgPath에 단일 닫힌 패스를 넣으면 그 모양이 됨 ──
+                { id: 38, name: "행운의 클로버 젤리", grade: "E", color: "#54b45e", type: "normal", fineGoo: true, shapePts: [[-0.313,0.83],[-0.193,0.967],[0.002,0.993],[0.172,0.911],[0.236,0.795],[0.258,0.813],[0.376,0.862],[0.547,0.828],[0.66,0.685],[0.655,0.516],[0.479,0.34],[0.223,0.159],[0.249,0.17],[0.537,0.279],[0.775,0.318],[0.921,0.222],[0.973,0.054],[0.901,-0.113],[0.812,-0.173],[0.782,-0.185],[0.852,-0.316],[0.827,-0.489],[0.69,-0.609],[0.522,-0.614],[0.331,-0.455],[0.151,-0.223],[0.167,-0.251],[0.294,-0.508],[0.345,-0.735],[0.259,-0.888],[0.095,-0.951],[-0.076,-0.89],[-0.15,-0.786],[-0.153,-0.78],[-0.291,-0.866],[-0.465,-0.847],[-0.59,-0.715],[-0.6,-0.547],[-0.443,-0.345],[-0.253,-0.172],[-0.281,-0.188],[-0.587,-0.343],[-0.795,-0.38],[-0.942,-0.284],[-0.994,-0.11],[-0.918,0.056],[-0.835,0.111],[-0.832,0.115],[-0.924,0.264],[-0.895,0.444],[-0.762,0.558],[-0.574,0.556],[-0.335,0.414],[-0.192,0.284],[-0.173,0.263],[-0.207,0.332],[-0.317,0.626]], svgScale: 1.05, strokeF: 0.14, maxStretch: 1.45, homeW: 2.4, nbrW: 0.35, k: 0.07, damping: 0.8, rate: 1, gloss: 0.6, baseAlpha: 0.9, stretchAlpha: 0.5 },
     ];
 
     const gradeOrder = { "L": 0, "E": 1, "R": 2, "C": 3 };
@@ -326,7 +334,7 @@
             
             if(isUnlocked) {
                 unlockCount++;
-                item.innerHTML = `<span class="grade-${spec.grade}">[${spec.grade}]</span><br><b>${spec.name}</b><br><span style="font-size:10px; color:#eee;">${spec.type === 'squishy' ? '스퀴시형' : spec.type === 'cotton' ? '솜뭉치형' : spec.type === 'crunch' ? '크런치형' : spec.type.includes('wax') ? '왁뿌형' : spec.jelly ? '해파리형' : spec.shape === 'heart' ? '하트형' : '일반형'}</span>`;
+                item.innerHTML = `<span class="grade-${spec.grade}">[${spec.grade}]</span><br><b>${spec.name}</b><br><span style="font-size:10px; color:#eee;">${spec.type === 'squishy' ? '스퀴시형' : spec.type === 'cotton' ? '솜뭉치형' : spec.type === 'crunch' ? '크런치형' : spec.type.includes('wax') ? '왁뿌형' : spec.jelly ? '해파리형' : (spec.svgPath || spec.shapePts) ? '커스텀형' : spec.shape === 'heart' ? '하트형' : '일반형'}</span>`;
             } else {
                 item.innerHTML = `❓<br><span style="color:#777;">미획득</span>`;
             }
@@ -623,7 +631,7 @@
     let width, height;
     let core = { x: 0, y: 0, vx: 0, vy: 0 };
     let nodes = [];
-    const numNodes = 16;
+    let numNodes = 16; // 현재 슬라임의 노드 수 (initSlime에서 spec.nodeCount로 설정)
     
     let waxIntact = true;
     let waxShards = [];
@@ -660,7 +668,42 @@
     }
     window.addEventListener("resize", resize);
 
+    /* =================================================================
+       SVG 커스텀 모양: spec.svgPath("d" 문자열)를 노드 좌표로 샘플링
+       - 단일 닫힌 패스만 지원 (M...Z 하나). 곡선/호 명령 전부 OK.
+       - 브라우저 네이티브 getPointAtLength로 둘레를 16등분 → 정규화(중심/최대반지름)
+       - spec.svgScale로 크기 배율, strokeF로 몸통 두께 조절
+    ================================================================= */
+    const svgPtsCache = {};
+    function getSvgPoints(spec) {
+        if (svgPtsCache[spec.id]) return svgPtsCache[spec.id];
+        const nn = spec.nodeCount || 16;
+        const svgEl = document.querySelector("svg");
+        const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        p.setAttribute("d", spec.svgPath);
+        svgEl.appendChild(p);
+        const len = p.getTotalLength();
+        const raw = [];
+        let cx2 = 0, cy2 = 0;
+        for (let i = 0; i < nn; i++) {
+            const pt = p.getPointAtLength((i / nn) * len);
+            raw.push({ x: pt.x, y: pt.y });
+            cx2 += pt.x; cy2 += pt.y;
+        }
+        svgEl.removeChild(p);
+        cx2 /= nn; cy2 /= nn;
+        let maxR = 0;
+        raw.forEach(q => { maxR = Math.max(maxR, Math.hypot(q.x - cx2, q.y - cy2)); });
+        const pts = raw.map(q => ({ x: (q.x - cx2) / (maxR || 1), y: (q.y - cy2) / (maxR || 1) }));
+        svgPtsCache[spec.id] = pts;
+        return pts;
+    }
+
     function initSlime() {
+        {
+            const sp = getSpec();
+            numNodes = sp.shapePts ? sp.shapePts.length : (sp.nodeCount || 16); // 종별 노드 수 확정
+        }
         nodes = [];
         waxShards = [];
         waxChips = [];
@@ -725,6 +768,22 @@
                 const jl = Math.hypot(jx, jy) || 1;
                 bd = jl * radius * 0.92;
                 bx = jx / jl; by = jy / jl;
+            }
+
+            // 정밀 좌표형: 오프라인 곡률 적응 샘플링(코너 스냅)된 좌표를 그대로 사용
+            if (spec.shapePts) {
+                const p = spec.shapePts[i % spec.shapePts.length];
+                const hl = Math.hypot(p[0], p[1]) || 1;
+                bd = hl * radius * (spec.svgScale || 0.95);
+                bx = p[0] / hl; by = p[1] / hl;
+            }
+
+            // SVG 패스형: 제공된 SVG 외곽선을 그대로 노드로 사용 (정확한 커스텀 모양)
+            if (spec.svgPath) {
+                const p = getSvgPoints(spec)[i];
+                const hl = Math.hypot(p.x, p.y) || 1;
+                bd = hl * radius * (spec.svgScale || 0.9);
+                bx = p.x / hl; by = p.y / hl;
             }
 
             // 미세 요철: 폼 알갱이가 표면을 살짝 오돌토돌하게
@@ -1034,21 +1093,75 @@
         ctx.drawImage(waxCanvas, 0, 0);
     }
 
-    // 해파리 얼굴: 점 눈 2개 + 미소 — 문지르면 밀리고 서서히 제자리로
+    // 노드 폴리곤 내부 판정 (레이캐스팅)
+    function pointInNodes(px, py) {
+        let inside = false;
+        for (let a = 0, b = numNodes - 1; a < numNodes; b = a++) {
+            const xi = nodes[a].x, yi = nodes[a].y, xj = nodes[b].x, yj = nodes[b].y;
+            if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) inside = !inside;
+        }
+        return inside;
+    }
+
+    // 해파리 얼굴: 점 눈 2개 + 미소 — 구겨져도 항상 몸 안쪽에 머무름
+    let jellyFaceDrawn = [];
     function drawJellyFace(radius) {
         ['lx', 'ly', 'rx', 'ry', 'mx', 'my'].forEach(k => jellyFace[k] *= 0.97);
-        const ey = core.y - radius * 0.1;
-        const ex = radius * 0.2;
-        const er = Math.max(2.5, radius * 0.05);
+        // 얼굴 기준점: 코어가 아니라 현재 몸(노드) 무게중심 → 구김을 따라감
+        let cxm = 0, cym = 0;
+        nodes.forEach(nd => { cxm += nd.x; cym += nd.y; });
+        cxm /= numNodes; cym /= numNodes;
+        const clampIn = (px, py) => {
+            for (let it = 0; it < 10 && !pointInNodes(px, py); it++) {
+                px += (cxm - px) * 0.18;
+                py += (cym - py) * 0.18;
+            }
+            return [px, py];
+        };
+        // 몸이 구겨져 작아지면 얼굴도 비례 축소 (뭉개짐 방지 1단계)
+        let curD = 0, baseD = 0;
+        nodes.forEach(nd => {
+            curD += Math.hypot(nd.x - cxm, nd.y - cym);
+            baseD += nd.baseDist;
+        });
+        const bodyScale = Math.min(1, Math.max(0.55, curD / (baseD || 1)));
+        const ex = radius * 0.2 * bodyScale;
+        const eyeDY = radius * 0.1 * bodyScale;
+
+        let pL = clampIn(cxm - ex + jellyFace.lx, cym - eyeDY + jellyFace.ly);
+        let pR = clampIn(cxm + ex + jellyFace.rx, cym - eyeDY + jellyFace.ry);
+        let pM = clampIn(cxm + jellyFace.mx, cym - radius * 0.02 * bodyScale + jellyFace.my);
+
+        // 최소 간격 유지 (뭉개짐 방지 2단계): 서로 겹치면 축 방향으로 밀어냄
+        const sep = (a, b, minD) => {
+            let dx = b[0] - a[0], dy = b[1] - a[1];
+            let d = Math.hypot(dx, dy);
+            if (d < 0.001) { dx = 1; dy = 0; d = 1; } // 완전 겹침 → 수평으로 분리
+            if (d < minD) {
+                const push = (minD - d) / 2;
+                a[0] -= (dx / d) * push; a[1] -= (dy / d) * push;
+                b[0] += (dx / d) * push; b[1] += (dy / d) * push;
+            }
+        };
+        const eyeMin = radius * 0.26 * bodyScale;
+        const mouthMin = radius * 0.16 * bodyScale;
+        for (let it = 0; it < 3; it++) {
+            sep(pL, pR, eyeMin);
+            sep(pL, pM, mouthMin);
+            sep(pR, pM, mouthMin);
+        }
+
+        jellyFaceDrawn = [pL, pR, pM];
+        const er = Math.max(2.5, radius * 0.05 * bodyScale);
         ctx.save();
         ctx.fillStyle = "#2e2e36";
-        ctx.beginPath(); ctx.arc(core.x - ex + jellyFace.lx, ey + jellyFace.ly, er, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(core.x + ex + jellyFace.rx, ey + jellyFace.ry, er, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(pL[0], pL[1], er, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(pR[0], pR[1], er, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = "#2e2e36";
-        ctx.lineWidth = Math.max(2, radius * 0.028);
+        ctx.lineWidth = Math.max(2, radius * 0.028 * bodyScale);
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.arc(core.x + jellyFace.mx, ey + radius * 0.08 + jellyFace.my, radius * 0.09, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.arc(pM[0], pM[1], radius * 0.09 * bodyScale, Math.PI * 0.15, Math.PI * 0.85);
         ctx.stroke();
         ctx.restore();
     }
@@ -1138,23 +1251,41 @@
                 const prev = nodes[(i - 1 + numNodes) % numNodes];
                 const next = nodes[(i + 1) % numNodes];
                 
-                n.vx += ((prev.x + next.x) / 2 - n.x) * (k * nbrW);
-                n.vy += ((prev.y + next.y) / 2 - n.y) * (k * nbrW);
+                // 편차 라플라시안 평활: 정지 상태(홈 모양)에선 힘이 0이라 코너/요철을
+                // 완벽 보존하고, 홈에서 벗어난 "편차"만 이웃과 비슷해지도록 눌러
+                // 바늘 스파이크를 제거함. 노드 밀도(간격²) 보정 포함.
+                const nbrScale = Math.min(9, Math.pow(numNodes / 16, 2));
+                const phx = core.x + Math.cos(prev.baseAngle) * prev.baseDist;
+                const phy = core.y + Math.sin(prev.baseAngle) * prev.baseDist;
+                const qhx = core.x + Math.cos(next.baseAngle) * next.baseDist;
+                const qhy = core.y + Math.sin(next.baseAngle) * next.baseDist;
+                const relTx = targetX + ((prev.x + next.x) / 2 - (phx + qhx) / 2);
+                const relTy = targetY + ((prev.y + next.y) / 2 - (phy + qhy) / 2);
+                n.vx += (relTx - n.x) * (k * nbrW * nbrScale);
+                n.vy += (relTy - n.y) * (k * nbrW * nbrScale);
                 
                 n.vx *= damp; n.vy *= damp;
                 n.x += n.vx; n.y += n.vy;
             } else {
                 // 금 내기는 터치 핸들러(damageWax)에서 좌표 기반으로 처리
-                // 소성/해파리: 잡은 노드가 이웃을 끌고 가서 뾰족하지 않고 덩어리째 움직임
-                if (spec.plastic || spec.jelly) {
-                    const prevN = nodes[(i - 1 + numNodes) % numNodes];
-                    const nextN = nodes[(i + 1) % numNodes];
-                    [prevN, nextN].forEach(m => {
-                        if (m.touchId === null) {
-                            m.vx += (n.x - m.x) * 0.05;
-                            m.vy += (n.y - m.y) * 0.05;
-                        }
-                    });
+                // 잡기 분산(종 모양): 이웃들이 잡은 노드 "변위"를 cos² 감쇠로 나눠 받아
+                // 끝이 평평하고 어깨가 매끈한, 슬라임다운 뭉툭한 당김이 됨
+                {
+                    const K = Math.max(2, Math.round(numNodes / 8));
+                    const nhx = core.x + Math.cos(n.baseAngle) * n.baseDist;
+                    const nhy = core.y + Math.sin(n.baseAngle) * n.baseDist;
+                    const dxg = n.x - nhx, dyg = n.y - nhy; // 잡은 노드의 홈 대비 변위
+                    for (let o = -K; o <= K; o++) {
+                        if (o === 0) continue;
+                        const m = nodes[(i + o + numNodes) % numNodes];
+                        if (m.touchId !== null) continue;
+                        const c = Math.cos((Math.abs(o) / (K + 1)) * Math.PI / 2);
+                        const fall = c * c; // 종형: 중심부 평평(뭉툭한 끝) + 경계 기울기 0(주름 없음)
+                        const tx2 = core.x + Math.cos(m.baseAngle) * m.baseDist + dxg * fall;
+                        const ty2 = core.y + Math.sin(m.baseAngle) * m.baseDist + dyg * fall;
+                        m.vx += (tx2 - m.x) * 0.3;
+                        m.vy += (ty2 - m.y) * 0.3;
+                    }
                 }
             }
 
@@ -1297,7 +1428,7 @@
             bodyColor = mysteryColor;
         }
         bodyCtx.save();
-        bodyCtx.filter = 'url(#gooey)';
+        bodyCtx.filter = spec.fineGoo ? 'url(#gooeyFine)' : 'url(#gooey)'; // 정밀 모양은 미세 블러
         if (spec.rim) {
             // 림(테두리 음영)도 같은 노드로 그려서 몸통과 함께 늘어남
             traceAndFillBlob(bodyCtx, spec.rim, radius, spec.strokeF);
