@@ -53,7 +53,7 @@
         }
         .slime-item {
             padding: 6px 8px; margin-bottom: 6px; border-radius: 10px;
-            cursor: pointer; font-size: 13px; border: 2px solid transparent;
+            cursor: pointer; font-size: 13px; border: 2px solid transparent; color: #333;
             display: flex; justify-content: space-between; align-items: center; background: #fff;
         }
         .slime-item.active { border-color: #ff4081; background: #fff0f5; }
@@ -121,15 +121,20 @@
         <div>
             <button class="btn" onclick="startGacha()">🎁 슬라임 뽑기</button><br>
             <button class="btn btn-book" onclick="openBook()">📖 슬라임 도감</button><br>
-            <button class="btn btn-shop" onclick="openShop()">🛒 슬라임 상점</button>
+            <button class="btn btn-shop" onclick="openShop()">🛒 슬라임 상점</button><br>
+            <button class="btn" style="background:#00acc1;" onclick="openCustomize()">🧪 슬라임 꾸미기</button>
         </div>
         
         <div id="inventory-container">
             <button class="btn" style="background:#795548; margin-right:6px; padding:10px 12px;" onclick="respawnSlime()" title="슬라임 다시 꺼내기">🔄</button><button class="btn" style="background:#455a64; margin-right:6px; padding:10px 12px;" id="fsBtn" onclick="toggleFullscreen()" title="전체화면">⤢</button><button class="btn" style="background:#607d8b; margin-right:6px; padding:10px 12px;" onclick="openBgModal()" title="배경색 바꾸기">🎨</button><button class="btn btn-sub" id="toggleInvBtn" onclick="toggleInventory()">🎒 가방 접기</button>
             <div id="mileage-box">✨ 마일리지: <span id="mileageText">0</span></div>
             <div id="inventory">
-                <div style="margin-bottom: 8px; color: #ff4081; font-weight:bold; text-align: center; font-size:13px;">보유 슬라임</div>
+                <div style="margin-bottom: 8px; color: #ff4081; font-weight:bold; text-align: center; font-size:13px;"style="display:flex; gap:6px; margin-bottom:8px; justify-content:center;">
+                    <button class="btn" id="tabSlime" style="padding:6px 14px; font-size:12px;" onclick="setInvTab('slime')">🧪 슬라임</button>
+                    <button class="btn" id="tabMat" style="padding:6px 14px; font-size:12px; background:#777;" onclick="setInvTab('mat')">🧺 재료</button>
+                </div>
                 <div id="slimeList"></div>
+                <div id="matList" style="display:none;"></div>
             </div>
         </div>
     </div>
@@ -163,8 +168,33 @@
         <div class="modal-card" style="width: 320px;">
             <h2>🛒 슬라임 상점</h2>
             <div id="shopMileage" style="color:#ffeb3b; margin-bottom:10px;"></div>
+            <div style="display:flex; gap:6px; justify-content:center; margin-bottom:10px;">
+                <button class="btn" id="shopTabSlime" style="padding:6px 14px; font-size:12px;" onclick="setShopTab('slime')">🧪 슬라임</button>
+                <button class="btn" id="shopTabMat" style="padding:6px 14px; font-size:12px; background:#777;" onclick="setShopTab('mat')">🧺 재료</button>
+            </div>
             <div class="grid" id="shopGrid"></div>
             <button class="btn" style="background:#555;" onclick="closeShop()">닫기</button>
+        </div>
+    </div>
+
+    <!-- 꾸미기 모달 -->
+    <div id="customModal" class="modal-overlay">
+        <div class="modal-card" style="width: 330px; max-height: 82vh; overflow-y: auto;">
+            <h2>🧪 슬라임 꾸미기</h2>
+            <div style="font-size:12px; color:#bbb; margin-bottom:10px;">베이스 슬라임에서 레벨을 꺼내고, 재료를 넣어 나만의 슬라임을 만들어요 (재료는 소모됨)</div>
+            <div style="text-align:left; font-size:13px; color:#ffd54a; margin:6px 0;">① 베이스 선택</div>
+            <div id="custBaseList" style="max-height:24vh; overflow-y:auto; margin-bottom:10px; text-align:left; padding:2px;"></div>
+            <div id="custLvRow" style="display:none; margin-bottom:10px;">
+                <span style="font-size:13px;">사용 레벨: </span>
+                <button class="btn" style="padding:4px 12px; font-size:14px;" onclick="custLv(-1)">−</button>
+                <b id="custLvText" style="margin:0 10px;">1</b>
+                <button class="btn" style="padding:4px 12px; font-size:14px;" onclick="custLv(1)">＋</button>
+                <span id="custLvMax" style="font-size:11px; color:#999;"></span>
+            </div>
+            <div style="text-align:left; font-size:13px; color:#ffd54a; margin:6px 0;">② 재료 넣기 (보유 재료)</div>
+            <div id="custMatList" style="margin-bottom:12px;"></div>
+            <button class="btn" style="background:#00acc1;" onclick="createCustomSlime()">✨ 만들기</button>
+            <button class="btn" style="background:#555;" onclick="closeCustomize()">닫기</button>
         </div>
     </div>
 
@@ -233,6 +263,28 @@
 
     const gradeOrder = { "L": 0, "E": 1, "R": 2, "C": 3 };
 
+    /* =================================================================
+       재료 DB — 슬라임 꾸미기(커스텀)용 소모재
+       cat: bead(비즈 1세트=구슬5개) / effect(터치 이펙트) / glitter / wax / topping
+       w: 뽑기 보너스 가중치
+    ================================================================= */
+    const matDB = [
+        { id: "b_pink",   cat: "bead",    name: "핑크 비즈",    color: "#ff9ec3", price: 20, w: 4 },
+        { id: "b_blue",   cat: "bead",    name: "블루 비즈",    color: "#7ec3f7", price: 20, w: 4 },
+        { id: "b_yellow", cat: "bead",    name: "옐로 비즈",    color: "#ffd95e", price: 20, w: 4 },
+        { id: "b_white",  cat: "bead",    name: "화이트 비즈",  color: "#ffffff", price: 20, w: 4 },
+        { id: "fx_fizz",  cat: "effect",  name: "탄산 이펙트",  fx: "fizz", price: 40, w: 2 },
+        { id: "fx_dust",  cat: "effect",  name: "밀가루 이펙트", fx: "dust", pop: "246,241,232", price: 40, w: 2 },
+        { id: "g_silver", cat: "glitter", name: "실버 글리터",  color: "#ffffff", price: 50, w: 2 },
+        { id: "g_gold",   cat: "glitter", name: "골드 글리터",  color: "#ffd54a", price: 50, w: 1 },
+        { id: "g_rainbow",cat: "glitter", name: "무지개 글리터", rainbow: true, price: 60, w: 1 },
+        { id: "w_thin",   cat: "wax",     name: "얇은 왁스",    color: "#ffe3ec", waxHits: 1, price: 45, w: 2 },
+        { id: "w_thick",  cat: "wax",     name: "두꺼운 왁스",  color: "#e8c04a", waxHits: 3, price: 55, w: 1 },
+        { id: "t_face",   cat: "topping", name: "얼굴 스티커",  top: "face", price: 35, w: 2 },
+        { id: "t_apple",  cat: "topping", name: "사과 꼭지",    top: "apple", price: 35, w: 2 }
+    ];
+    const CAT_LABEL = { bead: "비즈", effect: "이펙트", glitter: "글리터", wax: "왁스", topping: "토핑" };
+
     let saveData = {
         mySlimes: [{ id: 1, customName: "물젤리 슬랑이", level: 1 }],
         currentSlimeId: 1,
@@ -247,48 +299,197 @@
     }
 
     let mySlimes = saveData.mySlimes;
-    let currentSlime = mySlimes.find(s => s.id === saveData.currentSlimeId) || mySlimes[0];
+    let materials = saveData.materials || {}; // 재료 보유량 { matId: 개수 }
+    let currentSlime = (typeof saveData.currentSlimeId === "string" && saveData.currentSlimeId.indexOf("c:") === 0)
+        ? (mySlimes.find(s => s.uid === saveData.currentSlimeId.slice(2)) || mySlimes[0])
+        : (mySlimes.find(s => s.id === saveData.currentSlimeId) || mySlimes[0]);
     let mileage = saveData.mileage;
     let unlockedIds = saveData.unlockedIds || [1];
 
     function saveGame() {
         saveData.mySlimes = mySlimes;
-        saveData.currentSlimeId = currentSlime.id;
+        saveData.materials = materials;
+        saveData.currentSlimeId = currentSlime.id === "custom" ? "c:" + currentSlime.uid : currentSlime.id;
         saveData.mileage = mileage;
         saveData.unlockedIds = unlockedIds;
         localStorage.setItem("slime_gacha_save", JSON.stringify(saveData));
     }
 
+    let invTab = "slime";
+    function setInvTab(t) { invTab = t; updateInventoryUI(); }
+
     function updateInventoryUI() {
         mySlimes.sort((a, b) => {
-            let specA = slimeDB.find(x => x.id === a.id);
-            let specB = slimeDB.find(x => x.id === b.id);
-            return gradeOrder[specA.grade] - gradeOrder[specB.grade];
+            const ga = a.id === "custom" ? -1 : gradeOrder[slimeDB.find(x => x.id === a.id).grade];
+            const gb = b.id === "custom" ? -1 : gradeOrder[slimeDB.find(x => x.id === b.id).grade];
+            return ga - gb;
         });
 
+        document.getElementById("tabSlime").style.background = invTab === "slime" ? "#4caf50" : "#777";
+        document.getElementById("tabMat").style.background = invTab === "mat" ? "#4caf50" : "#777";
         const list = document.getElementById("slimeList");
+        const matList = document.getElementById("matList");
+        list.style.display = invTab === "slime" ? "block" : "none";
+        matList.style.display = invTab === "mat" ? "block" : "none";
+
         list.innerHTML = "";
         mySlimes.forEach(s => {
-            const spec = slimeDB.find(x => x.id === s.id);
+            const isCust = s.id === "custom";
+            const spec = isCust ? null : slimeDB.find(x => x.id === s.id);
             const div = document.createElement("div");
-            div.className = `slime-item ${s.id === currentSlime.id ? 'active' : ''}`;
-            
+            const active = (s === currentSlime);
+            div.className = `slime-item ${active ? "active" : ""}`;
+            const label = isCust
+                ? `<span style="color:#7ce7ff; font-weight:bold;">[★] ${s.customName || "나만의 슬라임"}</span>`
+                : `<span class="grade-${spec.grade}">[${spec.grade}] ${s.customName || spec.name}</span>`;
+            const renameCall = isCust ? `renameCustomSlime('${s.uid}', event)` : `renameSlime(${s.id}, event)`;
             div.innerHTML = `
-                <span class="grade-${spec.grade}">[${spec.grade}] ${s.customName || spec.name}</span>
+                ${label}
                 <div>
                     <span class="lv-badge">Lv.${s.level}</span>
-                    <button class="rename-btn" onclick="renameSlime(${s.id}, event)">📝</button>
+                    <button class="rename-btn" onclick="${renameCall}">📝</button>
                 </div>
             `;
-            div.onclick = () => { 
-                currentSlime = s; 
-                initSlime(); 
-                updateInventoryUI(); 
+            div.onclick = () => {
+                currentSlime = s;
+                initSlime();
+                updateInventoryUI();
                 saveGame();
             };
             list.appendChild(div);
         });
+
+        // 재료 탭
+        matList.innerHTML = "";
+        let any = false;
+        matDB.forEach(m => {
+            const cnt = materials[m.id] || 0;
+            if (cnt <= 0) return;
+            any = true;
+            const div = document.createElement("div");
+            div.className = "slime-item";
+            div.innerHTML = `<span>[${CAT_LABEL[m.cat]}] ${m.name}</span><span class="lv-badge">×${cnt}</span>`;
+            matList.appendChild(div);
+        });
+        if (!any) matList.innerHTML = `<div style="color:#999; font-size:12px; text-align:center; padding:10px;">재료가 없어요.<br>뽑기 보너스나 상점에서 얻을 수 있어요!</div>`;
+
         document.getElementById("mileageText").innerText = mileage;
+    }
+
+    /* =================================================================
+       슬라임 꾸미기 — 베이스(보유 슬라임에서 레벨 차출) + 재료(소모)
+    ================================================================= */
+    let custSel = { base: null, useLv: 1, mats: {} };
+
+    function openCustomize() {
+        custSel = { base: null, useLv: 1, mats: {} };
+        document.getElementById("customModal").style.display = "flex";
+        renderCustomize();
+    }
+    function closeCustomize() { document.getElementById("customModal").style.display = "none"; }
+
+    function renderCustomize() {
+        const baseList = document.getElementById("custBaseList");
+        baseList.innerHTML = "";
+        const bases = mySlimes.filter(s => s.id !== "custom")
+            .sort((a, b) => gradeOrder[slimeDB.find(x => x.id === a.id).grade] - gradeOrder[slimeDB.find(x => x.id === b.id).grade]);
+        if (!bases.length) baseList.innerHTML = `<span style="font-size:12px; color:#999;">베이스로 쓸 슬라임이 없어요</span>`;
+        bases.forEach(s => {
+            const spec = slimeDB.find(x => x.id === s.id);
+            const row = document.createElement("div");
+            const sel = custSel.base === s;
+            row.className = `slime-item ${sel ? "active" : ""}`;
+            if (sel) row.style.outline = "2px solid #00acc1";
+            row.innerHTML = `<span class="grade-${spec.grade}">[${spec.grade}] ${s.customName || spec.name}</span><span class="lv-badge">Lv.${s.level}</span>`;
+            row.onclick = () => { custSel.base = s; custSel.useLv = 1; renderCustomize(); };
+            baseList.appendChild(row);
+        });
+
+        const lvRow = document.getElementById("custLvRow");
+        if (custSel.base) {
+            lvRow.style.display = "block";
+            document.getElementById("custLvText").innerText = custSel.useLv;
+            document.getElementById("custLvMax").innerText = `(최대 ${custSel.base.level} — 쓰고 남은 레벨은 원본에 유지)`;
+        } else lvRow.style.display = "none";
+
+        const matWrap = document.getElementById("custMatList");
+        matWrap.innerHTML = "";
+        let any = false;
+        matDB.forEach(m => {
+            const own = materials[m.id] || 0;
+            if (own <= 0) return;
+            any = true;
+            const sel = custSel.mats[m.id] || 0;
+            const row = document.createElement("div");
+            row.className = "slime-item";
+            row.style.cursor = "default";
+            row.innerHTML = `<span style="font-size:12px;"><b style="color:#00838f;">[${CAT_LABEL[m.cat]}]</b> ${m.name} <span style="color:#999;">×${own}</span></span>
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <button class="btn" style="padding:2px 10px; font-size:13px; margin:0;" onclick="custMat('${m.id}', -1)">−</button>
+                    <b style="min-width:16px; text-align:center; color:${sel > 0 ? "#e91e63" : "#bbb"};">${sel}</b>
+                    <button class="btn" style="padding:2px 10px; font-size:13px; margin:0;" onclick="custMat('${m.id}', 1)">＋</button>
+                </span>`;
+            matWrap.appendChild(row);
+        });
+        if (!any) matWrap.innerHTML = `<div style="color:#999; font-size:12px; padding:8px;">보유 재료가 없어요 — 뽑기 보너스나 상점에서 구해보세요!</div>`;
+    }
+
+    function custLv(d) {
+        if (!custSel.base) return;
+        custSel.useLv = Math.max(1, Math.min(custSel.base.level, custSel.useLv + d));
+        renderCustomize();
+    }
+    function custMat(id, d) {
+        const own = materials[id] || 0;
+        custSel.mats[id] = Math.max(0, Math.min(own, (custSel.mats[id] || 0) + d));
+        if (custSel.mats[id] === 0) delete custSel.mats[id];
+        renderCustomize();
+    }
+
+    function createCustomSlime() {
+        const b = custSel.base;
+        if (!b) { showToast("베이스 슬라임을 먼저 선택하세요!"); return; }
+        const matArr = [];
+        Object.entries(custSel.mats).forEach(([id, n]) => { for (let q = 0; q < n; q++) matArr.push(id); });
+        if (!matArr.length) { showToast("재료를 1개 이상 넣어주세요!"); return; }
+
+        // 차감
+        const use = custSel.useLv;
+        b.level -= use;
+        Object.entries(custSel.mats).forEach(([id, n]) => {
+            materials[id] -= n;
+            if (materials[id] <= 0) delete materials[id];
+        });
+
+        const baseSpec = slimeDB.find(x => x.id === b.id);
+        const cs = {
+            id: "custom",
+            uid: "u" + Date.now().toString(36) + Math.floor(Math.random() * 999),
+            baseId: b.id,
+            mats: matArr,
+            level: use,
+            customName: "나만의 " + baseSpec.name
+        };
+        if (b.level <= 0) mySlimes.splice(mySlimes.indexOf(b), 1);
+        mySlimes.push(cs);
+        currentSlime = cs;
+        initSlime();
+        closeCustomize();
+        showToast("✨ 커스텀 슬라임 완성!");
+        updateInventoryUI();
+        saveGame();
+    }
+
+    function renameCustomSlime(uid, e) {
+        e.stopPropagation();
+        const s = mySlimes.find(x => x.uid === uid);
+        if (!s) return;
+        const newName = prompt("슬라임의 새 이름을 입력하세요:", s.customName || "나만의 슬라임");
+        if (newName && newName.trim().length > 0) {
+            s.customName = newName.trim();
+            updateInventoryUI();
+            saveGame();
+        }
     }
 
     function renameSlime(id, e) {
@@ -366,10 +567,30 @@
     }
     function closeShop() { document.getElementById("shopModal").style.display = "none"; }
 
+    let shopTab = "slime";
+    function setShopTab(t) { shopTab = t; renderShop(); }
+
     function renderShop() {
         document.getElementById("shopMileage").innerText = `✨ 보유 마일리지: ${mileage}`;
+        document.getElementById("shopTabSlime").style.background = shopTab === "slime" ? "#ff9800" : "#777";
+        document.getElementById("shopTabMat").style.background = shopTab === "mat" ? "#ff9800" : "#777";
         const grid = document.getElementById("shopGrid");
         grid.innerHTML = "";
+
+        if (shopTab === "mat") {
+            matDB.forEach(m => {
+                const own = materials[m.id] || 0;
+                const afford = mileage >= m.price;
+                const item = document.createElement("div");
+                item.className = "book-item unlocked";
+                item.style.border = own > 0 ? "2px solid #ffeb3b" : "2px solid transparent";
+                item.innerHTML = `<span style="color:#7ce7ff;">[${CAT_LABEL[m.cat]}]</span><br><b>${m.name}</b><br>`
+                    + `<span style="font-size:10px; color:#eee;">${own > 0 ? "×" + own + " 보유중" : "미보유"}</span><br>`
+                    + `<button class="btn" style="padding:4px 12px; font-size:12px; margin-top:6px;${afford ? "" : " background:#777;"}" onclick="buyMaterial('${m.id}')">✨ ${m.price}</button>`;
+                grid.appendChild(item);
+            });
+            return;
+        }
         const sorted = [...slimeDB].sort((a, b) => gradeOrder[a.grade] - gradeOrder[b.grade] || a.id - b.id);
         sorted.forEach(spec => {
             const price = SHOP_PRICES[spec.grade];
@@ -383,6 +604,17 @@
                 + `<button class="btn" style="padding:4px 12px; font-size:12px; margin-top:6px;${afford ? '' : ' background:#777;'}" onclick="buySlime(${spec.id})">✨ ${price}</button>`;
             grid.appendChild(item);
         });
+    }
+
+    function buyMaterial(id) {
+        const m = matDB.find(x => x.id === id);
+        if (mileage < m.price) { showToast(`마일리지가 부족해요! (필요: ✨${m.price})`); return; }
+        mileage -= m.price;
+        materials[id] = (materials[id] || 0) + 1;
+        showToast(`${m.name} 획득!`);
+        updateInventoryUI();
+        renderShop();
+        saveGame();
     }
 
     function buySlime(id) {
@@ -467,6 +699,15 @@
             result.innerHTML = `<span class="grade-${pulled.grade}">[${pulled.grade}] ${pulled.name}</span><br>신규 획득!`;
             subResult.innerText = `마일리지 +5 적립!`;
         }
+        // 보너스 재료 (45%)
+        if (Math.random() < 0.45) {
+            const pool = [];
+            matDB.forEach(m => { for (let q = 0; q < (m.w || 1); q++) pool.push(m); });
+            const bm = pool[Math.floor(Math.random() * pool.length)];
+            materials[bm.id] = (materials[bm.id] || 0) + 1;
+            subResult.innerText += `  🎁 보너스: ${bm.name}!`;
+        }
+
         document.getElementById("closeGachaBtn").style.display = "block";
         updateInventoryUI();
         saveGame();
@@ -654,7 +895,44 @@
     let lastTouchPt = null;           // 자석 퍼티가 기어갈 마지막 터치 지점
     let jellyHue = 200, jellySat = 50, jellyLit = 80; // 세션 고정 랜덤 색
 
-    function getSpec() { return slimeDB.find(x => x.id === currentSlime.id); }
+    // 커스텀 슬라임: 베이스 스펙 위에 재료 효과를 머지 (uid+재료 조합으로 캐싱)
+    const customSpecCache = {};
+    function buildCustomSpec(cs) {
+        const key = cs.uid + ":" + cs.mats.join(",");
+        if (customSpecCache[key]) return customSpecCache[key];
+        const base = slimeDB.find(x => x.id === cs.baseId) || slimeDB[0];
+        const s = Object.assign({}, base);
+        s.custom = true;
+        s.customBeads = [];
+        cs.mats.forEach(mid => {
+            const m = matDB.find(x => x.id === mid);
+            if (!m) return;
+            if (m.cat === "bead") s.customBeads.push({ col: m.color });
+            else if (m.cat === "effect") {
+                if (m.fx === "fizz") s.fizz = true;
+                if (m.fx === "dust") { s.dust = true; s.popColor = m.pop; }
+            } else if (m.cat === "glitter") {
+                s.sparkle = true;
+                if (m.rainbow) s.sparkleRainbow = true;
+                else s.sparkleColor = m.color;
+            } else if (m.cat === "wax") {
+                s.type = "crack_wax";
+                s.waxColor = m.color;
+                s.waxHits = m.waxHits;
+                s.breakScore = 4;
+            } else if (m.cat === "topping") {
+                if (m.top === "face") s.faceTopping = true;
+                if (m.top === "apple") s.decor = "apple";
+            }
+        });
+        if (!s.customBeads.length) delete s.customBeads;
+        customSpecCache[key] = s;
+        return s;
+    }
+    function getSpec() {
+        if (currentSlime.id === "custom") return buildCustomSpec(currentSlime);
+        return slimeDB.find(x => x.id === currentSlime.id);
+    }
     function getRadius() { return Math.min(100 + ((currentSlime.level || 1) - 1) * 10, 220); }
 
     function resize() {
@@ -844,6 +1122,21 @@
             }
         }
 
+        // 커스텀 비즈: 세트당 단색 구슬 5개 (initSlime에서 1회만 생성)
+        if (spec.customBeads) {
+            spec.customBeads.forEach(cb => {
+                for (let j = 0; j < 5; j++) {
+                    foamBeads.push({
+                        ni: Math.floor(Math.random() * numNodes),
+                        f: 0.15 + Math.random() * 0.72,
+                        aoff: (Math.random() - 0.5) * 0.38,
+                        r: 0.05 + Math.random() * 0.045,
+                        tint: 0.5,
+                        col: cb.col
+                    });
+                }
+            });
+        }
     }
 
     // 왁스 플레이크(얇은 칩 조각) 파편 생성
@@ -1490,7 +1783,7 @@
         }
 
         // 폼볼: 폼 알갱이 텍스처 (source-atop이라 몸통 안에만 그려짐)
-        if (spec.beads && foamBeads.length) {
+        if ((spec.beads || spec.customBeads) && foamBeads.length) {
             bodyCtx.save();
             bodyCtx.globalCompositeOperation = 'source-atop';
             foamBeads.forEach(B => {
@@ -1500,7 +1793,7 @@
                 const by2 = core.y + dyn * B.f + dxn * B.aoff;
                 const br = B.r * radius;
                 const bc = spec.beadColors || ["rgba(255,255,255,0.9)", "#ffd9e1", "#f79cae"];
-                bodyCtx.fillStyle = B.tint < 0.4 ? bc[0] : (B.tint < 0.7 ? bc[1] : bc[2]);
+                bodyCtx.fillStyle = B.col ? B.col : (B.tint < 0.4 ? bc[0] : (B.tint < 0.7 ? bc[1] : bc[2]));
                 bodyCtx.beginPath();
                 bodyCtx.arc(bx2, by2, br, 0, Math.PI * 2);
                 bodyCtx.fill();
@@ -1546,7 +1839,8 @@
                 const a = 0.3 + 0.6 * (0.5 + 0.5 * Math.sin(S.ph));
                 const sx = core.x + S.ox * radius, sy = core.y + S.oy * radius;
                 const L = S.sz * radius * (0.7 + 0.3 * a);
-                bodyCtx.strokeStyle = `rgba(255,255,255,${a})`;
+                bodyCtx.globalAlpha = a;
+                bodyCtx.strokeStyle = S.col || "#ffffff";
                 bodyCtx.lineWidth = 2;
                 bodyCtx.save();
                 bodyCtx.translate(sx, sy); bodyCtx.rotate(S.rot);
@@ -1581,13 +1875,13 @@
         ctx.restore();
 
         // 해파리 얼굴 (인쇄된 얼굴이라 불투명)
-        if (spec.jelly) drawJellyFace(radius);
+        if (spec.jelly || spec.faceTopping) drawJellyFace(radius);
 
         // 3-5. 왁스 코팅 껍질 (광택 재질 + 깨진 자리 구멍)
         if (showWaxShell) renderWaxShell(spec, radius);
 
         // 3-6. 껍질 장식 (청사과 꼭지+잎)
-        if (showWaxShell && spec.decor === "apple") {
+        if (spec.decor === "apple" && (showWaxShell || !spec.type.includes("wax"))) {
             drawAppleDecor(ctx, core.x, core.y - radius * 1.02, radius / 100, 0);
         }
 
@@ -1664,7 +1958,9 @@
         const r = getRadius();
         for (let i = 0; i < count; i++) {
             if (sparkles.length >= 28) sparkles.shift();
+            const gspec = getSpec();
             sparkles.push({
+                col: gspec.sparkleRainbow ? `hsl(${Math.floor(Math.random() * 360)}, 90%, 70%)` : (gspec.sparkleColor || "#ffffff"),
                 ox: (x - core.x) / r + (Math.random() - 0.5) * 0.18,
                 oy: (y - core.y) / r + (Math.random() - 0.5) * 0.18,
                 sz: 0.045 + Math.random() * 0.05,
@@ -1697,7 +1993,7 @@
         core.vy += (core.y - y) * 0.02;
         if (spec.jelly) jellyCloud = Math.min(1, jellyCloud + 0.015);
         if (spec.aurora) { auroraHue = (auroraHue + 24) % 360; auroraSat = Math.min(80, auroraSat + 6); }
-        if (spec.type === "crunch" && spec.dust) {
+        if (spec.dust) {
             // 밀가루 도우: 퍽! 하고 먼지 구름이 크게 피어오름
             playSquishSound('chop');
             for (let b = 0; b < 5; b++) {
@@ -1808,7 +2104,7 @@
         if (n) {
             const vel = Math.hypot(x - n.x, y - n.y);
             if (vel > 1) {
-                if (spec.type === "crunch" && spec.dust && Math.random() < 0.5) {
+                if (spec.dust && Math.random() < 0.5) {
                     // 밀가루: 옅고 큰 먼지가 풀풀 피어오름
                     if (Math.random() < 0.15) playSquishSound('squish');
                     crunchParticles.push({
