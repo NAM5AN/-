@@ -104,8 +104,8 @@
     <div id="ui">
         <div>
             <button class="btn" onclick="startGacha()">🎁 슬라임 뽑기</button><br>
-            <button class="btn btn-book" onclick="openBook()">📖 말랑이 도감</button><br>
-            <button class="btn btn-shop" onclick="openShop()">🛒 말랑이 상점</button>
+            <button class="btn btn-book" onclick="openBook()">📖 슬라임 도감</button><br>
+            <button class="btn btn-shop" onclick="openShop()">🛒 슬라임 상점</button>
         </div>
         
         <div id="inventory-container">
@@ -135,7 +135,7 @@
     <!-- 도감 모달 -->
     <div id="bookModal" class="modal-overlay">
         <div class="modal-card" style="width: 320px;">
-            <h2>📖 말랑이 수집 도감</h2>
+            <h2>📖 슬라임 수집 도감</h2>
             <div id="bookProgress" style="color:#ffeb3b; margin-bottom:10px;">0% 달성</div>
             <div class="grid" id="bookGrid"></div>
             <button class="btn" style="background:#555;" onclick="closeBook()">닫기</button>
@@ -145,7 +145,7 @@
     <!-- 상점 모달 -->
     <div id="shopModal" class="modal-overlay">
         <div class="modal-card" style="width: 320px;">
-            <h2>🛒 말랑이 상점</h2>
+            <h2>🛒 슬라임 상점</h2>
             <div id="shopMileage" style="color:#ffeb3b; margin-bottom:10px;"></div>
             <div class="grid" id="shopGrid"></div>
             <button class="btn" style="background:#555;" onclick="closeShop()">닫기</button>
@@ -169,25 +169,35 @@
     // gloss: 광택 세기(0~1), baseAlpha: 평소 투명도, stretchAlpha: 최대로 늘렸을 때 투명도
     // shape: "heart"면 하트형, strokeF: 몸통 두께 배율, kMul은 cotton 타입에서 노드별 랜덤 부여
     const slimeDB = [
-        { id: 1, name: "물젤리 슬랑이", grade: "C", color: "#64c8ff", k: 0.05, damping: 0.8, type: "normal", rate: 16, gloss: 0.55, baseAlpha: 0.9, stretchAlpha: 0.35 },
-        { id: 2, name: "우유 생크림 폼", grade: "C", color: "#ffffff", k: 0.08, damping: 0.85, type: "normal", rate: 13, gloss: 0.08, baseAlpha: 1, stretchAlpha: 0.95 },
-        { id: 3, name: "폼볼 크런치 팝", grade: "R", color: "#ffb6c1", k: 0.11, damping: 0.75, type: "crunch", rate: 8, gloss: 0.3, baseAlpha: 1, stretchAlpha: 0.85 },
-        { id: 4, name: "바사삭 리얼 왁뿌볼", grade: "E", color: "#d81b60", waxColor: "#f8bbd0", k: 0.12, damping: 0.8, type: "wax", rate: 4, gloss: 0.5, baseAlpha: 1, stretchAlpha: 0.8 },
-        { id: 5, name: "바삭 크랙볼", grade: "E", color: "#ff5722", waxColor: "#ffe082", k: 0.10, damping: 0.8, type: "crack_wax", rate: 4, gloss: 0.45, baseAlpha: 1, stretchAlpha: 0.8 }, 
-        { id: 6, name: "쫀득 고무 찰떡", grade: "R", color: "#8bc34a", k: 0.18, damping: 0.65, type: "normal", rate: 7, gloss: 0.7, baseAlpha: 1, stretchAlpha: 0.9 },
-        { id: 7, name: "구름 숨결 스퀴시", grade: "E", color: "#e040fb", k: 0.02, damping: 0.55, type: "squishy", rate: 3, gloss: 0.2, baseAlpha: 0.95, stretchAlpha: 0.75 }, 
-        { id: 8, name: "✨우주 덩어리✨", grade: "L", color: "#4b0082", k: 0.06, damping: 0.88, type: "normal", rate: 2, gloss: 0.85, baseAlpha: 0.85, stretchAlpha: 0.5 },
+        { id: 1, name: "물젤리 슬랑이", grade: "C", color: "#64c8ff", k: 0.05, damping: 0.8, type: "normal", rate: 9, gloss: 0.55, baseAlpha: 0.9, stretchAlpha: 0.35 },
+        { id: 2, name: "우유 생크림 폼", grade: "C", color: "#ffffff", k: 0.08, damping: 0.85, type: "normal", rate: 7, gloss: 0.08, baseAlpha: 1, stretchAlpha: 0.95 },
+        { id: 3, name: "폼볼 크런치 팝", grade: "R", color: "#ffb6c1", k: 0.11, damping: 0.75, type: "crunch", beads: true, bumpy: 0.09, rate: 5, gloss: 0.3, baseAlpha: 1, stretchAlpha: 0.85 },
+        { id: 4, name: "바사삭 리얼 왁뿌볼", grade: "E", color: "#d81b60", waxColor: "#f8bbd0", k: 0.12, damping: 0.8, type: "wax", rate: 3, gloss: 0.5, baseAlpha: 1, stretchAlpha: 0.8 },
+        { id: 5, name: "바삭 크랙볼", grade: "E", color: "#ff5722", waxColor: "#ffe082", k: 0.10, damping: 0.8, type: "crack_wax", rate: 3, gloss: 0.45, baseAlpha: 1, stretchAlpha: 0.8 }, 
+        { id: 6, name: "쫀득 고무 찰떡", grade: "R", color: "#8bc34a", k: 0.18, damping: 0.65, type: "normal", rate: 4, gloss: 0.7, baseAlpha: 1, stretchAlpha: 0.9 },
+        { id: 7, name: "구름 숨결 스퀴시", grade: "E", color: "#e040fb", k: 0.02, damping: 0.55, type: "squishy", rate: 2, gloss: 0.2, baseAlpha: 0.95, stretchAlpha: 0.75 }, 
+        { id: 8, name: "✨우주 덩어리✨", grade: "L", color: "#4b0082", k: 0.06, damping: 0.88, type: "normal", rate: 1, gloss: 0.85, baseAlpha: 0.85, stretchAlpha: 0.5 },
         // ── 신규 & 파생 라인업 ──
         { id: 9, name: "코랄 하트젤리", grade: "E", color: "#ff7f6e", k: 0.07, damping: 0.8, type: "normal", shape: "heart", strokeF: 0.5, rate: 3, gloss: 0.6, baseAlpha: 0.95, stretchAlpha: 0.5 },
-        { id: 10, name: "뭉게구름 솜슬라임", grade: "E", color: "#eceae6", k: 0.012, damping: 0.62, type: "cotton", rate: 4, gloss: 0.08, baseAlpha: 1, stretchAlpha: 0.96 },
-        { id: 11, name: "청량 민트젤리", grade: "C", color: "#5fd7c5", k: 0.05, damping: 0.8, type: "normal", rate: 11, gloss: 0.5, baseAlpha: 0.85, stretchAlpha: 0.3 },
+        { id: 10, name: "뭉게구름 솜슬라임", grade: "E", color: "#eceae6", k: 0.012, damping: 0.62, type: "cotton", rate: 2, gloss: 0.08, baseAlpha: 1, stretchAlpha: 0.96 },
+        { id: 11, name: "청량 민트젤리", grade: "C", color: "#5fd7c5", k: 0.05, damping: 0.8, type: "normal", rate: 6, gloss: 0.5, baseAlpha: 0.85, stretchAlpha: 0.3 },
         { id: 12, name: "아그작 청사과 왁뿌볼", grade: "E", color: "#7cb342", waxColor: "#d7ec9a", k: 0.10, damping: 0.8, type: "crack_wax", decor: "apple", rate: 3, gloss: 0.5, baseAlpha: 1, stretchAlpha: 0.8 },
-        { id: 13, name: "멜론 푸딩젤리", grade: "R", color: "#58d668", k: 0.06, damping: 0.82, type: "normal", rate: 7, gloss: 0.75, baseAlpha: 0.8, stretchAlpha: 0.45 },
-        { id: 14, name: "유리알 리퀴드", grade: "R", color: "#4fc3f7", k: 0.03, damping: 0.86, type: "normal", rate: 7, gloss: 0.9, baseAlpha: 0.7, stretchAlpha: 0.22 },
-        { id: 15, name: "포도알 톡톡", grade: "R", color: "#8e44ad", k: 0.15, damping: 0.7, type: "normal", rate: 6, gloss: 0.85, baseAlpha: 0.9, stretchAlpha: 0.55 },
-        { id: 16, name: "황금 꿀 슬라임", grade: "E", color: "#e2b93b", k: 0.04, damping: 0.84, type: "normal", rate: 3, gloss: 0.95, baseAlpha: 0.78, stretchAlpha: 0.35 },
-        { id: 17, name: "몽실몽실 목화솜", grade: "E", color: "#c9c4d4", k: 0.014, damping: 0.6, type: "cotton", lumpy: true, strokeF: 0.55, homeW: 2.0, nbrW: 0.25, rate: 3, gloss: 0.05, baseAlpha: 1, stretchAlpha: 1, puffs: true, plastic: 0.1 },
-        { id: 18, name: "🌈오로라 젤리🌈", grade: "L", color: "#b388ff", aurora: true, k: 0.035, damping: 0.86, type: "normal", rate: 1, gloss: 0.9, baseAlpha: 0.85, stretchAlpha: 0.4 }
+        { id: 13, name: "멜론 푸딩젤리", grade: "R", color: "#58d668", k: 0.06, damping: 0.82, type: "normal", rate: 4, gloss: 0.75, baseAlpha: 0.8, stretchAlpha: 0.45 },
+        { id: 14, name: "유리알 리퀴드", grade: "R", color: "#4fc3f7", k: 0.03, damping: 0.86, type: "normal", rate: 4, gloss: 0.9, baseAlpha: 0.7, stretchAlpha: 0.22 },
+        { id: 15, name: "포도알 톡톡", grade: "R", color: "#8e44ad", k: 0.15, damping: 0.7, type: "normal", rate: 4, gloss: 0.85, baseAlpha: 0.9, stretchAlpha: 0.55 },
+        { id: 16, name: "황금 꿀 슬라임", grade: "E", color: "#e2b93b", k: 0.04, damping: 0.84, type: "normal", rate: 2, gloss: 0.95, baseAlpha: 0.78, stretchAlpha: 0.35 },
+        { id: 17, name: "몽실몽실 목화솜", grade: "E", color: "#c9c4d4", k: 0.014, damping: 0.6, type: "cotton", lumpy: true, strokeF: 0.55, homeW: 2.0, nbrW: 0.25, rate: 2, gloss: 0.05, baseAlpha: 1, stretchAlpha: 1, puffs: true, plastic: 0.1 },
+        { id: 18, name: "🌈오로라 젤리🌈", grade: "L", color: "#b388ff", aurora: true, k: 0.035, damping: 0.86, type: "normal", rate: 1, gloss: 0.9, baseAlpha: 0.85, stretchAlpha: 0.4 },
+        { id: 19, name: "투명 해파리 말랑이", grade: "E", color: "#dfeef2", type: "normal", jelly: true, shape: "jellyfish", strokeF: 0.42, k: 0.14, damping: 0.7, homeW: 1.6, nbrW: 1.2, maxStretch: 1.18, rate: 3, gloss: 0.75, baseAlpha: 0.42, stretchAlpha: 0.42 },
+        // ── C/R 라인업 확충 ──
+        { id: 20, name: "딸기우유 폼", grade: "C", color: "#ffc7d4", type: "normal", k: 0.07, damping: 0.83, rate: 6, gloss: 0.15, baseAlpha: 1, stretchAlpha: 0.9 },
+        { id: 21, name: "레몬 젤리", grade: "C", color: "#ffe36e", type: "normal", k: 0.05, damping: 0.8, rate: 5, gloss: 0.5, baseAlpha: 0.85, stretchAlpha: 0.4 },
+        { id: 22, name: "초코 푸딩", grade: "C", color: "#8d5a3b", type: "normal", k: 0.04, damping: 0.82, rate: 4, gloss: 0.6, baseAlpha: 0.95, stretchAlpha: 0.8 },
+        { id: 23, name: "소다 젤리", grade: "C", color: "#a5dcf5", type: "normal", k: 0.05, damping: 0.8, rate: 4, gloss: 0.45, baseAlpha: 0.8, stretchAlpha: 0.35 },
+        { id: 24, name: "슈퍼 탱탱볼", grade: "R", color: "#ff6b6b", type: "normal", k: 0.22, damping: 0.62, maxStretch: 1.3, rate: 4, gloss: 0.8, baseAlpha: 0.9, stretchAlpha: 0.7 },
+        { id: 25, name: "꾸덕 카라멜", grade: "R", color: "#c98a3d", type: "normal", k: 0.02, damping: 0.7, plastic: 0.035, homeW: 1.3, nbrW: 0.8, rate: 3, gloss: 0.65, baseAlpha: 1, stretchAlpha: 0.85 },
+        { id: 26, name: "사이다 버블 팝", grade: "R", color: "#bfe6f7", type: "crunch", beads: true, beadColors: ["rgba(255,255,255,0.95)", "#dff2fc", "#9ed3ef"], popColor: "158,211,239", bumpy: 0.07, k: 0.08, damping: 0.8, rate: 3, gloss: 0.7, baseAlpha: 0.8, stretchAlpha: 0.45 },
+        { id: 27, name: "쭈욱 치즈 스트레치", grade: "R", color: "#f7c948", type: "normal", k: 0.025, damping: 0.85, rate: 3, gloss: 0.55, baseAlpha: 0.92, stretchAlpha: 0.55 }
     ];
 
     const gradeOrder = { "L": 0, "E": 1, "R": 2, "C": 3 };
@@ -293,7 +303,7 @@
             
             if(isUnlocked) {
                 unlockCount++;
-                item.innerHTML = `<span class="grade-${spec.grade}">[${spec.grade}]</span><br><b>${spec.name}</b><br><span style="font-size:10px; color:#eee;">${spec.type === 'squishy' ? '스퀴시형' : spec.type === 'cotton' ? '솜뭉치형' : spec.type === 'crunch' ? '크런치형' : spec.type.includes('wax') ? '왁뿌형' : spec.shape === 'heart' ? '하트형' : '일반형'}</span>`;
+                item.innerHTML = `<span class="grade-${spec.grade}">[${spec.grade}]</span><br><b>${spec.name}</b><br><span style="font-size:10px; color:#eee;">${spec.type === 'squishy' ? '스퀴시형' : spec.type === 'cotton' ? '솜뭉치형' : spec.type === 'crunch' ? '크런치형' : spec.type.includes('wax') ? '왁뿌형' : spec.jelly ? '해파리형' : spec.shape === 'heart' ? '하트형' : '일반형'}</span>`;
             } else {
                 item.innerHTML = `❓<br><span style="color:#777;">미획득</span>`;
             }
@@ -542,6 +552,10 @@
     let waxChips = [];           // 금/구멍 조각 (코어 기준 상대좌표, 서로 겹치지 않게 배치)
     let decorShards = [];        // 껍질 장식(사과 꼭지+잎)이 떨어질 때의 파편
     let cottonPuffs = [];        // 목화솜 표면 봉우리들 (노드에 앵커, 변형을 따라감)
+    let foamBeads = [];          // 폼볼 몸속 폼 알갱이들 (노드에 앵커, 변형을 따라감)
+    let jellyFeet = [];          // 해파리 발 (몸통 노드에 앵커된 원 4개)
+    let jellyCloud = 0;          // 해파리 탁해짐 (0=투명 → 1=뽀얗게)
+    let jellyHue = 200, jellySat = 50, jellyLit = 80; // 세션 고정 랜덤 색
 
     function getSpec() { return slimeDB.find(x => x.id === currentSlime.id); }
     function getRadius() { return Math.min(100 + ((currentSlime.level || 1) - 1) * 10, 220); }
@@ -563,6 +577,8 @@
         waxChips = [];
         decorShards = [];
         cottonPuffs = [];
+        foamBeads = [];
+        jellyFeet = [];
         activePushes = [];
         const spec = getSpec();
         waxIntact = (spec.type === "wax" || spec.type === "crack_wax"); 
@@ -571,10 +587,18 @@
         else if(spec.type === "crack_wax") document.getElementById("hint").innerText = "톡 누르면 금! 금 간 곳을 한 번 더 건드리면 조각이 빠작 떨어져요!";
         else if(spec.type === "squishy") document.getElementById("hint").innerText = "구름 숨결 스퀴시: 묵직한 저항감과 불규칙한 리얼 반죽 피지컬!";
         else if(spec.type === "cotton") document.getElementById("hint").innerText = spec.plastic ? "진짜 목화솜: 늘리고 구긴 모양이 그대로 기억돼요!" : "뭉게뭉게 솜구름: 울퉁불퉁 늘어나고 아주 천천히 돌아와요!";
+        else if(spec.type === "crunch") document.getElementById("hint").innerText = "폼 알갱이 가득! 문지르고 톡톡 치면 오도독 팝!";
+        else if(spec.jelly) document.getElementById("hint").innerText = "주물주물! 만질수록 뽀얗게 탁해져요 (색은 뽑을 때마다 랜덤)";
         else document.getElementById("hint").innerText = "드래그하거나 꾹 눌러서 만져보세요! 배경에서 밀고 들어오면 찌그러집니다.";
 
         core = { x: width / 2, y: height / 2, vx: 0, vy: 0 };
         stretchSmooth = 0;
+        jellyCloud = 0;
+        // 해파리: 뽑을 때마다 색이 랜덤 (고정, 변하지 않음). 30%는 완전 클리어 톤
+        if (spec.jelly) {
+            if (Math.random() < 0.3) { jellyHue = 200; jellySat = 6 + Math.random() * 6; jellyLit = 86; }
+            else { jellyHue = Math.floor(Math.random() * 360); jellySat = 40 + Math.random() * 28; jellyLit = 76 + Math.random() * 9; }
+        }
         const radius = getRadius();
         
         for (let i = 0; i < numNodes; i++) {
@@ -593,6 +617,20 @@
             // 울퉁불퉁형(목화솜): 노드마다 기본 반지름이 제각각 → 뭉게뭉게 큰 요철이 고정됨
             if (spec.lumpy) {
                 bd = radius * (0.55 + Math.random() * 0.38);
+            }
+
+            // 해파리형: 위는 넓은 돔, 아래는 납작 (발은 별도 원으로 융합)
+            if (spec.shape === "jellyfish") {
+                const jx = Math.cos(t);
+                const jy = Math.sin(t) < 0 ? Math.sin(t) * 0.82 : Math.sin(t) * 0.42;
+                const jl = Math.hypot(jx, jy) || 1;
+                bd = jl * radius * 0.92;
+                bx = jx / jl; by = jy / jl;
+            }
+
+            // 미세 요철: 폼 알갱이가 표면을 살짝 오돌토돌하게
+            if (spec.bumpy) {
+                bd = bd * (1 + (Math.random() - 0.5) * spec.bumpy);
             }
 
             nodes.push({
@@ -624,6 +662,38 @@
                     f: 0.2 + Math.random() * 0.6,
                     r: 0.18 + Math.random() * 0.12,
                     ox: 0, oy: 0
+                });
+            }
+        }
+
+        // 해파리 발: 아래쪽 노드에 앵커된 원 4개 → 주물러도 몸통을 따라감
+        if (spec.jelly) {
+            const feetDefs = [[-0.58, 0.52], [-0.2, 0.58], [0.2, 0.58], [0.58, 0.52]];
+            feetDefs.forEach(fd => {
+                const fa = Math.atan2(fd[1], fd[0]);
+                let best = 0, bestDiff = 99;
+                nodes.forEach((nd, idx) => {
+                    let da = Math.abs(nd.baseAngle - fa);
+                    if (da > Math.PI) da = Math.PI * 2 - da;
+                    if (da < bestDiff) { bestDiff = da; best = idx; }
+                });
+                jellyFeet.push({
+                    ni: best,
+                    f: (Math.hypot(fd[0], fd[1]) * radius) / nodes[best].baseDist,
+                    r: 0.17
+                });
+            });
+        }
+
+        // 폼볼: 몸속에 박힌 폼 알갱이들 (노드에 앵커 → 변형을 따라감)
+        if (spec.beads) {
+            for (let j = 0; j < 44; j++) {
+                foamBeads.push({
+                    ni: Math.floor(Math.random() * numNodes),
+                    f: 0.12 + Math.random() * 0.82,
+                    aoff: (Math.random() - 0.5) * 0.38,
+                    r: 0.034 + Math.random() * 0.032,
+                    tint: Math.random()
                 });
             }
         }
@@ -864,6 +934,24 @@
         ctx.drawImage(waxCanvas, 0, 0);
     }
 
+    // 해파리 얼굴: 점 눈 2개 + 미소
+    function drawJellyFace(radius) {
+        const ey = core.y - radius * 0.1;
+        const ex = radius * 0.2;
+        const er = Math.max(2.5, radius * 0.05);
+        ctx.save();
+        ctx.fillStyle = "#2e2e36";
+        ctx.beginPath(); ctx.arc(core.x - ex, ey, er, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(core.x + ex, ey, er, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#2e2e36";
+        ctx.lineWidth = Math.max(2, radius * 0.028);
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(core.x, ey + radius * 0.08, radius * 0.09, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        ctx.restore();
+    }
+
     // 사과 꼭지 + 잎 장식 그리기 (s: 크기 배율)
     function drawAppleDecor(c, x, y, s, rot) {
         c.save(); c.translate(x, y); c.rotate(rot || 0);
@@ -974,6 +1062,18 @@
                 }
             }
             
+            // 저신축: 주물거리는 말랑이 — 살짝만 늘어나고 강하게 원형 복귀
+            if (spec.maxStretch) {
+                const dxs = n.x - core.x, dys = n.y - core.y;
+                const ds = Math.hypot(dxs, dys);
+                const lim = radius * spec.maxStretch;
+                if (ds > lim) {
+                    n.x = core.x + (dxs / ds) * lim;
+                    n.y = core.y + (dys / ds) * lim;
+                    n.vx *= 0.3; n.vy *= 0.3;
+                }
+            }
+
             // 소성 기억: 현재 모양을 서서히 새 제자리로 기억 → 늘리거나 구긴 모양이 오래 유지됨
             if (spec.plastic) {
                 const relX = n.x - core.x, relY = n.y - core.y;
@@ -1043,12 +1143,18 @@
         // 3-2. 개체별 투명도: 평소 baseAlpha ↔ 최대 스트레치 stretchAlpha 보간
         const baseA = spec.baseAlpha !== undefined ? spec.baseAlpha : 1;
         const stA = spec.stretchAlpha !== undefined ? spec.stretchAlpha : baseA;
-        const bodyAlpha = showWaxShell ? 1 : (baseA + (stA - baseA) * stretchSmooth);
+        let bodyAlpha = showWaxShell ? 1 : (baseA + (stA - baseA) * stretchSmooth);
+        if (spec.jelly && !showWaxShell) bodyAlpha = 0.42 + jellyCloud * 0.52; // 만질수록 탁해짐
 
         // 3-3. 본체를 오프스크린에 불투명하게 그린 뒤, 알파를 입혀 합성
         bodyCtx.clearRect(0, 0, width, height);
-        // 오로라(L): 시간에 따라 색상이 무지개처럼 흐름
-        const bodyColor = spec.aurora ? `hsl(${Math.floor(performance.now() * 0.02) % 360}, 85%, 72%)` : spec.color;
+        // 오로라(L): 시간에 따라 색상이 무지개처럼 흐름 / 해파리: 세션 고정 랜덤 색 + 탁해질수록 뽀얗게
+        let bodyColor = spec.color;
+        if (spec.aurora) {
+            bodyColor = `hsl(${Math.floor(performance.now() * 0.02) % 360}, 85%, 72%)`;
+        } else if (spec.jelly) {
+            bodyColor = `hsl(${jellyHue}, ${jellySat * (1 - 0.65 * jellyCloud)}%, ${jellyLit + (93 - jellyLit) * 0.6 * jellyCloud}%)`;
+        }
         bodyCtx.save();
         bodyCtx.filter = 'url(#gooey)';
         if (spec.rim) {
@@ -1057,6 +1163,19 @@
             traceAndFillBlob(bodyCtx, bodyColor, radius, (spec.strokeF || 0.8) - (spec.rimW || 0.18));
         } else {
             traceAndFillBlob(bodyCtx, bodyColor, radius, spec.strokeF);
+        }
+        // 해파리 발: 몸통과 같은 색으로 필터 안에서 그려 매끈하게 융합
+        if (spec.jelly && jellyFeet.length) {
+            bodyCtx.fillStyle = bodyColor;
+            bodyCtx.beginPath();
+            jellyFeet.forEach(F => {
+                const nd = nodes[F.ni];
+                const fx2 = core.x + (nd.x - core.x) * F.f;
+                const fy2 = core.y + (nd.y - core.y) * F.f;
+                bodyCtx.moveTo(fx2 + F.r * radius, fy2);
+                bodyCtx.arc(fx2, fy2, F.r * radius, 0, Math.PI * 2);
+            });
+            bodyCtx.fill();
         }
         bodyCtx.restore();
 
@@ -1090,6 +1209,29 @@
             bodyCtx.restore();
         }
 
+        // 폼볼: 폼 알갱이 텍스처 (source-atop이라 몸통 안에만 그려짐)
+        if (spec.beads && foamBeads.length) {
+            bodyCtx.save();
+            bodyCtx.globalCompositeOperation = 'source-atop';
+            foamBeads.forEach(B => {
+                const nd = nodes[B.ni];
+                const dxn = nd.x - core.x, dyn = nd.y - core.y;
+                const bx2 = core.x + dxn * B.f - dyn * B.aoff;
+                const by2 = core.y + dyn * B.f + dxn * B.aoff;
+                const br = B.r * radius;
+                const bc = spec.beadColors || ["rgba(255,255,255,0.9)", "#ffd9e1", "#f79cae"];
+                bodyCtx.fillStyle = B.tint < 0.4 ? bc[0] : (B.tint < 0.7 ? bc[1] : bc[2]);
+                bodyCtx.beginPath();
+                bodyCtx.arc(bx2, by2, br, 0, Math.PI * 2);
+                bodyCtx.fill();
+                bodyCtx.fillStyle = "rgba(255,255,255,0.75)";
+                bodyCtx.beginPath();
+                bodyCtx.arc(bx2 - br * 0.3, by2 - br * 0.32, br * 0.3, 0, Math.PI * 2);
+                bodyCtx.fill();
+            });
+            bodyCtx.restore();
+        }
+
         // 3-4. 개체별 광택 (gloss 0=무광 ~ 1=유리광)
         const gloss = spec.gloss !== undefined ? spec.gloss : 0.3;
         if (gloss > 0.02 && !showWaxShell) {
@@ -1111,6 +1253,9 @@
         ctx.drawImage(bodyCanvas, 0, 0);
         ctx.restore();
 
+        // 해파리 얼굴 (인쇄된 얼굴이라 불투명)
+        if (spec.jelly) drawJellyFace(radius);
+
         // 3-5. 왁스 코팅 껍질 (광택 재질 + 깨진 자리 구멍)
         if (showWaxShell) renderWaxShell(spec, radius);
 
@@ -1124,7 +1269,7 @@
             crunchParticles.forEach((p, index) => {
                 p.x += p.vx; p.y += p.vy;
                 p.alpha -= 0.02;
-                ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+                ctx.fillStyle = `rgba(${p.rgb || "255,255,255"}, ${p.alpha})`;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
                 ctx.fill();
@@ -1180,7 +1325,21 @@
         });
         core.vx += (core.x - x) * 0.02;
         core.vy += (core.y - y) * 0.02;
-        if (spec.type !== "squishy") playSquishSound('chop'); // 스퀴시는 누를 때 바람소리만
+        if (spec.jelly) jellyCloud = Math.min(1, jellyCloud + 0.04);
+        if (spec.type === "crunch") {
+            // 폼볼: 탭하면 알갱이가 오도독 터지는 팝!
+            playCrackSound(false);
+            for (let b = 0; b < 8; b++) {
+                crunchParticles.push({
+                    x: x + (Math.random() - 0.5) * 60, y: y + (Math.random() - 0.5) * 60,
+                    vx: (Math.random() - 0.5) * 4, vy: -1 - Math.random() * 3,
+                    size: 2 + Math.random() * 3.5, alpha: 1,
+                    rgb: Math.random() < 0.5 ? "255,255,255" : (spec.popColor || "255,182,193")
+                });
+            }
+        } else if (spec.type !== "squishy") {
+            playSquishSound('chop'); // 스퀴시는 누를 때 바람소리만
+        }
         return true;
     }
 
@@ -1266,14 +1425,21 @@
             if (vel > 1) {
                 if (spec.type === "crunch" && Math.random() < 0.4) {
                     playCrackSound(false);
-                    crunchParticles.push({
-                        x: x, y: y,
-                        vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
-                        size: 3 + Math.random()*4, alpha: 1
-                    });
+                    for (let b = 0; b < 2; b++) {
+                        crunchParticles.push({
+                            x: x, y: y,
+                            vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
+                            size: 3 + Math.random()*4, alpha: 1,
+                            rgb: Math.random() < 0.5 ? "255,255,255" : (spec.popColor || "255,182,193")
+                        });
+                    }
                 } else if (spec.type !== "squishy" && !spec.type.includes("wax")) {
                     if(Math.random() < 0.15) playSquishSound('squish');
                 }
+            }
+            // 해파리 젤리: 주물거릴수록 뽀얗게 탁해짐
+            if (spec.jelly && vel > 1) {
+                jellyCloud = Math.min(1, jellyCloud + 0.0035 * Math.min(vel, 18));
             }
             // 왁뿌볼: 문지르는 손끝이 지나가는 좌표마다 데미지 (금 → 다른 제스처에 낙하)
             if (waxIntact && spec.type === "crack_wax" && vel > 2) {
