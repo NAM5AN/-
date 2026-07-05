@@ -385,6 +385,37 @@
         { id: "t_horn_removed", cat: "topping", name: "(삭제됨)", top: "none", price: 999999, w: 0, hidden: true }
     ];
     const CAT_LABEL = { bead: "비즈", effect: "이펙트", glitter: "글리터", wax: "왁스", topping: "토핑" };
+    // 재료별 미리보기 아이콘 (SVG 대신 이모지)
+    function matIcon(m) {
+        if (m.cat === "bead") {
+            if (m.beadShape === "star") return "⭐";
+            if (m.beadShape === "heart") return "🩷";
+            if (m.pearl) return "🤍";
+            if (m.id === "b_black") return "⚫";
+            return "🔵";
+        }
+        if (m.cat === "effect") {
+            if (m.fx === "fizz") return m.bubbleBig ? "🫧" : "💨";
+            return "❄️";
+        }
+        if (m.cat === "glitter") {
+            if (m.rainbow) return "🌈";
+            if (m.holo) return "✨";
+            return "💫";
+        }
+        if (m.cat === "wax") {
+            if (m.id === "w_choco") return "🍫";
+            if (m.id === "w_ice") return "🧊";
+            if (m.id === "w_candy") return "🍬";
+            if (m.waxSparkle) return "🌟";
+            return "🕯️";
+        }
+        if (m.cat === "topping") {
+            if (m.top === "face") return "😊";
+            if (m.top === "apple") return "🍎";
+        }
+        return "🎁";
+    }
 
     let saveData = {
         mySlimes: [{ id: 1, customName: "물젤리 슬랑이", level: 1 }],
@@ -474,7 +505,7 @@
             any = true;
             const div = document.createElement("div");
             div.className = "slime-item";
-            div.innerHTML = `<span class="item-name"><b style="color:#0097a7;">[${CAT_LABEL[m.cat]}]</b> ${m.name}</span><span class="lv-badge">×${cnt}</span>`;
+            div.innerHTML = `<span class="item-name"><span style="font-size:16px;">${matIcon(m)}</span> <b style="color:#0097a7;">[${CAT_LABEL[m.cat]}]</b> ${m.name}</span><span class="lv-badge">×${cnt}</span>`;
             div.style.cursor = "default";
             matList.appendChild(div);
         });
@@ -515,7 +546,7 @@
         if (custSel.base) {
             lvRow.style.display = "block";
             document.getElementById("custLvText").innerText = custSel.useLv;
-            document.getElementById("custLvMax").innerText = `(최대 ${custSel.base.level} — 쓰고 남은 레벨은 원본에 유지)`;
+            document.getElementById("custLvMax").innerText = `/ ${custSel.base.level}`;
         } else lvRow.style.display = "none";
 
         const matWrap = document.getElementById("custMatList");
@@ -530,7 +561,7 @@
             const row = document.createElement("div");
             row.className = "slime-item";
             row.style.cursor = "default";
-            row.innerHTML = `<span class="item-name"><b style="color:#0097a7;">[${CAT_LABEL[m.cat]}]</b> ${m.name} <span style="color:#aaa;">×${own}</span></span>
+            row.innerHTML = `<span class="item-name"><span style="font-size:16px;">${matIcon(m)}</span> <b style="color:#0097a7;">[${CAT_LABEL[m.cat]}]</b> ${m.name} <span style="color:#aaa;">×${own}</span></span>
                 <span class="item-right">
                     <button class="rename-btn" style="width:26px; font-weight:bold;" onclick="custMat('${m.id}', -1)">−</button>
                     <b style="min-width:16px; text-align:center; color:${sel > 0 ? "#e91e63" : "#ccc"};">${sel}</b>
@@ -538,7 +569,7 @@
                 </span>`;
             matWrap.appendChild(row);
         });
-        if (!any) matWrap.innerHTML = `<div style="color:#999; font-size:12px; padding:8px;">보유 재료가 없어요 — 뽑기 보너스나 상점에서 구해보세요!</div>`;
+        if (!any) matWrap.innerHTML = `<div style="color:#999; font-size:12px; padding:8px;">보유 재료가 없어요</div>`;
     }
 
     function custLv(d) {
@@ -576,6 +607,9 @@
         currentSlime = previewSlime;
         initSlime();
         document.getElementById("customModal").style.display = "none";
+        // 미리보기 중엔 플로팅 메뉴 강제로 닫기
+        fabOpen = false;
+        document.getElementById("fab-wrap").classList.remove("open");
         document.getElementById("previewModal").style.display = "flex";
     }
 
@@ -713,10 +747,11 @@
                 const item = document.createElement("div");
                 item.className = `book-item ${everSeen ? "unlocked" : "locked"}`;
                 if (everSeen) {
-                    item.innerHTML = `<span style="font-size:9px;color:#7ce7ff;">[${CAT_LABEL[m.cat]}]</span><br><b style="font-size:11px;">${m.name}</b>`
+                    item.innerHTML = `<div style="font-size:26px; line-height:1.1;">${matIcon(m)}</div>`
+                        + `<span style="font-size:9px;color:#7ce7ff;">[${CAT_LABEL[m.cat]}]</span><br><b style="font-size:11px;">${m.name}</b>`
                         + `<br><span style="font-size:9px;color:${owned ? "#8f8" : "#999"};">${owned ? "×" + materials[m.id] : "미보유"}</span>`;
                 } else {
-                    item.innerHTML = `❓<br><span style="color:#777;font-size:10px;">???</span>`;
+                    item.innerHTML = `<div style="font-size:26px; line-height:1.1; filter:grayscale(1) brightness(0.4);">${matIcon(m)}</div><span style="color:#777;font-size:10px;">???</span>`;
                 }
                 grid.appendChild(item);
             });
@@ -819,7 +854,7 @@
                 const item = document.createElement("div");
                 item.className = "book-item unlocked";
                 item.style.border = own > 0 ? "2px solid #ffeb3b" : "2px solid transparent";
-                item.innerHTML = `<span style="color:#7ce7ff;">[${CAT_LABEL[m.cat]}]</span><br><b>${m.name}</b><br>`
+                item.innerHTML = `<div style="font-size:24px;">${matIcon(m)}</div><span style="color:#7ce7ff;">[${CAT_LABEL[m.cat]}]</span><br><b>${m.name}</b><br>`
                     + `<span style="font-size:10px; color:#eee;">${own > 0 ? "×" + own + " 보유중" : "미보유"}</span><br>`
                     + `<button class="btn" style="padding:4px 12px; font-size:12px; margin-top:6px;${afford ? "" : " background:#777;"}" onclick="buyMaterial('${m.id}')">✨ ${m.price}</button>`;
                 grid.appendChild(item);
@@ -1108,6 +1143,22 @@
         "#ffe783", "#ff9e9e", "#7fc8f8", "#b8e986",
         "#3a3a44", "#1e2a4a", "#3b2a55", "#15151a"
     ];
+    // iOS(아이폰/아이패드) 감지 — 전체화면 버튼 숨김 + 흔들림 권한 처리에 사용
+    function detectIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    }
+    const IS_IOS = detectIOS();
+
+    // iOS면 전체화면 버튼 숨기고, 위쪽 FAB 액션들을 한 칸씩 내려 빈자리 제거
+    function applyPlatformUI() {
+        if (!detectIOS()) return;
+        const fsBtn = document.getElementById("fab-fs");
+        if (fsBtn) fsBtn.style.display = "none";
+        // 전체화면(맨 위 -402) 제거 → 배경색이 맨 위(-336)면 충분하므로 재배치 불필요
+        // (fab-fs만 숨기면 나머지는 그대로 -72~-336에 위치)
+    }
+
     let fabOpen = false;
     function toggleFab() {
         fabOpen = !fabOpen;
@@ -1213,7 +1264,8 @@
             } else if (m.cat === "wax") {
                 s.type = "crack_wax";
                 s.waxColor = m.color;
-                s.waxHits = m.waxHits;
+                // 왁스를 여러 개 넣으면 깨는 횟수가 누적됨 (여러 겹)
+                s.waxHits = (s.waxHits || 0) + m.waxHits;
                 s.breakScore = m.waxScore || 4;
                 if (m.chipScale) s.chipScale = m.chipScale;
                 if (m.waxSparkle) s.waxSparkle = true;
@@ -2497,16 +2549,26 @@
 
     // 기기 흔들기 → 말랑이 출렁 (iOS는 첫 터치 때 권한 요청됨)
     let motionReady = false;
+    let motionAttached = false;
     let lastAcc = null;
     function initMotion() {
-        if (motionReady) return;
-        motionReady = true;
-        const attach = () => window.addEventListener('devicemotion', onMotion);
+        if (motionAttached) return;  // 이미 리스너 붙었으면 끝
+        const attach = () => {
+            if (motionAttached) return;
+            motionAttached = true;
+            window.addEventListener('devicemotion', onMotion);
+        };
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            DeviceMotionEvent.requestPermission().then(state => { if (state === 'granted') attach(); }).catch(() => {});
+            // iOS 13+: 반드시 사용자 제스처(터치) 안에서 호출되어야 권한 팝업이 뜸
+            // 실패해도 motionReady를 잠그지 않아, 다음 터치에서 다시 시도 가능
+            DeviceMotionEvent.requestPermission()
+                .then(state => { if (state === 'granted') attach(); })
+                .catch(() => {});
         } else if (typeof DeviceMotionEvent !== 'undefined') {
+            // 안드로이드/기타: 권한 없이 바로 부착
             attach();
         }
+        motionReady = true;
     }
     function onMotion(e) {
         const a = e.accelerationIncludingGravity;
@@ -2547,9 +2609,11 @@
         return minDist < catchRadius ? nearest : null;
     }
 
+    let platformApplied = false;
     function handleStart(id, x, y) {
         initAudio();
         initMotion();
+        if (!platformApplied) { platformApplied = true; applyPlatformUI(); }
         touchGestures[id] = ++gestureSeq;
         touchStarts[id] = { x: x, y: y, t: performance.now() };
         lastTouchPt = { x: x, y: y, t: performance.now() };
@@ -2699,6 +2763,7 @@
     canvas.addEventListener('mouseleave', e => { isMouseDown = false; handleEnd('mouse'); });
 
     applyBgColor();
+    applyPlatformUI();
 
     updateInventoryUI();
     resize();
