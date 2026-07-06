@@ -645,6 +645,13 @@
     if (!session) { elAuthGate.classList.remove("hidden"); return; }
 
     elToolMain.classList.remove("hidden");
+    // '발랄하게' 말투는 관리자만 노출
+    const ADMIN_UID = "00712584-e37a-46c3-ac31-387f73b6523c";
+    const isAdmin = !!(session.user && session.user.id === ADMIN_UID);
+    if (!isAdmin) {
+      const lively = elToneChips.querySelector('[data-tone="lively"]');
+      if (lively) lively.remove();
+    }
     bindEvents();
     applySavedStyle();
   }
