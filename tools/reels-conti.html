@@ -281,7 +281,8 @@
 <!-- ============== 메인 작업 영역 ============== -->
 <main class="tool-main hidden" id="toolMain">
   <div class="panel">
-    <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">🎬 릴스 콘티 만들기 <button class="btn-redo" id="btnSavedOpen" type="button" style="flex-shrink:0;">📂 저장된 콘티</button></div>
+    <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center; gap:8px;"><span id="panelTitleText">🎬 릴스 콘티 만들기</span> <button class="btn-redo" id="btnSavedOpen" type="button" style="flex-shrink:0;">📂 저장된 콘티</button></div>
+    <div id="formView">
 
     <!-- 0. 불러오기 (무료) -->
     <div class="field-group">
@@ -412,19 +413,15 @@
       <p id="premiumGateText"></p>
       <a href="/?open=settings" class="premium-gate-cta">설정에서 프리미엄 켜기 →</a>
     </div>
+    </div><!-- /formView -->
+
+    <div id="savedView" class="hidden">
+      <div id="savedList"></div>
+    </div>
   </div>
 </main>
 
 <!-- ============== 결과 ============== -->
-<!-- 저장된 콘티 -->
-<section class="results hidden" id="savedWrap">
-  <div class="results-head">
-    <span class="results-title">📂 저장된 콘티</span>
-    <button class="btn-redo" id="btnSavedClose" type="button">닫기</button>
-  </div>
-  <div id="savedList"></div>
-</section>
-
 <section class="results hidden" id="resultsWrap">
   <div class="results-head">
     <span class="results-title">릴스 콘티</span>
@@ -498,7 +495,7 @@
   const elBtnGenerate = $("btnGenerate"), elGenError = $("genError"), elUsageMini = $("usageMini");
   const elPremiumGate = $("premiumGate"), elPremiumGateText = $("premiumGateText");
   const elResultsWrap = $("resultsWrap"), elResultTabs = $("resultTabs"), elBtnRedo = $("btnRedo");
-  const elBtnSave = $("btnSave"), elSavedWrap = $("savedWrap"), elSavedList = $("savedList"), elBtnSavedOpen = $("btnSavedOpen"), elBtnSavedClose = $("btnSavedClose");
+  const elBtnSave = $("btnSave"), elSavedList = $("savedList"), elBtnSavedOpen = $("btnSavedOpen"), elFormView = $("formView"), elSavedView = $("savedView"), elPanelTitleText = $("panelTitleText");
   const elResultsLoadingWrap = $("resultsLoadingWrap"), elToast = $("toast");
   const PANELS = { conti: $("panel-conti"), subs: $("panel-subs"), caption: $("panel-caption"), check: $("panel-check") };
 
@@ -677,11 +674,20 @@
     toast("콘티를 저장했어요. 📂 저장된 콘티에서 다시 볼 수 있어요.");
   }
 
+  function closeSaved(){
+    elSavedView.classList.add("hidden");
+    elFormView.classList.remove("hidden");
+    elBtnSavedOpen.textContent = "📂 저장된 콘티";
+    if (elPanelTitleText) elPanelTitleText.textContent = "🎬 릴스 콘티 만들기";
+  }
+
   async function openSaved(){
     if (!me) { toast("로그인이 필요해요.", "error"); return; }
+    elFormView.classList.add("hidden");
+    elSavedView.classList.remove("hidden");
+    elBtnSavedOpen.textContent = "✏️ 새 콘티 만들기";
+    if (elPanelTitleText) elPanelTitleText.textContent = "📂 저장된 콘티";
     elSavedList.innerHTML = '<p class="field-helper">불러오는 중…</p>';
-    elSavedWrap.classList.remove("hidden");
-    elSavedWrap.scrollIntoView({ behavior: "smooth", block: "start" });
     const { data, error } = await sb.from("reels_contis").select("id,title,created_at,payload").eq("user_id", me.id).order("created_at", { ascending: false }).limit(30);
     if (error) { console.error(error); elSavedList.innerHTML = '<p class="field-helper">불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>'; return; }
     if (!data || !data.length) { elSavedList.innerHTML = '<p class="field-helper">저장된 콘티가 없어요. 콘티를 만들고 💾 저장을 눌러 보세요.</p>'; return; }
@@ -864,8 +870,7 @@
       subtitleMode = mode;
     });
     elBtnSave.addEventListener("click", saveConti);
-    elBtnSavedOpen.addEventListener("click", openSaved);
-    elBtnSavedClose.addEventListener("click", () => elSavedWrap.classList.add("hidden"));
+    elBtnSavedOpen.addEventListener("click", () => { elSavedView.classList.contains("hidden") ? openSaved() : closeSaved(); });
     elSavedList.addEventListener("click", onSavedListClick);
 
     elBtnGenerate.addEventListener("click", onGenerate);
