@@ -792,7 +792,11 @@
     PANELS.subs.innerHTML = subsHtml;
 
     // ---------- 캡션 탭 ----------
-    PANELS.caption.innerHTML = '<p class="result-sub-title">인스타 캡션</p><div class="result-block"><div class="result-text">' + esc(data.caption || "") + "</div>" + (hashtags.length ? '<div class="hashtag-line">' + esc(hashtags.join(" ")) + "</div>" : "") + '</div><div class="copy-bar"><button class="btn-copy" data-copy="caption">캡션 복사</button></div>';
+    let capHtml = '<p class="result-sub-title">인스타그램 캡션</p><div class="result-block"><div class="result-text">' + esc(data.caption || "") + "</div>" + (hashtags.length ? '<div class="hashtag-line">' + esc(hashtags.join(" ")) + "</div>" : "") + '</div><div class="copy-bar"><button class="btn-copy" data-copy="caption">인스타 캡션 복사</button></div>';
+    if (data.caption_clip) {
+      capHtml += '<p class="result-sub-title" style="margin-top:14px;">네이버 클립 캡션 <span class="badge badge-sm">' + data.caption_clip.length + '/300자</span></p><div class="result-block"><div class="result-text">' + esc(data.caption_clip) + '</div></div><div class="copy-bar"><button class="btn-copy" data-copy="clip">클립 캡션 복사</button></div>';
+    }
+    PANELS.caption.innerHTML = capHtml;
 
     // ---------- 체크리스트 탭 (정적, 선택한 업종 기준) ----------
     const items = CHECKLISTS[category] || CHECKLISTS["맛집"];
@@ -819,6 +823,7 @@
     currentCopy.conti = contiLines.join("\n");
     currentCopy.subs = (fixedTop ? "[상단 고정] " + fixedTop + "\n" : "") + subs.join("\n");
     currentCopy.caption = (data.caption || "") + (hashtags.length ? "\n\n" + hashtags.join(" ") : "");
+    currentCopy.clip = data.caption_clip || "";
 
     switchTab("conti");
     elResultsWrap.classList.remove("hidden");
