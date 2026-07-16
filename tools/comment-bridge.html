@@ -81,7 +81,21 @@
   window.addEventListener("message", async function (ev) {
     if (ALLOWED.indexOf(ev.origin) < 0) return;      // 허용 안 된 사이트 무시
     var m = ev.data || {};
-    if (typeof m !== "object" || m.cm !== true) return; // 우리 패널의 메시지만
+    if (typeof m !== "object") return;
+
+    // 연결 팝업(우리 도메인)이 보낸 로그인 정보 → 이 파티션에 세션 저장
+    if (m.cmAuth === true) {
+      if (ev.origin !== "https://cheheomdan-manager.com" && ev.origin !== "https://www.cheheomdan-manager.com") return;
+      if (typeof m.access_token !== "string" || typeof m.refresh_token !== "string") return;
+      try {
+        var c0 = await client();
+        if (c0) { await c0.auth.setSession({ access_token: m.access_token, refresh_token: m.refresh_token }); }
+      } catch (e) {}
+      try { window.parent.postMessage({ cm: true, type: "authUpdated" }, "*"); } catch (e) {}
+      return;
+    }
+
+    if (m.cm !== true) return; // 우리 패널의 메시지만
     function reply(p) {
       p.cm = true;
       p.id = m.id;
