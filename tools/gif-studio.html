@@ -197,6 +197,16 @@
     background:var(--bg);color:var(--muted);border-radius:7px;padding:6px 11px;transition:.15s}
   .ratios button:hover{border-color:var(--accent-2);color:var(--text)}
   .ratios button.on{border-color:var(--accent-2);color:var(--accent-2);background:rgba(194,154,44,.1)}
+  /* 편집 모달: 회전·배속 */
+  .editrow{display:flex;flex-wrap:wrap;gap:10px 22px;margin:12px 0 2px;align-items:center}
+  .editgroup{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .elabel{font-size:12px;font-weight:700;color:var(--muted)}
+  .speedchips{display:flex;gap:7px;flex-wrap:wrap}
+  .speedchips button,#rotBtn{font-family:var(--mono);font-size:12px;cursor:pointer;border:1px solid var(--line);
+    background:var(--bg);color:var(--muted);border-radius:7px;padding:6px 11px;transition:.15s}
+  .speedchips button:hover,#rotBtn:hover{border-color:var(--accent-2);color:var(--text)}
+  .speedchips button.on{border-color:var(--accent-2);color:var(--accent-2);background:rgba(194,154,44,.1)}
+  #rotVal{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent-2);min-width:32px}
   .cropfields{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0 6px}
   .cropfields .field{flex:1;min-width:90px}
   .cropfields input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;
@@ -302,16 +312,16 @@
   <div class="notice">
     <b>사용 팁</b><br>
     • <b>MP4</b>를 올리면 지정한 fps로 캡처해 GIF로 변환한 뒤 목표 용량에 맞춰 압축해요. <b>GIF</b>도 같은 fps·최대 너비가 적용돼요.<br>
-    • 각 파일의 <b>✂ 크롭</b>으로 자를 영역을, <b>⌖ 구간</b>으로 변환할 시작/끝 시간을, <b>↺ 부메랑</b>으로 정·역방향 루프를 켤 수 있어요. (파일마다 따로 설정)<br>
+    • 각 파일의 <b>✎ 편집</b>에서 크롭·회전(90°)·배속(0.5~3×)을, <b>⌖ 구간</b>으로 변환할 시작/끝 시간을, <b>↺ 부메랑</b>으로 정·역방향 루프를 켤 수 있어요. (파일마다 따로 설정)<br>
     • <b>전체 변환·압축 시작</b>으로 한꺼번에, 또는 각 카드의 개별 버튼으로 하나씩 처리할 수 있어요.<br>
     • 압축은 해상도 → 색상 → 프레임 순으로 자동 조절하며, 화질을 최대한 지키면서 목표값 바로 아래에 맞춰요.
   </div>
 </div>
 
-<!-- 크롭 모달 -->
+<!-- 편집 모달 (크롭·회전·배속) -->
 <div class="modal" id="cropModal">
   <div class="sheet">
-    <h3>캔버스 자르기 (크롭)</h3>
+    <h3>편집 (크롭 · 회전 · 배속)</h3>
     <div class="fname" id="cropFname"></div>
     <div class="cropmain">
       <div class="stage" id="cropStage">
@@ -336,6 +346,18 @@
       <button data-r="1.7778">16:9</button><button data-r="0.5625">9:16</button>
       <button data-r="1.3333">4:3</button><button data-r="0.75">3:4</button>
     </div>
+    <div class="editrow">
+      <div class="editgroup"><span class="elabel">회전</span>
+        <button id="rotBtn" type="button">↻ 90° 회전</button>
+        <span id="rotVal">0°</span>
+      </div>
+      <div class="editgroup"><span class="elabel">배속</span>
+        <div class="speedchips" id="speedChips">
+          <button data-s="0.5">0.5×</button><button data-s="0.75">0.75×</button><button data-s="1" class="on">1×</button>
+          <button data-s="1.5">1.5×</button><button data-s="2">2×</button><button data-s="3">3×</button>
+        </div>
+      </div>
+    </div>
     <div class="cropfields">
       <div class="field"><label>X</label><input id="cropX" type="number" min="0" /></div>
       <div class="field"><label>Y</label><input id="cropY" type="number" min="0" /></div>
@@ -344,7 +366,7 @@
     </div>
     <div class="cropinfo" id="cropInfo"></div>
     <div class="sheet-actions">
-      <button class="ghost left" id="cropReset">크롭 해제</button>
+      <button class="ghost left" id="cropReset">초기화</button>
       <button class="ghost" id="cropCancel">취소</button>
       <button class="btn" id="cropApply">적용</button>
     </div>
@@ -418,8 +440,36 @@ async function loadLibs(){
 
 /* ---------- 유틸 ---------- */
 const fmt = b => b >= MB ? (b/MB).toFixed(2)+' MB' : (b/1024).toFixed(1)+' KB';
-const tick = () => new Promise(r => setTimeout(r, 0));
+// 백그라운드 탭에서도 setTimeout(최소 1초로 throttle됨)보다 덜 느려지는 양보 스케줄러
+const tick = (() => {
+  try{
+    const ch = new MessageChannel(); const cbs=[];
+    ch.port1.onmessage = () => { const fn=cbs.shift(); if(fn) fn(); };
+    return () => new Promise(r => { cbs.push(r); ch.port2.postMessage(0); });
+  }catch(_){ return () => new Promise(r => setTimeout(r, 0)); }
+})();
+// 변환 중 화면이 꺼지지 않도록 (포그라운드일 때만 유효; 다른 앱으로 전환하면 OS가 자동 해제함)
+let wakeLock = null;
+async function acquireWakeLock(){
+  try{
+    if('wakeLock' in navigator && !wakeLock && document.visibilityState==='visible'){
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', ()=>{ wakeLock=null; });
+    }
+  }catch(_){ wakeLock=null; }
+}
+async function releaseWakeLock(){ try{ if(wakeLock) await wakeLock.release(); }catch(_){} wakeLock=null; }
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && busy) acquireWakeLock(); });
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+// 이미지를 dw×dh 대상에 rot(0/90/180/270, 시계방향)으로 회전해 꽉 채워 그림
+function drawRot(ctx, img, rot, dw, dh){
+  ctx.save();
+  if(rot===90){ ctx.translate(dw,0); ctx.rotate(Math.PI/2); ctx.drawImage(img,0,0,dh,dw); }
+  else if(rot===180){ ctx.translate(dw,dh); ctx.rotate(Math.PI); ctx.drawImage(img,0,0,dw,dh); }
+  else if(rot===270){ ctx.translate(0,dh); ctx.rotate(-Math.PI/2); ctx.drawImage(img,0,0,dh,dw); }
+  else ctx.drawImage(img,0,0,dw,dh);
+  ctx.restore();
+}
 function showBanner(m){ banner.textContent=m; banner.style.display='block'; }
 function clearBanner(){ banner.style.display='none'; }
 function isVideo(file){ return file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v|ogg|avi|mkv)$/i.test(file.name); }
@@ -435,9 +485,9 @@ function addFiles(files){
       id:++seq, file, name:file.name, origSize:file.size,
       kind: isGif(file) ? 'gif' : 'video',
       natW:null, natH:null, duration:null,
-      crop:null, reverse:false, trim:null,
+      crop:null, reverse:false, trim:null, rotate:0, speed:1,
       src:null, preview:null,
-      resultBlob:null, resultSize:null, resultDims:null, error:false,
+      resultBlob:null, resultSize:null, resultDims:null, error:false, transcoded:null,
     };
     items.push(item);
     renderItem(item);
@@ -459,7 +509,7 @@ function renderItem(item){
     </div>
     <div class="right">
       <div class="toolrow">
-        <button class="tool crop" type="button">✂ 크롭</button>
+        <button class="tool crop" type="button">✎ 편집</button>
         <button class="tool trim" type="button">⌖ 구간</button>
         <button class="tool boom" type="button">↺ 부메랑</button>
       </div>
@@ -503,7 +553,7 @@ function renderItem(item){
 // 카드용 단일 프레임 썸네일 (full 미리보기 빌드 없이)
 async function ensureThumb(item){
   if(item.thumbUrl) return item.thumbUrl;
-  const src = await ensureSource(item);
+  const src = await ensureSource(item, false); // 썸네일 때문에 무거운 코덱 변환을 돌리지 않음
   const sc = Math.min(1, 128/src.natW);
   const c = document.createElement('canvas');
   c.width = Math.max(1,Math.round(src.natW*sc)); c.height = Math.max(1,Math.round(src.natH*sc));
@@ -522,6 +572,8 @@ async function ensureThumb(item){
 function baseStats(item){
   let s = `<span class="big">${fmt(item.origSize)}</span>`;
   if(item.crop) s += ` <span class="up">✂</span>`;
+  if(item.rotate) s += ` <span class="up">↻${item.rotate}°</span>`;
+  if(item.speed && item.speed!==1) s += ` <span class="up">${item.speed}×</span>`;
   if(item.trim) s += ` <span class="up">⌖ ${item.trim.start.toFixed(1)}–${item.trim.end.toFixed(1)}s</span>`;
   if(item.reverse) s += ` <span class="up">↺</span>`;
   return s;
@@ -541,6 +593,7 @@ function freeItem(item){
     item.src = null;
   }
   item.preview = null;
+  item.transcoded = null;
 }
 function resetItemResult(item){
   item.resultBlob=null; item.resultSize=null; item.resultDims=null; item.error=false;
@@ -566,10 +619,10 @@ function markError(item){
 
 /* ====================== 소스 디코딩 (GIF / 동영상 공통) ====================== */
 // GIF: 합성 프레임 + 타임스탬프, 동영상: <video> 보관 → 통합 src
-async function ensureSource(item){
+async function ensureSource(item, allowTranscode=true){
   if(item.src) return item.src;
   if(item.kind === 'gif') item.src = await decodeGifSource(item);
-  else item.src = await loadVideoSource(item);
+  else item.src = await loadVideoSource(item, allowTranscode);
   item.natW = item.src.natW; item.natH = item.src.natH; item.duration = item.src.duration;
   return item.src;
 }
@@ -607,23 +660,120 @@ async function decodeGifSource(item){
   return { kind:'gif', natW:W, natH:H, duration:t, hasAlpha, gifFrames:out, video:null, url:null };
 }
 
-function loadVideoSource(item){
+/* ====================== 코덱 폴백: ffmpeg.wasm (HEVC 등 → H.264) ====================== */
+// 시스템 코덱이 없어도 브라우저 안에서 직접 디코딩하기 위한 폴백.
+// 단일 스레드 코어라 COOP/COEP 헤더가 필요 없고, 코덱 미지원 영상에서만 최초 1회 로드됨(약 31MB).
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('스크립트 로드 실패'));
+    document.head.appendChild(s);
+  });
+}
+let ffmpegInst = null, ffmpegLoadP = null;
+function loadFfmpeg(){
+  if(ffmpegInst) return Promise.resolve(ffmpegInst);
+  if(ffmpegLoadP) return ffmpegLoadP;
+  // 기존 GIF 라이브러리처럼 import()로 로드(일부 차단기/추적방지는 <script src=CDN>만 막음). jsdelivr 실패 시 unpkg도 시도.
+  const CDNS = ['https://cdn.jsdelivr.net/npm', 'https://unpkg.com'];
+  ffmpegLoadP = (async () => {
+    let lastErr = null;
+    for(const base of CDNS){
+      try{
+        const FF   = `${base}/@ffmpeg/[email protected]/dist/umd`;
+        const UTIL = `${base}/@ffmpeg/[email protected]/dist/umd`;
+        const CORE = `${base}/@ffmpeg/[email protected]/dist/esm`; // 모듈 워커가 import()로 읽으므로 ESM 코어
+        await import(`${FF}/ffmpeg.js`);   // UMD가 self.FFmpegWASM 설정
+        await import(`${UTIL}/index.js`);  // UMD가 self.FFmpegUtil 설정
+        if(!self.FFmpegWASM || !self.FFmpegUtil) throw new Error('전역 객체 없음');
+        const { FFmpeg } = self.FFmpegWASM;
+        const { toBlobURL } = self.FFmpegUtil;
+        const classWorkerURL = await toBlobURL(`${FF}/814.ffmpeg.js`, 'text/javascript');
+        const coreURL = await toBlobURL(`${CORE}/ffmpeg-core.js`, 'text/javascript');
+        const wasmURL = await toBlobURL(`${CORE}/ffmpeg-core.wasm`, 'application/wasm');
+        const ff = new FFmpeg();
+        ff.on('log', ({ message }) => console.log('[ffmpeg]', message));
+        await ff.load({ classWorkerURL, coreURL, wasmURL });
+        ffmpegInst = ff;
+        console.log('[ffmpeg] 로드 성공:', base);
+        return ff;
+      }catch(e){ console.error('[ffmpeg] CDN 실패:', base, e); lastErr = e; }
+    }
+    throw new Error('ffmpeg를 불러오지 못했어요 (' + ((lastErr && lastErr.message) || lastErr) + '). 이 네트워크/브라우저가 외부 CDN(jsdelivr·unpkg)을 막고 있을 수 있어요.');
+  })();
+  ffmpegLoadP.catch(() => { ffmpegLoadP = null; });
+  return ffmpegLoadP;
+}
+// 코덱 미지원 영상을 H.264 mp4로 변환 (item별 1회만 실행되도록 캐시)
+function transcodeToH264(item){
+  if(item.transcodeP) return item.transcodeP;
+  item.transcodeP = (async () => {
+    setStatus(item, '코덱 호환 변환 준비 중… (최초 1회 디코더 다운로드, 조금 걸려요)');
+    setProgress(item, 0.02);
+    let ff;
+    try{ ff = await loadFfmpeg(); }
+    catch(e){ console.error('[ffmpeg load]', e); throw new Error('코덱 변환기를 불러오지 못했어요 — ' + (e?.message || e) + '. H.264 mp4로 변환해 올려도 돼요.'); }
+    const { fetchFile } = self.FFmpegUtil;
+    const inName = 'in_'+item.id+'.bin', outName = 'out_'+item.id+'.mp4';
+    const onProg = ({ progress }) => { if(progress>0 && progress<=1) setProgress(item, 0.05 + progress*0.9); };
+    ff.on('progress', onProg);
+    setStatus(item, '코덱 호환 변환 중… (HEVC 등 → H.264, 길면 오래 걸려요)');
+    try{
+      await ff.writeFile(inName, await fetchFile(item.file));
+      await ff.exec(['-i', inName, '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', outName]);
+      const data = await ff.readFile(outName);
+      const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+      if(!bytes || bytes.length < 1) throw new Error('빈 출력');
+      return new Blob([bytes], { type:'video/mp4' });
+    }catch(e){
+      console.error(e);
+      throw new Error('코덱 변환에 실패했어요. 영상이 너무 크거나 지원되지 않는 형식일 수 있어요 — H.264 mp4로 변환해 올려 주세요.');
+    }finally{
+      ff.off('progress', onProg);
+      try{ await ff.deleteFile(inName); }catch(_){}
+      try{ await ff.deleteFile(outName); }catch(_){}
+      setProgress(item, 0);
+    }
+  })();
+  item.transcodeP.catch(() => { item.transcodeP = null; });
+  return item.transcodeP;
+}
+
+// blob/File을 <video>로 로드 시도 (성공 시 src 객체 반환, 실패 시 reject)
+function tryLoadVideo(fileOrBlob){
   return new Promise((res, rej) => {
     const video = document.createElement('video');
     video.muted=true; video.playsInline=true; video.preload='auto';
-    const url = URL.createObjectURL(item.file);
+    const url = URL.createObjectURL(fileOrBlob);
     let settled=false;
-    const fail = (m) => { if(settled) return; settled=true; URL.revokeObjectURL(url); rej(new Error(m)); };
+    const fail = (code) => { if(settled) return; settled=true; URL.revokeObjectURL(url); const e=new Error('video load fail'); e.code=code; rej(e); };
     video.onloadedmetadata = () => {
       const W=video.videoWidth, H=video.videoHeight;
-      if(!W || !H) return fail('동영상 크기를 읽을 수 없습니다.');
+      if(!W || !H) return fail('nosize');
       settled=true;
       res({ kind:'video', natW:W, natH:H, duration:video.duration||0, hasAlpha:false, gifFrames:null, video, url });
     };
-    video.onerror = () => fail('동영상을 불러올 수 없습니다.');
-    setTimeout(()=>fail('동영상 로딩 시간 초과'), 15000);
+    video.onerror = () => fail(video.error && video.error.code);
+    setTimeout(()=>fail('timeout'), 15000);
     video.src = url;
   });
+}
+
+async function loadVideoSource(item, allowTranscode=true){
+  // 1) 파일 자체를 읽을 수 있는지 먼저 확인 (클라우드 전용·이동·삭제된 파일 감지)
+  try{ await item.file.slice(0, 1).arrayBuffer(); }
+  catch(_){ throw new Error('파일을 읽을 수 없어요. USB·외장 드라이브에 있거나, 클라우드 전용 파일(OneDrive 등)이거나, 이동·삭제됐을 수 있어요 — 파일을 기기 내부(바탕화면·다운로드 등)로 복사한 뒤 다시 올려 주세요.'); }
+  // 2) 이미 코덱 변환해둔 파일이 있으면 그걸로 로드
+  if(item.transcoded){ return await tryLoadVideo(item.transcoded); }
+  // 3) 네이티브 디코딩 시도 → 실패하면(코덱 미지원) ffmpeg.wasm으로 H.264 변환 후 재시도
+  try{
+    return await tryLoadVideo(item.file);
+  }catch(e){
+    // 썸네일 등 가벼운 호출에서는 변환하지 않고 그냥 실패 처리 (placeholder 유지)
+    if(!allowTranscode) throw new Error('이 브라우저가 이 동영상 코덱을 지원하지 않을 수 있어요 (HEVC 등).');
+    item.transcoded = await transcodeToH264(item);
+    return await tryLoadVideo(item.transcoded);
+  }
 }
 
 // 특정 시각 t(초)의 프레임을 캔버스(dst)에 그림. 동영상은 seek 필요(비동기).
@@ -684,17 +834,23 @@ async function buildFinalFrames(item, opts, onProgress){
   const start = clamp(item.trim?.start ?? 0, 0, dur || 1e9);
   const end = clamp(item.trim?.end ?? (dur || 0), start, dur || 1e9);
   const segDur = Math.max(1/opts.fps, (end - start) || (dur || 1/opts.fps));
+  const rot = item.rotate || 0;
+  const swap = (rot === 90 || rot === 270);
+  const speed = (item.speed > 0 ? item.speed : 1);
 
-  // 캡처 해상도 = 최대 너비 적용
-  const capScale = Math.min(1, opts.maxWidth / src.natW);
-  const capW = Math.max(2, Math.round(src.natW*capScale/2)*2);
-  const capH = Math.max(2, Math.round(src.natH*capScale/2)*2);
+  // 캡처 해상도 = 최대 너비 적용 (회전 후 너비 기준)
+  const rotNatW = swap ? src.natH : src.natW;
+  const rotNatH = swap ? src.natW : src.natH;
+  const capScale = Math.min(1, opts.maxWidth / rotNatW);
+  const capW = Math.max(2, Math.round(rotNatW*capScale/2)*2);
+  const capH = Math.max(2, Math.round(rotNatH*capScale/2)*2);
 
   const canvas = document.createElement('canvas'); canvas.width=capW; canvas.height=capH;
   const ctx = canvas.getContext('2d', { willReadFrequently:true });
   ctx.imageSmoothingQuality = 'high';
 
-  const dt = 1/opts.fps;
+  // 배속: 소스 시간은 speed/fps 간격으로 훑고, 출력 프레임 지연은 1/fps 유지 → 재생속도 ×speed
+  const dt = speed/opts.fps;
   const delay = Math.round(1000/opts.fps);
   const nFrames = Math.max(1, Math.min(3000, Math.floor(segDur/dt) + 1));
   const frames = [];
@@ -706,7 +862,7 @@ async function buildFinalFrames(item, opts, onProgress){
       const t = start + i*dt;
       if(t > end + 1e-6 && i>0) break;
       ctx.clearRect(0,0,capW,capH);
-      ctx.drawImage(findAt(t).bitmap, 0,0,capW,capH);
+      drawRot(ctx, findAt(t).bitmap, rot, capW, capH);
       frames.push({ bitmap: await createImageBitmap(canvas), delay });
       if(onProgress) onProgress(Math.min(0.99, (i+1)/nFrames));
       if(i%6===0) await tick();
@@ -719,7 +875,7 @@ async function buildFinalFrames(item, opts, onProgress){
       if(t > end + 1e-6 && i>0) break;
       await seekVideo(video, Math.min(t, Math.max(0,(dur||t)-1e-3)));
       ctx.clearRect(0,0,capW,capH);
-      ctx.drawImage(video, 0,0,capW,capH);
+      drawRot(ctx, video, rot, capW, capH);
       frames.push({ bitmap: await createImageBitmap(canvas), delay });
       if(onProgress) onProgress(Math.min(0.99, (i+1)/nFrames));
     }
@@ -868,7 +1024,8 @@ async function processItem(item, prep){
     finishItem(item, { withinTarget: result.size <= targetBytes, frames: result.frames, fps, reversed: decoded.reversed, cropped: !!item.crop });
   }catch(e){
     console.error(e);
-    setStatus(item, '처리 중 오류가 발생했어요. 재시도 버튼을 눌러 다시 시도해 주세요.', 'err');
+    const info = /코덱|HEVC|라이브러리|동영상|파일|클라우드/i.test(e?.message||'');
+    setStatus(item, info ? e.message : '처리 중 오류가 발생했어요. 재시도 버튼을 눌러 다시 시도해 주세요.', 'err');
     setProgress(item, 0);
     markError(item);
   }
@@ -886,6 +1043,8 @@ function finishItem(item, o){
   ];
   if(r) parts.push(`<span>${r[0]}×${r[1]}${o.frames?` · ${o.frames}f`:''}${o.fps?` · ${o.fps}fps`:''}</span>`);
   if(o.cropped) parts.push(`<span class="up">✂</span>`);
+  if(item.rotate) parts.push(`<span class="up">↻${item.rotate}°</span>`);
+  if(item.speed && item.speed!==1) parts.push(`<span class="up">${item.speed}×</span>`);
   if(o.reversed) parts.push(`<span class="up">↺</span>`);
   if(item.trim) parts.push(`<span class="up">⌖</span>`);
   item.refs.stats.innerHTML = parts.join(' ');
@@ -927,6 +1086,7 @@ async function prep(){
 }
 function setBusy(b){
   busy = b;
+  if(b) acquireWakeLock(); else releaseWakeLock();
   runBtn.disabled=b; clearBtn.disabled=b;
   items.forEach(it=>{ if(it.refs){ it.refs.run.disabled = b || !!it.resultBlob; it.refs.retry.disabled = b; } });
 }
@@ -960,21 +1120,28 @@ const cropModal=$('#cropModal'), cropCanvas=$('#cropCanvas'), resultCanvas=$('#r
 const cropCtx2d=cropCanvas.getContext('2d'), resultCtx2d=resultCanvas.getContext('2d');
 const cIn={ x:$('#cropX'), y:$('#cropY'), w:$('#cropW'), h:$('#cropH') };
 const cropInfo=$('#cropInfo'), cropFname=$('#cropFname'), ratiosWrap=$('#ratios'), resultDimsEl=$('#resultDims');
+const rotBtn=$('#rotBtn'), rotVal=$('#rotVal'), speedChips=$('#speedChips');
+const editRotC=document.createElement('canvas'), editRotCtx=editRotC.getContext('2d'); // 회전 적용된 프레임 임시 버퍼
 let cropCtx=null, cropPlay=null;
 
 async function openCropModal(item){
   let preview;
   try{ preview = await ensurePreview(item); }
-  catch(e){ showBanner('크롭용 미리보기를 불러오지 못했습니다. (배포/로컬 환경에서 실행해 주세요.)'); return; }
-  const natW=preview.natW, natH=preview.natH;
+  catch(e){ showBanner(e?.message || '편집용 미리보기를 불러오지 못했습니다.'); return; }
+  const rot = item.rotate || 0, swap = (rot===90 || rot===270);
+  // 회전 적용 후 기준 크기 (크롭 분수는 회전 후 공간 기준)
+  const natW = swap ? preview.natH : preview.natW;
+  const natH = swap ? preview.natW : preview.natH;
   // 저장된 분수 crop → 픽셀 sel
   const sel = item.crop
     ? { x:Math.round(item.crop.fx*natW), y:Math.round(item.crop.fy*natH), w:Math.round(item.crop.fw*natW), h:Math.round(item.crop.fh*natH) }
     : { x:0, y:0, w:natW, h:natH };
-  cropCtx = { item, natW, natH, sel, ratio:null, frames:preview.frames };
-  cropFname.textContent = `${item.name} · 원본 ${natW}×${natH}px`;
+  cropCtx = { item, natW, natH, sel, ratio:null, frames:preview.frames, rot, speed:(item.speed>0?item.speed:1) };
+  cropFname.textContent = `${item.name} · 기준 ${natW}×${natH}px${rot?` (↻${rot}°)`:''}`;
   cropCanvas.width = natW; cropCanvas.height = natH;
   [...ratiosWrap.children].forEach(b=>b.classList.toggle('on', b.dataset.r==='free'));
+  rotVal.textContent = rot + '°';
+  [...speedChips.children].forEach(b=>b.classList.toggle('on', parseFloat(b.dataset.s)===cropCtx.speed));
   cropModal.classList.add('open');
   requestAnimationFrame(()=>{ syncInputsFromSel(); drawSel(); startCropPlay(); });
 }
@@ -985,8 +1152,9 @@ function startCropPlay(){
   renderCropFrame(0);
   const loop=(now)=>{
     if(!cropCtx) return;
-    acc += now-last; last=now; if(acc>2000) acc=120;
-    while(acc>=120){ acc-=120; idx=(idx+1)%frames.length; renderCropFrame(idx); }
+    const iv = Math.max(30, 120/(cropCtx.speed||1)); // 배속 반영
+    acc += now-last; last=now; if(acc>2000) acc=iv;
+    while(acc>=iv){ acc-=iv; idx=(idx+1)%frames.length; renderCropFrame(idx); }
     cropPlay = requestAnimationFrame(loop);
   };
   cropPlay = requestAnimationFrame(loop);
@@ -995,14 +1163,21 @@ function stopCropPlay(){ if(cropPlay) cancelAnimationFrame(cropPlay); cropPlay=n
 function renderCropFrame(idx){
   if(!cropCtx) return;
   const fr = cropCtx.frames[idx];
-  cropCtx2d.clearRect(0,0,cropCtx.natW,cropCtx.natH);
-  cropCtx2d.drawImage(fr.canvas, 0,0,cropCtx.natW,cropCtx.natH);
+  const {natW,natH,rot} = cropCtx;
+  cropCtx2d.clearRect(0,0,natW,natH);
+  drawRot(cropCtx2d, fr.canvas, rot, natW, natH);
   const s = cropCtx.sel;
   if(resultCanvas.width!==s.w || resultCanvas.height!==s.h){ resultCanvas.width=s.w; resultCanvas.height=s.h; }
-  // 미리보기 캔버스는 다운스케일된 상태 → 비율로 잘라냄
-  const sc = fr.canvas.width / cropCtx.natW, scy = fr.canvas.height / cropCtx.natH;
+  // 회전 적용된 프레임을 임시 버퍼에 만든 뒤, 비율로 잘라냄 (미리보기 캔버스는 다운스케일 상태)
+  const swap = (rot===90||rot===270);
+  const rw = swap ? fr.canvas.height : fr.canvas.width;
+  const rh = swap ? fr.canvas.width : fr.canvas.height;
+  if(editRotC.width!==rw || editRotC.height!==rh){ editRotC.width=rw; editRotC.height=rh; }
+  editRotCtx.clearRect(0,0,rw,rh);
+  drawRot(editRotCtx, fr.canvas, rot, rw, rh);
+  const sc = rw / natW, scy = rh / natH;
   resultCtx2d.clearRect(0,0,s.w,s.h);
-  resultCtx2d.drawImage(fr.canvas, s.x*sc, s.y*scy, s.w*sc, s.h*scy, 0,0,s.w,s.h);
+  resultCtx2d.drawImage(editRotC, s.x*sc, s.y*scy, s.w*sc, s.h*scy, 0,0,s.w,s.h);
 }
 function closeCropModal(){ stopCropPlay(); cropModal.classList.remove('open'); cropCtx=null; }
 function clampSel(s){
@@ -1066,21 +1241,49 @@ ratiosWrap.addEventListener('click', e=>{
   if(cropCtx.ratio) applyRatioToSel();
   syncInputsFromSel(); drawSel();
 });
+// 회전: 90°씩 순환. 기준 크기가 바뀌므로 크롭 선택은 전체로 초기화
+rotBtn.onclick = ()=>{
+  if(!cropCtx) return;
+  cropCtx.rot = (cropCtx.rot + 90) % 360;
+  const t = cropCtx.natW; cropCtx.natW = cropCtx.natH; cropCtx.natH = t;
+  cropCtx.sel = { x:0, y:0, w:cropCtx.natW, h:cropCtx.natH };
+  cropCtx.ratio = null;
+  [...ratiosWrap.children].forEach(b=>b.classList.toggle('on', b.dataset.r==='free'));
+  cropCanvas.width = cropCtx.natW; cropCanvas.height = cropCtx.natH;
+  rotVal.textContent = cropCtx.rot + '°';
+  cropFname.textContent = `${cropCtx.item.name} · 기준 ${cropCtx.natW}×${cropCtx.natH}px${cropCtx.rot?` (↻${cropCtx.rot}°)`:''}`;
+  syncInputsFromSel(); drawSel(); startCropPlay();
+};
+// 배속 칩
+speedChips.addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b||!cropCtx) return;
+  [...speedChips.children].forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  cropCtx.speed = parseFloat(b.dataset.s) || 1;
+});
 $('#cropCancel').onclick = closeCropModal;
 cropModal.addEventListener('click', e=>{ if(e.target===cropModal) closeCropModal(); });
+// 편집 버튼 라벨: 적용된 항목 요약 (없으면 기본)
+function updateEditBtn(item, selW, selH){
+  const parts=[];
+  if(item.crop && selW && selH) parts.push(`✂${selW}×${selH}`);
+  else if(item.crop) parts.push('✂');
+  if(item.rotate) parts.push(`↻${item.rotate}°`);
+  if(item.speed && item.speed!==1) parts.push(`${item.speed}×`);
+  item.refs.crop.classList.toggle('on', parts.length>0);
+  item.refs.crop.textContent = parts.length ? parts.join(' ') : '✎ 편집';
+}
 $('#cropReset').onclick = ()=>{
-  const item=cropCtx.item; item.crop=null;
-  item.refs.crop.classList.remove('on'); item.refs.crop.textContent='✂ 크롭';
+  const item=cropCtx.item;
+  item.crop=null; item.rotate=0; item.speed=1;
+  updateEditBtn(item);
   resetItemResult(item); closeCropModal();
 };
 $('#cropApply').onclick = ()=>{
-  const {item,sel,natW,natH}=cropCtx;
-  if(sel.x===0 && sel.y===0 && sel.w===natW && sel.h===natH){
-    item.crop=null; item.refs.crop.classList.remove('on'); item.refs.crop.textContent='✂ 크롭';
-  }else{
-    item.crop = { fx:sel.x/natW, fy:sel.y/natH, fw:sel.w/natW, fh:sel.h/natH };
-    item.refs.crop.classList.add('on'); item.refs.crop.textContent=`✂ ${sel.w}×${sel.h}`;
-  }
+  const {item,sel,natW,natH,rot,speed}=cropCtx;
+  if(sel.x===0 && sel.y===0 && sel.w===natW && sel.h===natH) item.crop=null;
+  else item.crop = { fx:sel.x/natW, fy:sel.y/natH, fw:sel.w/natW, fh:sel.h/natH };
+  item.rotate = rot; item.speed = speed;
+  updateEditBtn(item, sel.w, sel.h);
   resetItemResult(item); closeCropModal();
 };
 
@@ -1094,7 +1297,7 @@ let trimCtx=null, trimPlay=null, tlDrag=null;
 async function openTrimModal(item){
   let preview;
   try{ preview = await ensurePreview(item); }
-  catch(e){ showBanner('구간 미리보기를 불러오지 못했습니다.'); return; }
+  catch(e){ showBanner(e?.message || '구간 미리보기를 불러오지 못했습니다.'); return; }
   const dur = preview.duration || item.duration || 0;
   if(!dur){ showBanner('이 파일은 길이를 읽을 수 없어 구간 지정이 어렵습니다.'); return; }
   trimCtx = { item, dur, start: clamp(item.trim?.start ?? 0,0,dur), end: clamp(item.trim?.end ?? dur,0,dur), frames:preview.frames };
@@ -1174,7 +1377,7 @@ let pvCtx=null, pvPlay=null;
 async function openPreviewModal(item){
   let preview;
   try{ preview = await ensurePreview(item); }
-  catch(e){ showBanner('미리보기를 불러오지 못했습니다. (배포/로컬 환경에서 실행해 주세요.)'); return; }
+  catch(e){ showBanner(e?.message || '미리보기를 불러오지 못했습니다.'); return; }
   const frames = preview.frames;
   const dur = preview.duration || (frames.length ? frames[frames.length-1].t : 0) || 0;
 
@@ -1182,32 +1385,39 @@ async function openPreviewModal(item){
   const segStart = clamp(item.trim?.start ?? 0, 0, dur || 1e9);
   const segEnd   = clamp(item.trim?.end ?? (dur || 0), segStart, dur || 1e9);
   const boomer = !!(item.reverse && (segEnd - segStart) > 0.001);
+  const rot = item.rotate || 0, swap = (rot===90 || rot===270);
+  const speed = (item.speed > 0 ? item.speed : 1);
 
-  // 크롭 영역(미리보기 캔버스 픽셀 기준 — crop은 정규화 분수라 그대로 적용)
-  const cw0 = frames[0].canvas.width, ch0 = frames[0].canvas.height;
+  // 크롭 영역(회전 적용 후 미리보기 픽셀 기준 — crop 분수는 회전 후 공간)
+  const fw0 = frames[0].canvas.width, fh0 = frames[0].canvas.height;
+  const cw0 = swap ? fh0 : fw0, ch0 = swap ? fw0 : fh0;
   const cr = item.crop
     ? { sx:item.crop.fx*cw0, sy:item.crop.fy*ch0, sw:Math.max(1,item.crop.fw*cw0), sh:Math.max(1,item.crop.fh*ch0) }
     : { sx:0, sy:0, sw:cw0, sh:ch0 };
   previewCanvas.width = Math.max(1,Math.round(cr.sw)); previewCanvas.height = Math.max(1,Math.round(cr.sh));
 
-  // 실제 변환 기준 최종 출력 크기 (캡션용)
+  // 실제 변환 기준 최종 출력 크기 (캡션용, 회전 반영)
   const maxWidth = Math.max(80, parseInt($('#maxw').value)||640);
   const fps = clamp(parseInt($('#fps').value)||15,1,50);
-  const capScale = Math.min(1, maxWidth/preview.natW);
-  const capW = Math.max(2, Math.round(preview.natW*capScale/2)*2);
-  const capH = Math.max(2, Math.round(preview.natH*capScale/2)*2);
+  const rNatW = swap ? preview.natH : preview.natW;
+  const rNatH = swap ? preview.natW : preview.natH;
+  const capScale = Math.min(1, maxWidth/rNatW);
+  const capW = Math.max(2, Math.round(rNatW*capScale/2)*2);
+  const capH = Math.max(2, Math.round(rNatH*capScale/2)*2);
   const outW = item.crop ? Math.max(1, Math.round(item.crop.fw*capW)) : capW;
   const outH = item.crop ? Math.max(1, Math.round(item.crop.fh*capH)) : capH;
 
-  pvCtx = { frames, segStart, segEnd, boomer, cr };
+  pvCtx = { frames, segStart, segEnd, boomer, cr, rot, speed, rw:cw0, rh:ch0 };
   pvFname.textContent = item.name;
 
   const badges=[];
   badges.push(item.crop ? `<span class="pvbadge">✂ 크롭 ${outW}×${outH}</span>` : `<span class="pvbadge muted">크롭 없음</span>`);
+  badges.push(rot ? `<span class="pvbadge">↻ ${rot}°</span>` : `<span class="pvbadge muted">회전 없음</span>`);
+  badges.push(speed!==1 ? `<span class="pvbadge">⚡ ${speed}×</span>` : `<span class="pvbadge muted">1× 배속</span>`);
   badges.push((item.trim && dur) ? `<span class="pvbadge">⌖ ${segStart.toFixed(1)}–${segEnd.toFixed(1)}s</span>` : `<span class="pvbadge muted">전체 구간</span>`);
   badges.push(boomer ? `<span class="pvbadge">↺ 부메랑</span>` : `<span class="pvbadge muted">부메랑 없음</span>`);
   pvBadges.innerHTML = badges.join('');
-  pvInfo.textContent = `결과 ${outW}×${outH}px · ${fps}fps · 실제 변환과 유사한 근사 미리보기예요`;
+  pvInfo.textContent = `결과 ${outW}×${outH}px · ${fps}fps${speed!==1?` · ${speed}× 배속`:''} · 실제 변환과 유사한 근사 미리보기예요`;
 
   previewModal.classList.add('open');
   startPreviewPlay();
@@ -1221,7 +1431,7 @@ function startPreviewPlay(){
   if((segEnd - segStart) <= 0.001) return; // 사실상 단일 프레임 → 정지
   const loop=(now)=>{
     if(!pvCtx) return;
-    const d=(now-last)/1000; last=now;
+    const d=(now-last)/1000*pvCtx.speed; last=now; // 배속 반영
     t += dir*d;
     if(boomer){
       if(t>=segEnd){ t=segEnd; dir=-1; }
@@ -1234,11 +1444,15 @@ function startPreviewPlay(){
 }
 function renderPreviewAt(t){
   if(!pvCtx) return;
-  const { frames, cr } = pvCtx;
+  const { frames, cr, rot, rw, rh } = pvCtx;
   const idx = previewIndexAt({frames}, t);
   const fr = frames[Math.max(0,Math.min(idx,frames.length-1))]; if(!fr) return;
+  // 회전 적용된 프레임을 임시 버퍼에 만든 뒤 크롭 영역만 표시
+  if(editRotC.width!==rw || editRotC.height!==rh){ editRotC.width=rw; editRotC.height=rh; }
+  editRotCtx.clearRect(0,0,rw,rh);
+  drawRot(editRotCtx, fr.canvas, rot, rw, rh);
   previewCtx2d.clearRect(0,0,previewCanvas.width,previewCanvas.height);
-  previewCtx2d.drawImage(fr.canvas, cr.sx, cr.sy, cr.sw, cr.sh, 0,0,previewCanvas.width,previewCanvas.height);
+  previewCtx2d.drawImage(editRotC, cr.sx, cr.sy, cr.sw, cr.sh, 0,0,previewCanvas.width,previewCanvas.height);
 }
 function stopPreviewPlay(){ if(pvPlay) cancelAnimationFrame(pvPlay); pvPlay=null; }
 function closePreviewModal(){ stopPreviewPlay(); previewModal.classList.remove('open'); pvCtx=null; }
