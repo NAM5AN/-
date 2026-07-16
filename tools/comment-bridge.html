@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>comment-bridge</title>
+<!-- 북마클릿 전용 브릿지: 화면 없음. 부모(네이버 페이지)와 postMessage로만 통신 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>if (!window.supabase) { document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>'); }</script>
+</head>
+<body>
+<script>
+(function () {
+  var SUPABASE_URL = "https://wvwoqqfizgbhvdzlqscc.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU";
+  var FN_URL = SUPABASE_URL + "/functions/v1/naver-comment";
+  var STYLE_KEY = "cm_naver_comment_style_v1"; // 사이트 도구와 같은 키 → 설정 공유
+
+  // 이 브릿지에 말을 걸 수 있는 부모 창의 출처(origin) 허용 목록
+  var ALLOWED = [
+    "https://blog.naver.com",
+    "https://m.blog.naver.com",
+    "https://cheheomdan-manager.com",
+    "https://www.cheheomdan-manager.com"
+  ];
+
+  var sb = null;
+  function waitLib() {
+    return new Promise(function (resolve) {
+      var n = 0;
+      (function tick() {
+        if (window.supabase) return resolve(true);
+        if (++n > 40) return resolve(false); // 최대 4초 대기
+        setTimeout(tick, 100);
+      })();
+    });
+  }
+  async function client() {
+    if (sb) return sb;
+    var ok = await waitLib();
+    if (!ok) return null;
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return sb;
+  }
+  async function getToken() {
+    try {
+      var c = await client();
+      if (!c) return null;
+      var s = (await c.auth.getSession()).data.session;
+      return s ? s.access_token : null;
+    } catch (e) { return null; }
+  }
+  function readStyle() {
+    try { var r = localStorage.getItem(STYLE_KEY); return r ? JSON.parse(r) : null; } catch (e) { return null; }
+  }
+  function writeStyle(st) {
+    try {
+      if (!st || typeof st !== "object") return;
+      localStorage.setItem(STYLE_KEY, JSON.stringify({
+        toneId: typeof st.toneId === "string" ? st.toneId : "warm",
+        customTone: typeof st.customTone === "string" ? st.customTone : "",
+        samples: Array.isArray(st.samples) ? st.samples.slice(0, 30).map(function (x) { return String(x || ""); }) : []
+      }));
+    } catch (e) {}
+  }
+  async function callFn(tk, payload) {
+    var res = await fetch(FN_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "authorization": "Bearer " + tk
+      },
+      body: JSON.stringify(payload)
+    });
+    var data = null;
+    try { data = await res.json(); } catch (e) { data = { ok: false, error: "응답을 읽지 못했어요." }; }
+    return { status: res.status, data: data };
+  }
+
+  window.addEventListener("message", async function (ev) {
+    if (ALLOWED.indexOf(ev.origin) < 0) return;      // 허용 안 된 사이트 무시
+    var m = ev.data || {};
+    if (typeof m !== "object" || m.cm !== true) return; // 우리 패널의 메시지만
+    function reply(p) {
+      p.cm = true;
+      p.id = m.id;
+      try { ev.source.postMessage(p, ev.origin); } catch (e) {}
+    }
+
+    if (m.type === "status") {
+      var tk = await getToken();
+      if (!tk) { reply({ type: "status", loggedIn: false, style: readStyle() }); return; }
+      var r = await callFn(tk, { action: "status" });
+      if (r.status === 401 || !r.data || r.data.ok !== true) {
+        reply({ type: "status", loggedIn: false, style: readStyle() });
+        return;
+      }
+      reply({ type: "status", loggedIn: true, premium: !!r.data.premium, admin: !!r.data.admin, style: readStyle() });
+      return;
+    }
+
+    if (m.type === "saveStyle") {
+      writeStyle(m.style);
+      reply({ type: "saveStyle", ok: true });
+      return;
+    }
+
+    if (m.type === "comment") {
+      var tk2 = await getToken();
+      if (!tk2) { reply({ type: "comment", status: 401, data: { ok: false, error: "로그인이 필요해요." } }); return; }
+      var payload = {
+        action: "comment",
+        text: String(m.text || "").slice(0, 8000),
+        length: Number(m.length) || 60,
+        source: "bookmarklet"
+      };
+      if (Array.isArray(m.styleSamples) && m.styleSamples.length) {
+        payload.styleSamples = m.styleSamples.slice(0, 15).map(function (x) { return String(x || ""); });
+      } else {
+        payload.tone = String(m.tone || "자연스럽고 진솔한 존댓말");
+      }
+      var r2 = await callFn(tk2, payload);
+      reply({ type: "comment", status: r2.status, data: r2.data });
+      return;
+    }
+  });
+})();
+</script>
+</body>
+</html>
