@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>로그인 연결 - 체험단 매니저</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>if (!window.supabase) { document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>'); }</script>
+<style>
+  body { margin: 0; background: #F5EFE6; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', sans-serif; color: #2A2522; }
+  .box { max-width: 360px; margin: 60px auto; background: #FBF7F0; border: 1px solid #E5DCCE; border-radius: 14px; padding: 28px 24px; text-align: center; }
+  h1 { font-size: 16px; margin: 0 0 14px; }
+  #msg { font-size: 13px; line-height: 1.8; color: #5C544C; word-break: keep-all; margin-bottom: 16px; }
+  .btn { display: inline-block; width: 100%; box-sizing: border-box; padding: 12px 0; border: 0; border-radius: 9px; background: #C2542B; color: #fff; font-size: 13.5px; font-weight: 700; cursor: pointer; text-decoration: none; margin-bottom: 8px; }
+  .btn:hover { background: #A84722; }
+  .btn.ghost { background: #fff; color: #C2542B; border: 1px solid #E0A98F; }
+  .btn.ghost:hover { background: #FBF1EC; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🔗 로그인 연결</h1>
+  <div id="msg">확인 중이에요...</div>
+  <a class="btn hidden" id="goSite" href="/" target="_blank" rel="noopener">체험단 매니저 열기 (로그인)</a>
+  <button class="btn ghost hidden" id="retry" type="button">로그인했어요, 다시 연결</button>
+</div>
+<script>
+(function () {
+  var SUPABASE_URL = "https://wvwoqqfizgbhvdzlqscc.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2d29xcWZpemdiaHZkemxxc2NjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTQ0ODMsImV4cCI6MjA5NDE3MDQ4M30.A1c4pPj-zqzF7Utw0Fno0EnJ4DwmD9b_mL125gL1tfU";
+  var OUR_ORIGIN = "https://cheheomdan-manager.com";
+
+  function $(id) { return document.getElementById(id); }
+  function waitLib(cb, n) {
+    if (window.supabase) return cb(true);
+    if ((n || 0) > 40) return cb(false);
+    setTimeout(function () { waitLib(cb, (n || 0) + 1); }, 100);
+  }
+
+  function run() {
+    $("msg").textContent = "확인 중이에요...";
+    $("goSite").classList.add("hidden");
+    $("retry").classList.add("hidden");
+    waitLib(async function (ok) {
+      if (!ok) { $("msg").textContent = "연결 준비에 실패했어요. 창을 닫고 다시 열어 주세요."; return; }
+      var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      var s = null;
+      try { s = (await sb.auth.getSession()).data.session; } catch (e) {}
+      if (!s) {
+        $("msg").innerHTML = "아직 로그인이 안 되어 있어요.<br>아래 버튼으로 <b>카카오 로그인</b>을 마친 뒤,<br>'다시 연결'을 눌러 주세요.";
+        $("goSite").classList.remove("hidden");
+        $("retry").classList.remove("hidden");
+        return;
+      }
+      // 로그인 정보를 "우리 도메인의 iframe(브릿지)"에게만 직접 전달.
+      // targetOrigin을 우리 도메인으로 지정하므로, 네이버 페이지나 다른 iframe은 받을 수 없음.
+      var op = window.opener, posted = false;
+      if (op) {
+        var n = 0;
+        try { n = op.frames.length; } catch (e) {}
+        for (var i = 0; i < n; i++) {
+          try {
+            op.frames[i].postMessage(
+              { cmAuth: true, access_token: s.access_token, refresh_token: s.refresh_token },
+              OUR_ORIGIN
+            );
+            posted = true;
+          } catch (e) {}
+        }
+      }
+      if (posted) {
+        $("msg").innerHTML = "연결했어요! 이 창은 곧 닫혀요.<br>패널이 그대로면 <b>'다시 확인'</b>을 눌러 주세요.";
+        setTimeout(function () { try { window.close(); } catch (e) {} }, 1200);
+      } else {
+        $("msg").textContent = "연결할 패널 화면을 찾지 못했어요. 네이버 글 화면의 패널에서 '로그인 연결하기'를 다시 눌러 주세요.";
+      }
+    });
+  }
+
+  $("retry").addEventListener("click", run);
+  run();
+})();
+</script>
+</body>
+</html>
