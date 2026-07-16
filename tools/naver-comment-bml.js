@@ -39,7 +39,7 @@
   /* ---------- 호스트 + Shadow DOM ---------- */
   var host = document.createElement("div");
   host.id = "cm-cmt-host";
-  host.style.cssText = "all:initial; position:fixed; z-index:2147483000; right:16px; bottom:16px;";
+  host.style.cssText = "all:initial; position:fixed; z-index:2147483000; right:16px; top:16px;";
   (document.body || document.documentElement).appendChild(host);
   var root = host.attachShadow({ mode: "open" });
 
@@ -49,7 +49,7 @@
     + ".panel{width:min(380px,calc(100vw - 32px)); max-height:min(82vh,700px); display:flex; flex-direction:column;"
     + " background:#FBF7F0; color:#2A2522; border:1px solid #E5DCCE; border-radius:14px;"
     + " box-shadow:0 12px 40px rgba(42,37,34,.22); overflow:hidden}"
-    + ".hd{display:flex; align-items:center; gap:8px; padding:12px 14px; background:#F5EFE6; border-bottom:1px solid #E5DCCE}"
+    + ".hd{display:flex; align-items:center; gap:8px; padding:12px 14px; background:#F5EFE6; border-bottom:1px solid #E5DCCE; cursor:move; user-select:none; touch-action:none}"
     + ".hd b{font-size:14px; font-weight:700}"
     + ".hd .sp{flex:1}"
     + ".xbtn{border:0; background:transparent; font-size:18px; line-height:1; color:#8B8178; cursor:pointer; padding:4px}"
@@ -415,6 +415,41 @@
 
   /* ---------- 열기/닫기 ---------- */
   $("cmClose").addEventListener("click", function () { host.style.display = "none"; });
+
+  /* ---------- 상단바 드래그로 이동 ---------- */
+  (function () {
+    var hd = root.querySelector(".hd");
+    var drag = null;
+    hd.addEventListener("pointerdown", function (e) {
+      if (e.target && e.target.id === "cmClose") return; // 닫기 버튼은 제외
+      var r = host.getBoundingClientRect();
+      // right/top 기준을 left/top 픽셀 고정으로 전환한 뒤 이동
+      host.style.left = r.left + "px";
+      host.style.top = r.top + "px";
+      host.style.right = "auto";
+      host.style.bottom = "auto";
+      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+      try { hd.setPointerCapture(e.pointerId); } catch (err) {}
+      e.preventDefault();
+    });
+    hd.addEventListener("pointermove", function (e) {
+      if (!drag) return;
+      var w = host.offsetWidth, h = host.offsetHeight;
+      var x = e.clientX - drag.dx, y = e.clientY - drag.dy;
+      // 화면 밖으로 못 나가게 (헤더가 항상 잡히도록 여유 8px)
+      x = Math.max(8 - w + 60, Math.min(x, window.innerWidth - 60));
+      y = Math.max(8, Math.min(y, window.innerHeight - 48));
+      host.style.left = x + "px";
+      host.style.top = y + "px";
+    });
+    function endDrag(e) {
+      if (!drag) return;
+      drag = null;
+      try { hd.releasePointerCapture(e.pointerId); } catch (err) {}
+    }
+    hd.addEventListener("pointerup", endDrag);
+    hd.addEventListener("pointercancel", endDrag);
+  })();
   document.addEventListener("cm-cmt-toggle", function () {
     host.style.display = host.style.display === "none" ? "" : "none";
     if (host.style.display !== "none") { prefillBody(false); }
