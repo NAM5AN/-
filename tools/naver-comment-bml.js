@@ -104,10 +104,10 @@
     + "  <div class='bd'>"
     + "    <div id='vLoading' class='gate'><p class='muted'>확인 중이에요...</p></div>"
     + "    <div id='vLogin' class='gate hidden'>"
-    + "      <div class='big'>로그인이 필요해요</div>"
-    + "      <p>체험단 매니저에 카카오 로그인 후,<br>북마크 버튼을 다시 눌러 주세요.</p>"
-    + "      <a class='btn' id='btnOpenSite' target='_blank' rel='noopener'>체험단 매니저 열기</a>"
-    + "      <button class='btn ghost' id='btnRecheck1'>로그인했어요, 다시 확인</button>"
+    + "      <div class='big'>로그인 연결이 필요해요</div>"
+    + "      <p>체험단 매니저 로그인 정보를 이 화면과 연결할게요.<br><b>연결하기</b>를 누르면 작은 창이 떠요.<br>(사이트에 로그인이 안 되어 있으면 그 창에서 안내해 드려요)</p>"
+    + "      <button class='btn' id='btnConnect' type='button'>🔗 로그인 연결하기</button>"
+    + "      <button class='btn ghost' id='btnRecheck1'>다시 확인</button>"
     + "    </div>"
     + "    <div id='vPremium' class='gate hidden'>"
     + "      <div class='big'>💎 프리미엄 전용 기능이에요</div>"
@@ -147,7 +147,6 @@
   var elSamples = $("cmSamples"), elAddSample = $("cmAddSample");
   var elLen = $("cmLen"), elLenVal = $("cmLenVal"), elGo = $("cmGo"), elErr = $("cmErr"), elResults = $("cmResults");
 
-  $("btnOpenSite").href = SITE + "/";
   $("btnOpenSettings").href = SITE + "/?open=settings";
 
   function show(view) {
@@ -169,7 +168,9 @@
   window.addEventListener("message", function (ev) {
     if (ev.origin !== SITE_ORIGIN) return;
     var m = ev.data || {};
-    if (typeof m !== "object" || m.cm !== true || !m.id) return;
+    if (typeof m !== "object" || m.cm !== true) return;
+    if (m.type === "authUpdated") { checkStatus(); return; } // 연결 완료 신호 → 상태 재확인
+    if (!m.id) return;
     var p = pending[m.id];
     if (!p) return;
     delete pending[m.id];
@@ -209,6 +210,10 @@
   }
   $("btnRecheck1").addEventListener("click", checkStatus);
   $("btnRecheck2").addEventListener("click", checkStatus);
+  $("btnConnect").addEventListener("click", function () {
+    // window.open이어야 팝업이 opener(이 창)를 알 수 있어요 → 브릿지 iframe에 직접 전달 가능
+    try { window.open(SITE + "/tools/comment-auth.html?v=" + Date.now(), "cmCmtAuth", "width=430,height=560"); } catch (e) {}
+  });
 
   /* ---------- 도구 UI ---------- */
   var toneId = "warm";
