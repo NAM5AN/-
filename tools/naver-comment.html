@@ -164,6 +164,20 @@
   .ai-usage-mini strong { color: var(--terra); font-weight: 600; }
   .ai-usage-mini.exhausted strong { color: var(--rose); }
 
+  /* ---- 북마클릿 설치 ---- */
+  .bml-sec { max-width: 720px; margin: 8px auto 48px; padding: 0 20px; }
+  .bml-card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
+  .bml-title { font-size: 15px; font-weight: 700; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .bml-badge { font-size: 10.5px; font-weight: 700; color: #fff; background: var(--terra); border-radius: 999px; padding: 3px 8px; }
+  .bml-desc { font-size: 12.5px; color: var(--ink-soft); line-height: 1.7; margin: 0 0 14px; word-break: keep-all; }
+  .bml-btn { display: inline-block; background: var(--terra); color: #fff; font-weight: 700; font-size: 13.5px; padding: 11px 18px; border-radius: 10px; text-decoration: none; cursor: grab; }
+  .bml-btn:active { cursor: grabbing; }
+  .bml-copy { margin-left: 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft); border-radius: 8px; font-size: 11.5px; padding: 7px 10px; cursor: pointer; vertical-align: middle; }
+  .bml-copy:hover { border-color: var(--terra); color: var(--terra); }
+  .bml-steps { margin: 14px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.9; }
+  .bml-note { font-size: 11.5px; color: var(--ink-faint); margin-top: 10px; line-height: 1.7; word-break: keep-all; }
+  .bml-note a { color: var(--terra); }
+
   /* ---- 결과 ---- */
   .results { max-width: 720px; margin: 26px auto 0; padding: 0 20px; }
   .results-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -338,6 +352,44 @@
 </section>
 
 <div class="toast" id="toast"></div>
+
+<!-- ============== 북마클릿 설치 (프리미엄) ============== -->
+<section class="bml-sec">
+  <div class="bml-card">
+    <p class="bml-title">🔖 북마클릿으로 더 빠르게 <span class="bml-badge">💎 프리미엄</span></p>
+    <p class="bml-desc">이웃 글을 보다가 북마크 버튼 한 번이면, 사이트로 오지 않아도 <b>보고 있는 글 화면 위에서 바로</b> 댓글을 만들 수 있어요. 본문도 자동으로 읽어와요. 말투·학습 설정은 이 페이지와 공유돼요.</p>
+    <a class="bml-btn" id="bmlLink" href="javascript:(function(){var h=location.host;if(h.indexOf('blog.naver.com')===-1){alert('네이버 블로그 글 화면에서 눌러 주세요.');return;}var d=document;var f=d.getElementById('mainFrame');if(f){try{if(f.contentDocument){d=f.contentDocument;}}catch(e){}}if(d.getElementById('cm-cmt-host')){d.dispatchEvent(new CustomEvent('cm-cmt-toggle'));return;}var s=d.createElement('script');s.src='https://cheheomdan-manager.com/tools/naver-comment-bml.js?v='+Date.now();(d.body||d.documentElement).appendChild(s);})();">💬 댓글 도우미</a><button class="bml-copy" id="bmlCopy" type="button">코드 복사</button>
+    <ol class="bml-steps">
+      <li>북마크바를 켜요 (크롬·웨일: <b>Ctrl + Shift + B</b>)</li>
+      <li>위 <b>[💬 댓글 도우미]</b> 버튼을 북마크바로 <b>끌어다</b> 놓아요</li>
+      <li>네이버 블로그 <b>글 화면</b>에서 그 북마크를 누르면 패널이 떠요</li>
+    </ol>
+    <p class="bml-note">PC 전용 · 프리미엄 전용이에요. 지금은 베타 기간이라 <a href="/?open=settings">설정에서 프리미엄을 무료로</a> 켤 수 있어요.<br>버튼이 안 끌리면 '코드 복사'를 누른 뒤, 북마크를 새로 만들어 주소 칸에 붙여넣으면 돼요.</p>
+  </div>
+</section>
+<script>
+(function () {
+  var btn = document.getElementById("bmlCopy");
+  var link = document.getElementById("bmlLink");
+  if (!btn || !link) return;
+  btn.addEventListener("click", function () {
+    var code = link.getAttribute("href");
+    function done() { btn.textContent = "복사됨!"; setTimeout(function () { btn.textContent = "코드 복사"; }, 1200); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(done).catch(fallback);
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = code;
+      ta.style.cssText = "position:fixed; left:-9999px; top:0;";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) {}
+      ta.remove();
+    }
+  });
+})();
+</script>
 
 <script>
   // ====== 설정 ======
