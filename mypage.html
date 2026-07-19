@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F5EFE6">
+<meta name="robots" content="noindex">
+<title>마이페이지 - 체험단 매니저</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/layout.css">
+<link rel="stylesheet" href="styles/components.css">
+<link rel="stylesheet" href="styles/screens.css">
+
+<style>
+/* ===== 마이페이지 전용 (mp- 접두사, 기존 스타일과 충돌 없음) ===== */
+.mp-wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 48px; }
+
+.mp-top { display: flex; align-items: center; gap: 6px; padding: 8px 0 18px; }
+.mp-back {
+  border: none; background: none; cursor: pointer;
+  font-size: 22px; line-height: 1; padding: 6px 10px 6px 0;
+  color: var(--ink, #3d3229);
+}
+.mp-title {
+  font-family: var(--font-serif, serif);
+  font-size: 22px; margin: 0; color: var(--ink, #3d3229);
+}
+
+.mp-profile { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.mp-avatar {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--terra, #b0603f); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 19px; flex-shrink: 0;
+}
+.mp-name { font-weight: 700; font-size: 15px; color: var(--ink, #3d3229); }
+.mp-email { font-size: 12px; color: var(--ink-faint, #9b8f82); margin-top: 2px; word-break: break-all; }
+
+.mp-card {
+  background: var(--card, #fff);
+  border: 1px solid var(--line, #e8e0d4);
+  border-radius: 16px;
+  padding: 20px 18px;
+}
+
+.mp-tabs { display: flex; gap: 6px; margin-bottom: 18px; }
+.mp-tab {
+  flex: 1; border: 1px solid var(--line, #e8e0d4); background: none;
+  border-radius: 999px; padding: 8px 0; font-size: 13px;
+  color: var(--ink-soft, #6f6457); cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.mp-tab.active {
+  background: var(--terra, #b0603f);
+  border-color: var(--terra, #b0603f);
+  color: #fff; font-weight: 700;
+}
+
+.mp-copy { text-align: center; padding: 6px 0 4px; }
+.mp-copy-line1 { font-size: 14px; color: var(--ink-soft, #6f6457); }
+.mp-copy-line1 b { color: var(--ink, #3d3229); }
+.mp-amount {
+  font-family: var(--font-serif, serif);
+  font-size: clamp(32px, 9vw, 44px);
+  font-weight: 700; color: var(--terra, #b0603f);
+  line-height: 1.25; margin: 6px 0 2px;
+  font-variant-numeric: tabular-nums;
+}
+.mp-copy-line2 { font-size: 16px; color: var(--ink, #3d3229); }
+.mp-count {
+  font-size: 12px; color: var(--ink-faint, #9b8f82); margin-top: 12px;
+}
+.mp-missing {
+  display: none;
+  font-size: 12px; color: var(--ink-faint, #9b8f82); margin-top: 4px;
+}
+.mp-error {
+  display: none;
+  text-align: center; font-size: 13px; color: var(--ink-soft, #6f6457); padding: 10px 0;
+}
+
+.mp-divider { border: none; border-top: 1px solid var(--line, #e8e0d4); margin: 26px 0; }
+
+.mp-section-title {
+  font-family: var(--font-serif, serif);
+  font-size: 17px; color: var(--ink, #3d3229); margin: 0 0 12px;
+}
+.mp-soon {
+  text-align: center; font-size: 13px; color: var(--ink-faint, #9b8f82);
+  padding: 28px 16px; line-height: 1.7;
+}
+</style>
+</head>
+<body>
+
+<div class="mp-wrap">
+  <div class="mp-top">
+    <button class="mp-back" id="btnBack" aria-label="뒤로가기">←</button>
+    <h1 class="mp-title">마이페이지</h1>
+  </div>
+
+  <div class="mp-profile">
+    <div class="mp-avatar" id="mpAvatar">?</div>
+    <div>
+      <div class="mp-name" id="mpName">사용자</div>
+      <div class="mp-email" id="mpEmail"></div>
+    </div>
+  </div>
+
+  <!-- 절약 통계 -->
+  <div class="mp-card">
+    <div class="mp-tabs" id="mpTabs">
+      <button class="mp-tab" data-period="today">오늘</button>
+      <button class="mp-tab" data-period="week">이번주</button>
+      <button class="mp-tab" data-period="month">이번달</button>
+      <button class="mp-tab active" data-period="year">올해</button>
+    </div>
+
+    <div class="mp-copy" id="mpCopy">
+      <div class="mp-copy-line1">체험단 매니저와 함께 <b id="mpPeriodLabel">올해</b></div>
+      <div class="mp-amount"><span id="mpAmount">0</span>원</div>
+      <div class="mp-copy-line2">아꼈어요! 🎉</div>
+      <div class="mp-count" id="mpCount">완료 0건</div>
+      <div class="mp-missing" id="mpMissing"></div>
+    </div>
+    <div class="mp-error" id="mpError">통계를 불러오지 못했어요. 잠시 후 새로고침해 주세요.</div>
+  </div>
+
+  <hr class="mp-divider">
+
+  <!-- 포트폴리오 (다음 단계에서 채워짐) -->
+  <section>
+    <h2 class="mp-section-title">내 포트폴리오</h2>
+    <div class="mp-card mp-soon">
+      준비 중이에요 🌱<br>
+      완료 갤러리 · 잔디 캘린더 · 마일스톤 뱃지가 여기에 들어와요.
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  // ===== Supabase (index.html과 동일 프로젝트 — 로그인 세션 공유) =====
+  const SUPABASE_URL = 'https://wvwoqqfizgbhvdzlqscc.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_iLtSrF52sRfzalwcR4Nt-w_dJiU2q16';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false // OAuth 콜백 처리는 index에서만
+    }
+  });
+
+  // ===== 뒤로가기 =====
+  document.getElementById('btnBack').addEventListener('click', () => {
+    location.href = '/';
+  });
+
+  // ===== 사용자 표시 (index.html과 동일 규칙) =====
+  function getUserDisplayName(user) {
+    if (!user) return '사용자';
+    const meta = user.user_metadata || {};
+    return meta.name || meta.full_name || meta.preferred_username || user.email?.split('@')[0] || '사용자';
+  }
+  function emailToInitial(email) {
+    if (!email) return '?';
+    return email.charAt(0).toUpperCase();
+  }
+
+  // ===== 기간 계산 (이번주 = 월요일 시작) =====
+  function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+  function startOfWeek() {
+    const d = startOfToday();
+    const diff = (d.getDay() + 6) % 7; // 월=0 … 일=6
+    d.setDate(d.getDate() - diff);
+    return d;
+  }
+  function startOfMonth() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); }
+  function startOfYear() { const n = new Date(); return new Date(n.getFullYear(), 0, 1); }
+
+  const PERIODS = {
+    today: { label: '오늘',   from: startOfToday },
+    week:  { label: '이번주', from: startOfWeek },
+    month: { label: '이번달', from: startOfMonth },
+    year:  { label: '올해',   from: startOfYear }
+  };
+
+  // ===== 상태 =====
+  let rows = [];          // { value: number|null, at: Date }
+  let current = 'year';
+
+  function computeStats(period) {
+    const from = PERIODS[period].from();
+    let sum = 0, cnt = 0, missing = 0;
+    rows.forEach(r => {
+      if (r.at >= from) {
+        cnt++;
+        if (r.value != null) sum += r.value;
+        else missing++;
+      }
+    });
+    return { sum, cnt, missing };
+  }
+
+  // ===== 금액 카운트업 애니메이션 =====
+  let rafId = null;
+  function animateAmount(to) {
+    const el = document.getElementById('mpAmount');
+    if (rafId) cancelAnimationFrame(rafId);
+    const dur = 700;
+    const t0 = performance.now();
+    function tick(now) {
+      const p = Math.min((now - t0) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      el.textContent = Math.round(to * eased).toLocaleString('ko-KR');
+      if (p < 1) rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // ===== 렌더 =====
+  function render() {
+    const s = computeStats(current);
+    document.getElementById('mpPeriodLabel').textContent = PERIODS[current].label;
+    animateAmount(s.sum);
+    document.getElementById('mpCount').textContent = '완료 ' + s.cnt + '건';
+
+    const mEl = document.getElementById('mpMissing');
+    if (s.missing > 0) {
+      mEl.style.display = 'block';
+      mEl.textContent = '금액 미입력 ' + s.missing + '건은 합계에서 빠져 있어요';
+    } else {
+      mEl.style.display = 'none';
+    }
+
+    document.querySelectorAll('.mp-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.period === current);
+    });
+  }
+
+  document.getElementById('mpTabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.mp-tab');
+    if (!btn || btn.dataset.period === current) return;
+    current = btn.dataset.period;
+    render();
+  });
+
+  // ===== 초기화 =====
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      // 비로그인/게스트 → 홈으로
+      location.replace('/');
+      return;
+    }
+    const user = session.user;
+    const name = getUserDisplayName(user);
+    document.getElementById('mpName').textContent = name;
+    document.getElementById('mpEmail').textContent = user.email || '';
+    document.getElementById('mpAvatar').textContent = emailToInitial(user.email || name);
+
+    const { data, error } = await sb
+      .from('entries')
+      .select('provided_value, completed_at')
+      .eq('completed', true);
+
+    if (error) {
+      console.error('[mypage] entries load error:', error);
+      document.getElementById('mpCopy').style.display = 'none';
+      document.getElementById('mpError').style.display = 'block';
+      return;
+    }
+
+    rows = (data || [])
+      .filter(r => r.completed_at)
+      .map(r => ({
+        value: (typeof r.provided_value === 'number') ? r.provided_value : null,
+        at: new Date(r.completed_at)
+      }));
+
+    render();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
