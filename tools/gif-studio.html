@@ -470,6 +470,54 @@ function drawRot(ctx, img, rot, dw, dh){
   else ctx.drawImage(img,0,0,dw,dh);
   ctx.restore();
 }
+
+/* ---------- 세션 보존 (IndexedDB): 원본 파일 + 편집 설정 자동 저장 ---------- */
+// 탭이 브라우저에 의해 버려져(discard) 새로 로드돼도 업로드 파일과 편집 정보를 복원하기 위한 임시 저장소.
+const PERSIST_TTL = 24*60*60*1000; // 24시간 지난 항목은 자동 삭제
+let idbP = null;
+function idb(){
+  if(idbP) return idbP;
+  idbP = new Promise((res, rej) => {
+    try{
+      const req = indexedDB.open('gif-studio', 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore('items', { keyPath:'id' }); };
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    }catch(e){ rej(e); }
+  });
+  idbP.catch(()=>{ idbP=null; });
+  return idbP;
+}
+function idbReq(r){ return new Promise((res,rej)=>{ r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function persistSave(item){
+  try{
+    const db = await idb();
+    const rec = { id:item.id, name:item.name, kind:item.kind, origSize:item.origSize, file:item.file,
+      crop:item.crop, trim:item.trim, reverse:item.reverse, rotate:item.rotate||0, speed:item.speed||1,
+      savedAt:Date.now() };
+    await idbReq(db.transaction('items','readwrite').objectStore('items').put(rec));
+  }catch(e){ console.warn('[persist] 저장 실패', e); }
+}
+async function persistDelete(id){
+  try{ const db = await idb(); await idbReq(db.transaction('items','readwrite').objectStore('items').delete(id)); }
+  catch(e){ console.warn('[persist] 삭제 실패', e); }
+}
+async function persistClear(){
+  try{ const db = await idb(); await idbReq(db.transaction('items','readwrite').objectStore('items').clear()); }
+  catch(e){ console.warn('[persist] 비우기 실패', e); }
+}
+async function persistLoadAll(){
+  try{
+    const db = await idb();
+    const all = await idbReq(db.transaction('items','readonly').objectStore('items').getAll());
+    const now = Date.now();
+    const fresh = [], stale = [];
+    for(const r of (all||[])) (now - (r.savedAt||0) > PERSIST_TTL ? stale : fresh).push(r);
+    for(const r of stale) persistDelete(r.id); // TTL 초과분 정리
+    fresh.sort((a,b)=>(a.savedAt||0)-(b.savedAt||0));
+    return fresh;
+  }catch(e){ console.warn('[persist] 불러오기 실패', e); return []; }
+}
 function showBanner(m){ banner.textContent=m; banner.style.display='block'; }
 function clearBanner(){ banner.style.display='none'; }
 function isVideo(file){ return file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v|ogg|avi|mkv)$/i.test(file.name); }
@@ -482,7 +530,7 @@ function addFiles(files){
   clearBanner();
   for(const file of ok){
     const item = {
-      id:++seq, file, name:file.name, origSize:file.size,
+      id: Date.now().toString(36)+'_'+(++seq), file, name:file.name, origSize:file.size,
       kind: isGif(file) ? 'gif' : 'video',
       natW:null, natH:null, duration:null,
       crop:null, reverse:false, trim:null, rotate:0, speed:1,
@@ -491,6 +539,7 @@ function addFiles(files){
     };
     items.push(item);
     renderItem(item);
+    persistSave(item);
   }
   syncUI();
 }
@@ -531,7 +580,7 @@ function renderItem(item){
   item.refs = refs;
   refs.name.textContent = item.name;
   refs.stats.innerHTML = baseStats(item);
-  refs.rm.onclick = () => { items = items.filter(x=>x!==item); freeItem(item); card.remove(); syncUI(); };
+  refs.rm.onclick = () => { items = items.filter(x=>x!==item); freeItem(item); card.remove(); persistDelete(item.id); syncUI(); };
   refs.dl.onclick = () => download(item);
   refs.run.onclick = () => runOne(item);
   refs.retry.onclick = () => retryItem(item);
@@ -540,6 +589,7 @@ function renderItem(item){
   refs.boom.onclick = () => {
     item.reverse = !item.reverse;
     refs.boom.classList.toggle('on', item.reverse);
+    persistSave(item);
     resetItemResult(item);
   };
   refs.thumb.onclick = () => openPreviewModal(item);
@@ -1276,6 +1326,7 @@ $('#cropReset').onclick = ()=>{
   const item=cropCtx.item;
   item.crop=null; item.rotate=0; item.speed=1;
   updateEditBtn(item);
+  persistSave(item);
   resetItemResult(item); closeCropModal();
 };
 $('#cropApply').onclick = ()=>{
@@ -1284,6 +1335,7 @@ $('#cropApply').onclick = ()=>{
   else item.crop = { fx:sel.x/natW, fy:sel.y/natH, fw:sel.w/natW, fh:sel.h/natH };
   item.rotate = rot; item.speed = speed;
   updateEditBtn(item, sel.w, sel.h);
+  persistSave(item);
   resetItemResult(item); closeCropModal();
 };
 
@@ -1358,6 +1410,7 @@ $('#trimPlay').onclick = ()=>{
 $('#trimReset').onclick = ()=>{
   const item=trimCtx.item; item.trim=null;
   item.refs.trim.classList.remove('on'); item.refs.trim.textContent='⌖ 구간';
+  persistSave(item);
   resetItemResult(item); closeTrimModal();
 };
 $('#trimCancel').onclick = closeTrimModal;
@@ -1365,6 +1418,7 @@ $('#trimApply').onclick = ()=>{
   const {item,start,end,dur}=trimCtx;
   if(start<=0.01 && end>=dur-0.01){ item.trim=null; item.refs.trim.classList.remove('on'); item.refs.trim.textContent='⌖ 구간'; }
   else{ item.trim={start,end}; item.refs.trim.classList.add('on'); item.refs.trim.textContent=`⌖ ${start.toFixed(1)}–${end.toFixed(1)}s`; }
+  persistSave(item);
   resetItemResult(item); closeTrimModal();
 };
 trimModal.addEventListener('click', e=>{ if(e.target===trimModal) closeTrimModal(); });
@@ -1466,7 +1520,7 @@ picker.onchange = e=>{ addFiles(e.target.files); picker.value=''; };
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('over'); }));
 drop.addEventListener('drop', e=>{ if(e.dataTransfer.files) addFiles(e.dataTransfer.files); });
 runBtn.onclick = runAll;
-clearBtn.onclick = ()=>{ items.forEach(i=>{ freeItem(i); i.refs.card.remove(); }); items=[]; syncUI(); clearBanner(); };
+clearBtn.onclick = ()=>{ items.forEach(i=>{ freeItem(i); i.refs.card.remove(); }); items=[]; persistClear(); syncUI(); clearBanner(); };
 ['#target','#colors','#fps','#maxw'].forEach(id=>$(id).addEventListener('change', resetAll));
 window.addEventListener('keydown', e=>{
   if(e.key!=='Escape') return;
@@ -1477,6 +1531,35 @@ window.addEventListener('keydown', e=>{
 window.addEventListener('resize', ()=>{ if(cropCtx) drawSel(); });
 window.addEventListener('dragover', e=>e.preventDefault());
 window.addEventListener('drop', e=>e.preventDefault());
+
+/* ---------- 세션 복원 ---------- */
+// 변환 중 창을 닫거나 새로고침하면 경고
+window.addEventListener('beforeunload', e=>{ if(busy){ e.preventDefault(); e.returnValue=''; } });
+// 브라우저에 저장소 유지 요청 (지원 안 하면 무시)
+try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(_){}
+// 이전 세션의 파일 + 편집 설정 복원
+(async () => {
+  const recs = await persistLoadAll();
+  if(!recs.length) return;
+  for(const r of recs){
+    const item = {
+      id:r.id, file:r.file, name:r.name, origSize:r.origSize,
+      kind:r.kind,
+      natW:null, natH:null, duration:null,
+      crop:r.crop||null, reverse:!!r.reverse, trim:r.trim||null, rotate:r.rotate||0, speed:(r.speed>0?r.speed:1),
+      src:null, preview:null,
+      resultBlob:null, resultSize:null, resultDims:null, error:false, transcoded:null,
+    };
+    items.push(item);
+    renderItem(item);
+    // 저장된 편집 상태를 버튼에 반영
+    updateEditBtn(item);
+    if(item.trim){ item.refs.trim.classList.add('on'); item.refs.trim.textContent=`⌖ ${item.trim.start.toFixed(1)}–${item.trim.end.toFixed(1)}s`; }
+    if(item.reverse) item.refs.boom.classList.add('on');
+  }
+  syncUI();
+  showBanner(`이전 세션의 파일 ${recs.length}개를 편집 설정과 함께 복원했어요. 필요 없으면 '목록 비우기'를 누르세요.`);
+})();
 </script>
 </body>
 </html>
