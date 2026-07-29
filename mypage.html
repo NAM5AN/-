@@ -42,47 +42,102 @@
   background: var(--card, #fff);
   border: 1px solid var(--line, #e8e0d4);
   border-radius: 16px;
-  padding: 20px 18px;
+  padding: 24px 18px 20px;
 }
 
-.mp-tabs { display: flex; gap: 6px; margin-bottom: 18px; }
-.mp-tab {
-  flex: 1; border: 1px solid var(--line, #e8e0d4); background: none;
-  border-radius: 999px; padding: 8px 0; font-size: 13px;
-  color: var(--ink-soft, #6f6457); cursor: pointer;
-  transition: background .15s, color .15s;
+.mp-copy { text-align: center; }
+.mp-copy-line1 { font-size: 15px; color: var(--ink-soft, #6f6457); }
+
+/* 인라인 기간 선택 트리거 */
+.mp-period-wrap { position: relative; display: inline-block; }
+.mp-period-btn {
+  border: none; background: none; cursor: pointer;
+  font: inherit; font-weight: 700;
+  color: var(--terra, #b0603f);
+  border-bottom: 2px dashed var(--terra-soft, #d9a68e);
+  padding: 0 2px 1px; border-radius: 0;
 }
-.mp-tab.active {
-  background: var(--terra, #b0603f);
-  border-color: var(--terra, #b0603f);
-  color: #fff; font-weight: 700;
+.mp-period-btn::after { content: ' ▾'; font-size: 11px; }
+.mp-period-btn:hover { background: var(--terra-soft, #f2e0d6); }
+
+/* 기간 선택 팝오버 */
+.mp-pop {
+  display: none;
+  position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  z-index: 50; width: 260px;
+  background: var(--card, #fff);
+  border: 1px solid var(--line, #e8e0d4);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.12);
+  padding: 8px;
+  text-align: left;
+}
+.mp-pop.open { display: block; }
+.mp-pop-item {
+  display: block; width: 100%; text-align: left;
+  border: none; background: none; cursor: pointer;
+  padding: 9px 12px; border-radius: 9px;
+  font-size: 14px; color: var(--ink, #3d3229);
+}
+.mp-pop-item:hover { background: var(--paper, #faf6ef); }
+.mp-pop-item.on { color: var(--terra, #b0603f); font-weight: 700; }
+.mp-pop-sep { border: none; border-top: 1px solid var(--line, #e8e0d4); margin: 6px 4px; }
+.mp-pop-label { font-size: 11px; color: var(--ink-faint, #9b8f82); padding: 2px 12px 6px; }
+.mp-pop-row { display: flex; gap: 6px; align-items: center; padding: 0 12px 8px; }
+.mp-pop-row input[type="date"] {
+  flex: 1; min-width: 0;
+  border: 1px solid var(--line, #e8e0d4); border-radius: 8px;
+  padding: 6px 8px; font-size: 13px; color: var(--ink, #3d3229);
+  background: var(--paper, #faf6ef); font-family: inherit;
+}
+.mp-pop-row span { font-size: 12px; color: var(--ink-faint, #9b8f82); }
+.mp-pop-apply {
+  width: calc(100% - 24px); margin: 0 12px 6px;
+  border: none; border-radius: 9px; cursor: pointer;
+  background: var(--terra, #b0603f); color: #fff;
+  padding: 8px 0; font-size: 13px; font-weight: 700; font-family: inherit;
 }
 
-.mp-copy { text-align: center; padding: 6px 0 4px; }
-.mp-copy-line1 { font-size: 14px; color: var(--ink-soft, #6f6457); }
-.mp-copy-line1 b { color: var(--ink, #3d3229); }
 .mp-amount {
   font-family: var(--font-serif, serif);
-  font-size: clamp(32px, 9vw, 44px);
+  font-size: clamp(30px, 8.5vw, 44px);
   font-weight: 700; color: var(--terra, #b0603f);
-  line-height: 1.25; margin: 6px 0 2px;
+  line-height: 1.25; margin: 10px 0 2px;
   font-variant-numeric: tabular-nums;
 }
 .mp-copy-line2 { font-size: 16px; color: var(--ink, #3d3229); }
-.mp-count {
-  font-size: 12px; color: var(--ink-faint, #9b8f82); margin-top: 12px;
+.mp-count { font-size: 12px; color: var(--ink-faint, #9b8f82); margin-top: 12px; }
+.mp-missing { display: none; font-size: 12px; color: var(--ink-faint, #9b8f82); margin-top: 4px; }
+
+/* 집계 기준 안내 */
+.mp-basis {
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--line, #e8e0d4);
+  text-align: center;
 }
-.mp-missing {
+.mp-basis-btn {
+  border: none; background: none; cursor: pointer;
+  font-size: 12px; color: var(--ink-faint, #9b8f82);
+  font-family: inherit; padding: 2px 6px;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.mp-basis-body {
   display: none;
-  font-size: 12px; color: var(--ink-faint, #9b8f82); margin-top: 4px;
+  margin-top: 10px; padding: 12px 14px;
+  background: var(--paper, #faf6ef);
+  border-radius: 10px;
+  font-size: 12px; line-height: 1.75;
+  color: var(--ink-soft, #6f6457); text-align: left;
 }
+.mp-basis-body.open { display: block; }
+.mp-basis-body b { color: var(--ink, #3d3229); }
+
 .mp-error {
   display: none;
   text-align: center; font-size: 13px; color: var(--ink-soft, #6f6457); padding: 10px 0;
 }
 
 .mp-divider { border: none; border-top: 1px solid var(--line, #e8e0d4); margin: 26px 0; }
-
 .mp-section-title {
   font-family: var(--font-serif, serif);
   font-size: 17px; color: var(--ink, #3d3229); margin: 0 0 12px;
@@ -111,21 +166,51 @@
 
   <!-- 절약 통계 -->
   <div class="mp-card">
-    <div class="mp-tabs" id="mpTabs">
-      <button class="mp-tab" data-period="today">오늘</button>
-      <button class="mp-tab" data-period="week">이번주</button>
-      <button class="mp-tab" data-period="month">이번달</button>
-      <button class="mp-tab active" data-period="year">올해</button>
-    </div>
-
     <div class="mp-copy" id="mpCopy">
-      <div class="mp-copy-line1">체험단 매니저와 함께 <b id="mpPeriodLabel">올해</b></div>
+      <div class="mp-copy-line1">
+        체험단 매니저와 함께
+        <span class="mp-period-wrap">
+          <button class="mp-period-btn" id="mpPeriodBtn" aria-haspopup="true" aria-expanded="false">올해</button>
+
+          <div class="mp-pop" id="mpPop">
+            <button class="mp-pop-item" data-preset="today">오늘</button>
+            <button class="mp-pop-item" data-preset="week">이번주</button>
+            <button class="mp-pop-item" data-preset="month">이번달</button>
+            <button class="mp-pop-item" data-preset="year">올해</button>
+            <button class="mp-pop-item" data-preset="all">지금까지 전체</button>
+            <hr class="mp-pop-sep">
+            <div class="mp-pop-label">특정 날짜</div>
+            <div class="mp-pop-row">
+              <input type="date" id="mpDay">
+            </div>
+            <div class="mp-pop-label">기간 선택</div>
+            <div class="mp-pop-row">
+              <input type="date" id="mpFrom"><span>~</span><input type="date" id="mpTo">
+            </div>
+            <button class="mp-pop-apply" id="mpApply">적용</button>
+          </div>
+        </span>
+      </div>
+
       <div class="mp-amount"><span id="mpAmount">0</span>원</div>
       <div class="mp-copy-line2">아꼈어요! 🎉</div>
       <div class="mp-count" id="mpCount">완료 0건</div>
       <div class="mp-missing" id="mpMissing"></div>
     </div>
+
     <div class="mp-error" id="mpError">통계를 불러오지 못했어요. 잠시 후 새로고침해 주세요.</div>
+
+    <div class="mp-basis">
+      <button class="mp-basis-btn" id="mpBasisBtn">집계 기준이 궁금해요</button>
+      <div class="mp-basis-body" id="mpBasisBody">
+        <b>완료 처리한 날짜</b>를 기준으로 계산해요. 방문일이나 마감일이 아니라,
+        목록에서 <b>완료 버튼을 누른 시점</b>이에요.<br><br>
+        그래서 지난달에 방문한 체험단이라도 오늘 완료 처리했다면 <b>오늘</b> 집계에 들어가요.
+        방문 후 바로 완료 처리하시면 실제 방문 흐름과 거의 같아져요.<br><br>
+        금액은 제공 내역에 적힌 금액을 자동으로 읽어와요.
+        <b>"2인 체험권"</b>처럼 금액이 적혀 있지 않은 건은 합계에서 빠져요.
+      </div>
+    </div>
   </div>
 
   <hr class="mp-divider">
@@ -153,10 +238,7 @@
     }
   });
 
-  // ===== 뒤로가기 =====
-  document.getElementById('btnBack').addEventListener('click', () => {
-    location.href = '/';
-  });
+  document.getElementById('btnBack').addEventListener('click', () => { location.href = '/'; });
 
   // ===== 사용자 표시 (index.html과 동일 규칙) =====
   function getUserDisplayName(user) {
@@ -169,52 +251,62 @@
     return email.charAt(0).toUpperCase();
   }
 
-  // ===== 기간 계산 (이번주 = 월요일 시작) =====
+  // ===== 기간 계산 =====
   function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
   function startOfWeek() {
     const d = startOfToday();
-    const diff = (d.getDay() + 6) % 7; // 월=0 … 일=6
-    d.setDate(d.getDate() - diff);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // 월요일 시작
     return d;
   }
   function startOfMonth() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); }
   function startOfYear() { const n = new Date(); return new Date(n.getFullYear(), 0, 1); }
 
-  const PERIODS = {
-    today: { label: '오늘',   from: startOfToday },
-    week:  { label: '이번주', from: startOfWeek },
-    month: { label: '이번달', from: startOfMonth },
-    year:  { label: '올해',   from: startOfYear }
+  function parseDateInput(v) { // 'YYYY-MM-DD' → 로컬 00:00
+    if (!v) return null;
+    const [y, m, d] = v.split('-').map(Number);
+    return new Date(y, m - 1, d, 0, 0, 0, 0);
+  }
+  function endOfDay(d) {
+    const e = new Date(d);
+    e.setHours(23, 59, 59, 999);
+    return e;
+  }
+  function fmtDate(d) {
+    return (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
+  }
+
+  const PRESETS = {
+    today: { label: '오늘',        from: startOfToday },
+    week:  { label: '이번주',      from: startOfWeek },
+    month: { label: '이번달',      from: startOfMonth },
+    year:  { label: '올해',        from: startOfYear },
+    all:   { label: '지금까지',    from: () => null }
   };
 
   // ===== 상태 =====
-  let rows = [];          // { value: number|null, at: Date }
-  let current = 'year';
+  let rows = [];                                  // { value, at }
+  let range = { from: startOfYear(), to: null, label: '올해', preset: 'year' };
 
-  function computeStats(period) {
-    const from = PERIODS[period].from();
+  function computeStats() {
     let sum = 0, cnt = 0, missing = 0;
     rows.forEach(r => {
-      if (r.at >= from) {
-        cnt++;
-        if (r.value != null) sum += r.value;
-        else missing++;
-      }
+      if (range.from && r.at < range.from) return;
+      if (range.to && r.at > range.to) return;
+      cnt++;
+      if (r.value != null) sum += r.value; else missing++;
     });
     return { sum, cnt, missing };
   }
 
-  // ===== 금액 카운트업 애니메이션 =====
+  // ===== 카운트업 =====
   let rafId = null;
   function animateAmount(to) {
     const el = document.getElementById('mpAmount');
     if (rafId) cancelAnimationFrame(rafId);
-    const dur = 700;
-    const t0 = performance.now();
+    const t0 = performance.now(), dur = 700;
     function tick(now) {
       const p = Math.min((now - t0) / dur, 1);
-      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
-      el.textContent = Math.round(to * eased).toLocaleString('ko-KR');
+      el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))).toLocaleString('ko-KR');
       if (p < 1) rafId = requestAnimationFrame(tick);
     }
     rafId = requestAnimationFrame(tick);
@@ -222,8 +314,8 @@
 
   // ===== 렌더 =====
   function render() {
-    const s = computeStats(current);
-    document.getElementById('mpPeriodLabel').textContent = PERIODS[current].label;
+    const s = computeStats();
+    document.getElementById('mpPeriodBtn').textContent = range.label;
     animateAmount(s.sum);
     document.getElementById('mpCount').textContent = '완료 ' + s.cnt + '건';
 
@@ -235,35 +327,98 @@
       mEl.style.display = 'none';
     }
 
-    document.querySelectorAll('.mp-tab').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.period === current);
+    document.querySelectorAll('.mp-pop-item').forEach(b => {
+      b.classList.toggle('on', b.dataset.preset === range.preset);
     });
   }
 
-  document.getElementById('mpTabs').addEventListener('click', (e) => {
-    const btn = e.target.closest('.mp-tab');
-    if (!btn || btn.dataset.period === current) return;
-    current = btn.dataset.period;
+  // ===== 팝오버 =====
+  const pop = document.getElementById('mpPop');
+  const popBtn = document.getElementById('mpPeriodBtn');
+
+  function openPop() { pop.classList.add('open'); popBtn.setAttribute('aria-expanded', 'true'); }
+  function closePop() { pop.classList.remove('open'); popBtn.setAttribute('aria-expanded', 'false'); }
+
+  popBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    pop.classList.contains('open') ? closePop() : openPop();
+  });
+  pop.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', closePop);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePop(); });
+
+  // 프리셋 선택
+  pop.querySelectorAll('.mp-pop-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = PRESETS[btn.dataset.preset];
+      range = { from: p.from(), to: null, label: p.label, preset: btn.dataset.preset };
+      document.getElementById('mpDay').value = '';
+      document.getElementById('mpFrom').value = '';
+      document.getElementById('mpTo').value = '';
+      closePop();
+      render();
+    });
+  });
+
+  // 특정 날짜 / 기간 적용
+  document.getElementById('mpApply').addEventListener('click', () => {
+    const day = parseDateInput(document.getElementById('mpDay').value);
+    const f = parseDateInput(document.getElementById('mpFrom').value);
+    const t = parseDateInput(document.getElementById('mpTo').value);
+
+    if (day) {
+      range = { from: day, to: endOfDay(day), label: fmtDate(day), preset: null };
+    } else if (f || t) {
+      let a = f, b = t;
+      if (a && b && a > b) { const tmp = a; a = b; b = tmp; } // 거꾸로 입력해도 보정
+      range = {
+        from: a,
+        to: b ? endOfDay(b) : null,
+        label: (a ? fmtDate(a) : '처음') + '~' + (b ? fmtDate(b) : '지금'),
+        preset: null
+      };
+    } else {
+      closePop();
+      return;
+    }
+    closePop();
     render();
+  });
+
+  // 날짜 입력은 서로 배타적으로
+  document.getElementById('mpDay').addEventListener('change', () => {
+    document.getElementById('mpFrom').value = '';
+    document.getElementById('mpTo').value = '';
+  });
+  ['mpFrom', 'mpTo'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      document.getElementById('mpDay').value = '';
+    });
+  });
+
+  // 집계 기준 설명 토글
+  document.getElementById('mpBasisBtn').addEventListener('click', () => {
+    const body = document.getElementById('mpBasisBody');
+    const open = body.classList.toggle('open');
+    document.getElementById('mpBasisBtn').textContent = open ? '설명 접기' : '집계 기준이 궁금해요';
   });
 
   // ===== 초기화 =====
   async function init() {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) {
-      // 비로그인/게스트 → 홈으로
-      location.replace('/');
-      return;
-    }
+    if (!session) { location.replace('/'); return; }
+
     const user = session.user;
     const name = getUserDisplayName(user);
     document.getElementById('mpName').textContent = name;
     document.getElementById('mpEmail').textContent = user.email || '';
     document.getElementById('mpAvatar').textContent = emailToInitial(user.email || name);
 
+    // ★ 반드시 내 데이터만 — user_id 필터 필수
     const { data, error } = await sb
       .from('entries')
       .select('provided_value, completed_at')
+      .eq('user_id', user.id)
       .eq('completed', true);
 
     if (error) {
