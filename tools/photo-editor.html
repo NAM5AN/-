@@ -210,13 +210,6 @@
     font-size: 17px;
   }
 
-  .small-button.fit-view-button {
-    width: auto;
-    padding: 0 9px;
-    font-size: 9px;
-    font-weight: 700;
-  }
-
   .small-button:hover:not(:disabled) {
     border-color: var(--editor-line);
     background: var(--editor-panel-2);
@@ -475,6 +468,11 @@
     cursor: grabbing;
   }
 
+  .canvas-stage.guide-active,
+  .canvas-stage.guide-active .crop-overlay {
+    cursor: crosshair;
+  }
+
   .canvas-frame {
     position: relative;
     max-width: 100%;
@@ -538,6 +536,179 @@
     left: 33.333%;
     border-right: 1px solid rgba(255,255,255,.35);
     border-left: 1px solid rgba(255,255,255,.35);
+  }
+
+  .canvas-stage.rotation-dragging .crop-overlay::before,
+  .canvas-stage.rotation-dragging .crop-overlay::after,
+  .canvas-stage.guide-active .crop-overlay::before,
+  .canvas-stage.guide-active .crop-overlay::after {
+    border-color: rgba(255,255,255,.76);
+  }
+
+  .rotation-hit-zone {
+    position: absolute;
+    z-index: 5;
+    top: 42px;
+    bottom: 42px;
+    width: 34px;
+    display: none;
+    border: 0;
+    background: transparent;
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .editor-shell.crop-mode .rotation-hit-zone {
+    display: block;
+  }
+
+  .rotation-hit-zone.left {
+    left: 0;
+  }
+
+  .rotation-hit-zone.right {
+    right: 0;
+  }
+
+  .rotation-hit-zone::after {
+    position: absolute;
+    top: 50%;
+    width: 19px;
+    height: 46px;
+    border: solid rgba(255,255,255,.78);
+    opacity: 0;
+    transform: translateY(-50%);
+    transition: opacity .15s ease;
+    content: "";
+  }
+
+  .rotation-hit-zone.left::after {
+    left: 5px;
+    border-width: 2px 0 2px 2px;
+    border-radius: 12px 0 0 12px;
+  }
+
+  .rotation-hit-zone.right::after {
+    right: 5px;
+    border-width: 2px 2px 2px 0;
+    border-radius: 0 12px 12px 0;
+  }
+
+  .rotation-hit-zone:hover::after,
+  .canvas-stage.rotation-dragging .rotation-hit-zone::after {
+    opacity: 1;
+  }
+
+  .rotation-angle-hud {
+    --angle: 0deg;
+    position: absolute;
+    z-index: 8;
+    bottom: 30px;
+    left: 50%;
+    width: 210px;
+    height: 78px;
+    display: none;
+    pointer-events: none;
+    transform: translateX(-50%);
+    color: white;
+    text-align: center;
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,.32));
+  }
+
+  .rotation-angle-hud.visible {
+    display: block;
+  }
+
+  .rotation-angle-value {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    min-width: 58px;
+    height: 27px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.55);
+    border-radius: 999px;
+    background: rgba(42,37,34,.78);
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rotation-angle-scale {
+    position: absolute;
+    bottom: 0;
+    left: 10px;
+    width: 190px;
+    height: 48px;
+    overflow: hidden;
+  }
+
+  .rotation-angle-scale::before {
+    position: absolute;
+    right: 12px;
+    bottom: -35px;
+    left: 12px;
+    height: 70px;
+    border: 2px dotted rgba(255,255,255,.82);
+    border-bottom: 0;
+    border-radius: 90px 90px 0 0;
+    content: "";
+  }
+
+  .rotation-angle-scale::after {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    height: 39px;
+    border-radius: 2px;
+    background: var(--terra-soft);
+    box-shadow: 0 0 0 1px rgba(42,37,34,.28);
+    transform: translateX(-50%) rotate(var(--angle));
+    transform-origin: 50% 100%;
+    content: "";
+  }
+
+  .straighten-guide {
+    position: absolute;
+    z-index: 7;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    display: none;
+    pointer-events: none;
+    border-radius: 2px;
+    background: white;
+    box-shadow: 0 0 0 1px rgba(42,37,34,.55), 0 0 10px rgba(255,255,255,.52);
+    transform-origin: 0 50%;
+  }
+
+  .straighten-guide.visible {
+    display: block;
+  }
+
+  .straighten-guide::before,
+  .straighten-guide::after {
+    position: absolute;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    border: 2px solid white;
+    border-radius: 50%;
+    background: var(--terra);
+    box-shadow: 0 0 0 1px rgba(42,37,34,.4);
+    transform: translate(-50%, -50%);
+    content: "";
+  }
+
+  .straighten-guide::before {
+    left: 0;
+  }
+
+  .straighten-guide::after {
+    left: 100%;
   }
 
   .crop-handle {
@@ -929,29 +1100,6 @@
     font-weight: 700;
   }
 
-  .histogram {
-    position: relative;
-    height: 92px;
-    padding: 10px 14px 18px;
-    border-bottom: 1px solid var(--editor-line);
-    background: #1c1a18;
-  }
-
-  #histogramCanvas {
-    width: 100%;
-    height: 62px;
-    display: block;
-  }
-
-  .histogram-meta {
-    position: absolute;
-    right: 14px;
-    bottom: 5px;
-    color: #6f685f;
-    font-family: ui-monospace, Consolas, monospace;
-    font-size: 8px;
-  }
-
   .quick-adjust-actions {
     height: 43px;
     display: grid;
@@ -1106,6 +1254,109 @@
     color: #f0eae2;
   }
 
+  .straighten-angle-control {
+    height: 34px;
+    display: grid;
+    grid-template-columns: 38px 1fr 42px;
+    gap: 7px;
+    align-items: center;
+    margin-top: 10px;
+    color: var(--ink-soft);
+    font-size: 9px;
+  }
+
+  .straighten-angle-control input {
+    width: 100%;
+    height: 14px;
+    margin: 0;
+    appearance: none;
+    background: transparent;
+    cursor: ew-resize;
+  }
+
+  .straighten-angle-control input::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--ink-faint), var(--terra) 50%, var(--ink-faint));
+  }
+
+  .straighten-angle-control input::-webkit-slider-thumb {
+    width: 11px;
+    height: 11px;
+    margin-top: -4.5px;
+    appearance: none;
+    border: 2px solid var(--paper);
+    border-radius: 50%;
+    background: var(--terra);
+    box-shadow: 0 0 0 1px var(--terra-soft);
+  }
+
+  .straighten-angle-control output {
+    color: var(--ink-soft);
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 9px;
+    text-align: right;
+  }
+
+  .upright-controls {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .upright-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: var(--ink);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .upright-heading span:last-child {
+    color: var(--ink-faint);
+    font-size: 8px;
+    font-weight: 500;
+  }
+
+  .upright-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+
+  .upright-buttons button {
+    min-width: 0;
+    height: 29px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--ink-soft);
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .upright-buttons button:hover:not(:disabled),
+  .upright-buttons button.active {
+    border-color: var(--terra-soft);
+    background: rgba(194,84,43,.07);
+    color: var(--terra);
+  }
+
+  .upright-buttons button:disabled {
+    cursor: default;
+    opacity: .35;
+  }
+
+  .upright-help {
+    margin: 8px 0 0;
+    color: var(--ink-faint);
+    font-size: 8px;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+
   .help-card {
     max-width: 980px;
     margin: 24px auto 0;
@@ -1206,10 +1457,6 @@
       border-left: 0;
     }
 
-    .histogram {
-      display: none;
-    }
-
     .right-scroll {
       max-height: none;
     }
@@ -1299,7 +1546,6 @@
   .workspace-toolbar,
   .workspace-footer,
   .filmstrip,
-  .histogram,
   .quick-adjust-actions,
   .adjust-section,
   .crop-controls {
@@ -1465,14 +1711,6 @@
 
   .empty-state button {
     border-color: var(--terra);
-  }
-
-  .histogram {
-    background: var(--card);
-  }
-
-  .histogram-meta {
-    color: var(--ink-faint);
   }
 
   .quick-adjust-actions {
@@ -1680,7 +1918,6 @@
           </div>
           <div class="toolbar-group">
             <button class="small-button" id="quickUploadButton" type="button" title="사진 불러오기" aria-label="사진 불러오기">＋</button>
-            <button class="small-button fit-view-button" id="fitButton" type="button" title="확대와 위치를 초기화하여 화면에 맞춤" aria-label="화면에 맞춤">맞춤</button>
           </div>
         </div>
 
@@ -1693,7 +1930,14 @@
               <span class="crop-handle" data-crop-handle="sw" aria-hidden="true"></span>
               <span class="crop-handle" data-crop-handle="se" aria-hidden="true"></span>
             </div>
+            <button class="rotation-hit-zone left" type="button" data-rotation-zone="left" aria-label="사진 왼쪽에서 드래그하여 미세 회전"></button>
+            <button class="rotation-hit-zone right" type="button" data-rotation-zone="right" aria-label="사진 오른쪽에서 드래그하여 미세 회전"></button>
+            <span class="straighten-guide" id="straightenGuide" aria-hidden="true"></span>
             <span class="before-label" id="beforeLabel">편집 전</span>
+          </div>
+          <div class="rotation-angle-hud" id="rotationAngleHud" aria-live="polite">
+            <span class="rotation-angle-value" id="rotationAngleHudValue">0.0°</span>
+            <span class="rotation-angle-scale" aria-hidden="true"></span>
           </div>
           <div class="empty-state" id="emptyState">
             <span class="empty-state-icon">＋</span>
@@ -1716,11 +1960,7 @@
       </section>
 
       <aside class="side-panel right-panel">
-        <div class="panel-heading">히스토그램 <span>RGB</span></div>
-        <div class="histogram">
-          <canvas id="histogramCanvas" width="256" height="62" aria-label="사진 히스토그램"></canvas>
-          <span class="histogram-meta">LIVE PREVIEW</span>
-        </div>
+        <div class="panel-heading">빠른 보정 <span>한 번에 적용</span></div>
 
         <div class="quick-adjust-actions" aria-label="빠른 보정">
           <button id="autoButton" type="button">자동</button>
@@ -1741,6 +1981,22 @@
             <button id="rotateRight" type="button">↷ 90°</button>
             <button id="flipHorizontal" type="button">↔ 반전</button>
             <button id="flipVertical" type="button">↕ 반전</button>
+          </div>
+          <label class="straighten-angle-control">
+            <span>각도</span>
+            <input id="straightenAngle" type="range" min="-45" max="45" step="0.1" value="0" aria-label="미세 회전 각도" />
+            <output id="straightenAngleOutput">0.0°</output>
+          </label>
+          <div class="upright-controls">
+            <div class="upright-heading"><span>맞춤</span><span>선 분석</span></div>
+            <div class="upright-buttons" aria-label="사진 맞춤">
+              <button id="uprightAuto" type="button">자동</button>
+              <button id="uprightLevel" type="button">수평</button>
+              <button id="uprightVertical" type="button">수직</button>
+              <button id="uprightGuided" type="button">가이드</button>
+              <button id="uprightReset" type="button">재설정</button>
+            </div>
+            <p class="upright-help">자동은 사진 속 수평·수직선을 분석합니다. 가이드는 사진 위 기준선을 따라 드래그하세요. 회전 중 Shift를 누르면 45° 단위로 맞춰집니다.</p>
           </div>
         </div>
 
@@ -1775,7 +2031,7 @@
   </main>
 
   <div class="help-card">
-    <strong>사용 안내</strong> · 사진 위에서 휠을 돌리면 확대되고, 확대한 사진을 드래그하면 위치를 옮길 수 있습니다. 하단 사진을 Shift+클릭하면 여러 장을 선택하며, 우클릭 메뉴에서 선택한 사진을 한 번에 추출할 수 있습니다.
+    <strong>사용 안내</strong> · 보정 화면에서는 휠과 드래그로 사진을 확대·이동할 수 있습니다. 자르기 화면에서는 사진 양옆을 드래그해 기울기를 조정하며, Shift를 누르면 45° 단위로 맞춰집니다. 자동·가이드 맞춤도 사용할 수 있습니다. 하단 사진을 Shift+클릭하면 여러 장을 선택하며, 우클릭 메뉴에서 한 번에 추출할 수 있습니다.
   </div>
 </div>
 
@@ -1832,11 +2088,22 @@
 
   const previewCanvas = document.getElementById("previewCanvas");
   const previewContext = previewCanvas.getContext("2d", { willReadFrequently: true });
-  const histogramCanvas = document.getElementById("histogramCanvas");
-  const histogramContext = histogramCanvas.getContext("2d");
   const canvasStage = document.getElementById("canvasStage");
   const canvasFrame = document.getElementById("canvasFrame");
   const cropOverlay = document.getElementById("cropOverlay");
+  const rotationZones = Array.from(document.querySelectorAll("[data-rotation-zone]"));
+  const rotationAngleHud = document.getElementById("rotationAngleHud");
+  const rotationAngleHudValue = document.getElementById("rotationAngleHudValue");
+  const straightenGuide = document.getElementById("straightenGuide");
+  const straightenAngleInput = document.getElementById("straightenAngle");
+  const straightenAngleOutput = document.getElementById("straightenAngleOutput");
+  const uprightButtons = [
+    document.getElementById("uprightAuto"),
+    document.getElementById("uprightLevel"),
+    document.getElementById("uprightVertical"),
+    document.getElementById("uprightGuided"),
+    document.getElementById("uprightReset")
+  ];
   const fileInput = document.getElementById("fileInput");
   const editorShell = document.querySelector(".editor-shell");
   const uploadCard = document.getElementById("uploadCard");
@@ -1868,6 +2135,7 @@
   let cropRatio = "original";
   let cropRect = { x: 0, y: 0, width: 1, height: 1 };
   let rotation = 0;
+  let straighten = 0;
   let flipX = 1;
   let flipY = 1;
   let showBefore = false;
@@ -1890,6 +2158,9 @@
   let viewOffsetX = 0;
   let viewOffsetY = 0;
   let panInteraction = null;
+  let rotationInteraction = null;
+  let guideInteraction = null;
+  let guideMode = false;
 
   function getPresetButtons() {
     return Array.from(presetList.querySelectorAll("[data-preset]"));
@@ -1901,6 +2172,7 @@
       cropRatio: snapshot?.cropRatio || "original",
       cropRect: normalizeCropRect(snapshot?.cropRect),
       rotation: Number(snapshot?.rotation) || 0,
+      straighten: clamp(Number(snapshot?.straighten) || 0, -45, 45),
       flipX: snapshot?.flipX === -1 ? -1 : 1,
       flipY: snapshot?.flipY === -1 ? -1 : 1,
       currentPreset: snapshot?.currentPreset || "original"
@@ -1924,6 +2196,7 @@
       cropRatio,
       cropRect: { ...cropRect },
       rotation,
+      straighten,
       flipX,
       flipY,
       currentPreset
@@ -1954,6 +2227,7 @@
     cropRatio = snapshot.cropRatio;
     cropRect = { ...snapshot.cropRect };
     rotation = snapshot.rotation;
+    straighten = snapshot.straighten;
     flipX = snapshot.flipX;
     flipY = snapshot.flipY;
     currentPreset = snapshot.currentPreset;
@@ -1975,6 +2249,14 @@
     return number > 0 ? `+${rounded}` : String(rounded);
   }
 
+  function syncStraightenControls() {
+    straightenAngleInput.value = String(straighten);
+    straightenAngleOutput.textContent = `${straighten.toFixed(1)}°`;
+    rotationAngleHudValue.textContent = `${straighten.toFixed(1)}°`;
+    rotationAngleHud.style.setProperty("--angle", `${straighten}deg`);
+    document.getElementById("uprightGuided").classList.toggle("active", guideMode);
+  }
+
   function syncControls() {
     sliderInputs.forEach((input) => {
       input.value = adjustments[input.dataset.adjustment];
@@ -1991,6 +2273,8 @@
     ratioButtons.forEach((button) => {
       button.classList.toggle("active", button.dataset.ratio === cropRatio);
     });
+
+    syncStraightenControls();
   }
 
   function loadSavedPresets() {
@@ -2145,7 +2429,6 @@
       exportButton,
       compareButton,
       document.getElementById("resetButton"),
-      document.getElementById("fitButton"),
       document.getElementById("zoomButton"),
       document.getElementById("autoButton"),
       document.getElementById("monoButton"),
@@ -2153,6 +2436,8 @@
       document.getElementById("rotateRight"),
       document.getElementById("flipHorizontal"),
       document.getElementById("flipVertical"),
+      straightenAngleInput,
+      ...uprightButtons,
       ...modeTabs,
       ...ratioButtons,
       ...sliderInputs,
@@ -2167,10 +2452,10 @@
       dimensions.textContent = "— × — px";
       previewCanvas.width = 1;
       previewCanvas.height = 1;
-      histogramContext.clearRect(0, 0, histogramCanvas.width, histogramCanvas.height);
       beforeLabel.classList.remove("visible");
       compareButton.classList.remove("active");
       cropOverlay.classList.remove("visible");
+      endGuideMode();
       resetViewTransform(false);
     }
     updateHistoryButtons();
@@ -2191,6 +2476,7 @@
     cropRatio = state.cropRatio;
     cropRect = { ...state.cropRect };
     rotation = state.rotation;
+    straighten = state.straighten;
     flipX = state.flipX;
     flipY = state.flipY;
     currentPreset = state.currentPreset;
@@ -2414,14 +2700,25 @@
     canvas.width = outputWidth;
     canvas.height = outputHeight;
     context.clearRect(0, 0, outputWidth, outputHeight);
+    const totalRotation = state.rotation + state.straighten;
+    const rotationRadians = totalRotation * Math.PI / 180;
+    const cosine = Math.abs(Math.cos(rotationRadians));
+    const sine = Math.abs(Math.sin(rotationRadians));
+    const unscaledDrawWidth = crop.width * scale;
+    const unscaledDrawHeight = crop.height * scale;
+    const coverScale = Math.max(
+      (cosine * outputWidth + sine * outputHeight) / Math.max(unscaledDrawWidth, 1),
+      (sine * outputWidth + cosine * outputHeight) / Math.max(unscaledDrawHeight, 1),
+      1
+    );
     context.save();
     context.translate(outputWidth / 2, outputHeight / 2);
-    context.rotate(state.rotation * Math.PI / 180);
+    context.rotate(rotationRadians);
     context.scale(state.flipX, state.flipY);
     context.filter = before ? "none" : buildFilter(state.adjustments);
 
-    const drawWidth = crop.width * scale;
-    const drawHeight = crop.height * scale;
+    const drawWidth = unscaledDrawWidth * coverScale;
+    const drawHeight = unscaledDrawHeight * coverScale;
     context.drawImage(
       image,
       crop.x,
@@ -2471,48 +2768,6 @@
       context.fillRect(0, 0, width, height);
       context.restore();
     }
-  }
-
-  function renderHistogram() {
-    const width = histogramCanvas.width;
-    const height = histogramCanvas.height;
-    histogramContext.clearRect(0, 0, width, height);
-    if (!previewCanvas.width || !previewCanvas.height) return;
-
-    const sampleCanvas = document.createElement("canvas");
-    sampleCanvas.width = 128;
-    sampleCanvas.height = 72;
-    const sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
-    sampleContext.drawImage(previewCanvas, 0, 0, 128, 72);
-    const pixels = sampleContext.getImageData(0, 0, 128, 72).data;
-    const red = new Array(64).fill(0);
-    const green = new Array(64).fill(0);
-    const blue = new Array(64).fill(0);
-
-    for (let index = 0; index < pixels.length; index += 4) {
-      red[Math.min(63, pixels[index] >> 2)] += 1;
-      green[Math.min(63, pixels[index + 1] >> 2)] += 1;
-      blue[Math.min(63, pixels[index + 2] >> 2)] += 1;
-    }
-
-    const maxValue = Math.max(...red, ...green, ...blue, 1);
-    [
-      [red, "rgba(238,93,74,.58)"],
-      [green, "rgba(101,181,117,.50)"],
-      [blue, "rgba(91,141,224,.56)"]
-    ].forEach(([values, color]) => {
-      histogramContext.beginPath();
-      histogramContext.moveTo(0, height);
-      values.forEach((value, index) => {
-        const x = index / 63 * width;
-        const y = height - value / maxValue * (height - 3);
-        histogramContext.lineTo(x, y);
-      });
-      histogramContext.lineTo(width, height);
-      histogramContext.closePath();
-      histogramContext.fillStyle = color;
-      histogramContext.fill();
-    });
   }
 
   function updateOutputDimensions() {
@@ -2575,7 +2830,7 @@
   }
 
   function beginCropInteraction(event) {
-    if (currentMode !== "crop" || !getActivePhoto() || event.button !== 0) return;
+    if (currentMode !== "crop" || guideMode || !getActivePhoto() || event.button !== 0) return;
     event.preventDefault();
     const canvasBounds = previewCanvas.getBoundingClientRect();
     const handle = event.target.closest("[data-crop-handle]")?.dataset.cropHandle || "move";
@@ -2629,6 +2884,302 @@
     scheduleRender();
   }
 
+  function normalizeSignedAngle(value) {
+    return ((Number(value) + 180) % 360 + 360) % 360 - 180;
+  }
+
+  function setStraightenValue(value) {
+    straighten = Math.round(clamp(Number(value) || 0, -45, 45) * 10) / 10;
+    currentPreset = "custom";
+    syncStraightenControls();
+    persistActivePhoto();
+    scheduleRender();
+  }
+
+  function beginRotationInteraction(event) {
+    if (currentMode !== "crop" || guideMode || !getActivePhoto() || event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const frameBounds = canvasFrame.getBoundingClientRect();
+    const centerX = frameBounds.left + frameBounds.width / 2;
+    const centerY = frameBounds.top + frameBounds.height / 2;
+    rotationInteraction = {
+      pointerId: event.pointerId,
+      target: event.currentTarget,
+      centerX,
+      centerY,
+      startPointerAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX) * 180 / Math.PI,
+      startRotation: rotation,
+      startStraighten: straighten,
+      changed: false
+    };
+    canvasStage.classList.add("rotation-dragging");
+    rotationAngleHud.classList.add("visible");
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveRotationInteraction(event) {
+    if (!rotationInteraction || event.pointerId !== rotationInteraction.pointerId) return;
+    event.preventDefault();
+    const pointerAngle = Math.atan2(
+      event.clientY - rotationInteraction.centerY,
+      event.clientX - rotationInteraction.centerX
+    ) * 180 / Math.PI;
+    const delta = normalizeSignedAngle(pointerAngle - rotationInteraction.startPointerAngle);
+    const rawTotal = rotationInteraction.startRotation + rotationInteraction.startStraighten + delta;
+    let nextTotal = rawTotal;
+
+    if (event.shiftKey) {
+      nextTotal = Math.round(rawTotal / 45) * 45;
+      const fromStartQuarter = normalizeSignedAngle(nextTotal - rotationInteraction.startRotation);
+      if (Math.abs(fromStartQuarter) <= 45) {
+        rotation = rotationInteraction.startRotation;
+        setStraightenValue(fromStartQuarter);
+      } else {
+        const snappedQuarter = Math.round(nextTotal / 90) * 90;
+        rotation = ((snappedQuarter % 360) + 360) % 360;
+        setStraightenValue(normalizeSignedAngle(nextTotal - snappedQuarter));
+      }
+    } else {
+      rotation = rotationInteraction.startRotation;
+      setStraightenValue(rotationInteraction.startStraighten + delta);
+    }
+
+    const appliedTotal = rotation + straighten;
+    const movedAngle = normalizeSignedAngle(appliedTotal - rotationInteraction.startRotation - rotationInteraction.startStraighten);
+    rotationInteraction.changed ||= Math.abs(movedAngle) > 0.05;
+    rotationAngleHudValue.textContent = event.shiftKey
+      ? `${Math.round(nextTotal)}° · 스냅`
+      : `${appliedTotal.toFixed(1)}°`;
+  }
+
+  function endRotationInteraction(event) {
+    if (!rotationInteraction || event.pointerId !== rotationInteraction.pointerId) return;
+    const { target, changed } = rotationInteraction;
+    rotationInteraction = null;
+    canvasStage.classList.remove("rotation-dragging");
+    rotationAngleHud.classList.remove("visible");
+    if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
+    if (changed) {
+      syncControls();
+      pushHistory();
+    }
+  }
+
+  function endGuideMode() {
+    guideMode = false;
+    guideInteraction = null;
+    straightenGuide.classList.remove("visible");
+    canvasStage.classList.remove("guide-active");
+    document.getElementById("uprightGuided").classList.remove("active");
+  }
+
+  function toggleGuideMode() {
+    if (currentMode !== "crop" || !getActivePhoto()) return;
+    if (guideMode) {
+      endGuideMode();
+      return;
+    }
+    guideMode = true;
+    canvasStage.classList.add("guide-active");
+    document.getElementById("uprightGuided").classList.add("active");
+    showToast("사진 위 수평선이나 수직선을 따라 드래그하세요.");
+  }
+
+  function positionGuideLine(startX, startY, endX, endY) {
+    const distance = Math.hypot(endX - startX, endY - startY);
+    const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+    straightenGuide.style.left = `${startX}px`;
+    straightenGuide.style.top = `${startY}px`;
+    straightenGuide.style.width = `${distance}px`;
+    straightenGuide.style.transform = `rotate(${angle}deg)`;
+  }
+
+  function beginGuideInteraction(event) {
+    if (
+      !guideMode
+      || currentMode !== "crop"
+      || !getActivePhoto()
+      || event.button !== 0
+      || event.target.closest("[data-rotation-zone]")
+      || !event.target.closest("#canvasFrame")
+    ) return;
+    event.preventDefault();
+    const frameBounds = canvasFrame.getBoundingClientRect();
+    const startX = clamp(event.clientX - frameBounds.left, 0, frameBounds.width);
+    const startY = clamp(event.clientY - frameBounds.top, 0, frameBounds.height);
+    guideInteraction = {
+      pointerId: event.pointerId,
+      frameBounds,
+      startX,
+      startY,
+      endX: startX,
+      endY: startY,
+      startStraighten: straighten
+    };
+    straightenGuide.classList.add("visible");
+    positionGuideLine(startX, startY, startX, startY);
+    canvasStage.setPointerCapture(event.pointerId);
+  }
+
+  function moveGuideInteraction(event) {
+    if (!guideInteraction || event.pointerId !== guideInteraction.pointerId) return;
+    event.preventDefault();
+    const { frameBounds, startX, startY } = guideInteraction;
+    guideInteraction.endX = clamp(event.clientX - frameBounds.left, 0, frameBounds.width);
+    guideInteraction.endY = clamp(event.clientY - frameBounds.top, 0, frameBounds.height);
+    positionGuideLine(startX, startY, guideInteraction.endX, guideInteraction.endY);
+  }
+
+  function endGuideInteraction(event) {
+    if (!guideInteraction || event.pointerId !== guideInteraction.pointerId) return;
+    const { startX, startY, endX, endY, startStraighten } = guideInteraction;
+    const distance = Math.hypot(endX - startX, endY - startY);
+    if (canvasStage.hasPointerCapture(event.pointerId)) canvasStage.releasePointerCapture(event.pointerId);
+    endGuideMode();
+    if (distance < 28) {
+      showToast("기준선을 조금 더 길게 그어주세요.", false);
+      return;
+    }
+
+    const lineAngle = normalizeSignedAngle(Math.atan2(endY - startY, endX - startX) * 180 / Math.PI);
+    const axisDeviation = Math.abs(lineAngle) <= 45
+      ? lineAngle
+      : lineAngle - Math.sign(lineAngle || 1) * 90;
+    setStraightenValue(startStraighten - axisDeviation);
+    pushHistory();
+    showToast(`가이드 기준으로 ${straighten.toFixed(1)}° 맞췄습니다.`);
+  }
+
+  function createLineAnalysisCanvas() {
+    if (!sourceImage?.naturalWidth) return null;
+    const normalizedRotation = ((rotation % 360) + 360) % 360;
+    const swapped = normalizedRotation === 90 || normalizedRotation === 270;
+    const orientedWidth = swapped ? sourceImage.naturalHeight : sourceImage.naturalWidth;
+    const orientedHeight = swapped ? sourceImage.naturalWidth : sourceImage.naturalHeight;
+    const scale = Math.min(1, 220 / Math.max(orientedWidth, orientedHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(48, Math.round(orientedWidth * scale));
+    canvas.height = Math.max(48, Math.round(orientedHeight * scale));
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.translate(canvas.width / 2, canvas.height / 2);
+    context.rotate(normalizedRotation * Math.PI / 180);
+    context.drawImage(
+      sourceImage,
+      -sourceImage.naturalWidth * scale / 2,
+      -sourceImage.naturalHeight * scale / 2,
+      sourceImage.naturalWidth * scale,
+      sourceImage.naturalHeight * scale
+    );
+    return canvas;
+  }
+
+  function analyzeLineAngle(axis) {
+    const canvas = createLineAnalysisCanvas();
+    if (!canvas) return null;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    const { width, height } = canvas;
+    const pixels = context.getImageData(0, 0, width, height).data;
+    const grayscale = new Float32Array(width * height);
+    for (let index = 0; index < width * height; index += 1) {
+      const pixelIndex = index * 4;
+      grayscale[index] = pixels[pixelIndex] * 0.299 + pixels[pixelIndex + 1] * 0.587 + pixels[pixelIndex + 2] * 0.114;
+    }
+
+    const maximumDeviation = axis === "auto" ? 18 : 24;
+    const binSize = 0.5;
+    const bins = new Float64Array(Math.round(maximumDeviation * 2 / binSize) + 1);
+    let totalWeight = 0;
+    let edgeCount = 0;
+
+    for (let y = 2; y < height - 2; y += 2) {
+      for (let x = 2; x < width - 2; x += 2) {
+        const topLeft = grayscale[(y - 1) * width + x - 1];
+        const top = grayscale[(y - 1) * width + x];
+        const topRight = grayscale[(y - 1) * width + x + 1];
+        const left = grayscale[y * width + x - 1];
+        const right = grayscale[y * width + x + 1];
+        const bottomLeft = grayscale[(y + 1) * width + x - 1];
+        const bottom = grayscale[(y + 1) * width + x];
+        const bottomRight = grayscale[(y + 1) * width + x + 1];
+        const gradientX = -topLeft - 2 * left - bottomLeft + topRight + 2 * right + bottomRight;
+        const gradientY = -topLeft - 2 * top - topRight + bottomLeft + 2 * bottom + bottomRight;
+        const magnitude = Math.hypot(gradientX, gradientY);
+        if (magnitude < 90) continue;
+
+        let lineAngle = normalizeSignedAngle(Math.atan2(gradientY, gradientX) * 180 / Math.PI + 90);
+        if (lineAngle > 90) lineAngle -= 180;
+        if (lineAngle <= -90) lineAngle += 180;
+        const horizontalDeviation = lineAngle;
+        const verticalDeviation = lineAngle >= 0 ? lineAngle - 90 : lineAngle + 90;
+        let deviation;
+        if (axis === "horizontal") deviation = horizontalDeviation;
+        else if (axis === "vertical") deviation = verticalDeviation;
+        else deviation = Math.abs(horizontalDeviation) <= Math.abs(verticalDeviation) ? horizontalDeviation : verticalDeviation;
+        if (Math.abs(deviation) > maximumDeviation) continue;
+
+        const centerWeight = 1 - Math.abs(x / width - 0.5) * 0.18 - Math.abs(y / height - 0.5) * 0.18;
+        const weight = magnitude * centerWeight * (1 - Math.abs(deviation) / maximumDeviation * 0.32);
+        const binIndex = Math.round((deviation + maximumDeviation) / binSize);
+        bins[binIndex] += weight;
+        totalWeight += weight;
+        edgeCount += 1;
+      }
+    }
+
+    if (edgeCount < 18 || totalWeight <= 0) return null;
+    let bestIndex = 0;
+    let bestWeight = 0;
+    bins.forEach((weight, index) => {
+      const smoothed = (bins[index - 1] || 0) * 0.5 + weight + (bins[index + 1] || 0) * 0.5;
+      if (smoothed > bestWeight) {
+        bestWeight = smoothed;
+        bestIndex = index;
+      }
+    });
+    const deviation = bestIndex * binSize - maximumDeviation;
+    return {
+      angle: clamp(-deviation, -45, 45),
+      score: bestWeight,
+      confidence: bestWeight / totalWeight,
+      edgeCount
+    };
+  }
+
+  function applyUpright(axis) {
+    if (!getActivePhoto()) return;
+    endGuideMode();
+    if (axis === "reset") {
+      if (Math.abs(straighten) < 0.05) return;
+      setStraightenValue(0);
+      pushHistory();
+      showToast("사진 맞춤을 재설정했습니다.");
+      return;
+    }
+
+    let result;
+    let label;
+    if (axis === "auto") {
+      const horizontal = analyzeLineAngle("horizontal");
+      const vertical = analyzeLineAngle("vertical");
+      result = [horizontal, vertical]
+        .filter(Boolean)
+        .sort((left, right) => right.score * right.confidence - left.score * left.confidence)[0];
+      label = "자동";
+    } else {
+      result = analyzeLineAngle(axis);
+      label = axis === "horizontal" ? "수평" : "수직";
+    }
+
+    if (!result || result.confidence < 0.012) {
+      showToast("뚜렷한 기준선을 찾지 못했습니다. 가이드 맞춤을 사용해보세요.", false);
+      return;
+    }
+    setStraightenValue(result.angle);
+    pushHistory();
+    showToast(`${label} 기준으로 ${straighten.toFixed(1)}° 맞췄습니다.`);
+  }
+
   function scheduleRender() {
     cancelAnimationFrame(renderFrame);
     renderFrame = requestAnimationFrame(() => {
@@ -2638,7 +3189,6 @@
       updateOutputDimensions();
       beforeLabel.classList.toggle("visible", showBefore);
       compareButton.classList.toggle("active", showBefore);
-      renderHistogram();
       updateCropOverlay();
       updatePhotoThumbnail(getActivePhoto());
       updateViewTransform();
@@ -2681,9 +3231,11 @@
     currentMode = mode;
     modeTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.mode === mode));
     const cropMode = mode === "crop";
+    editorShell.classList.toggle("crop-mode", cropMode);
     cropControls.classList.toggle("visible", cropMode);
     adjustmentsPanel.style.display = cropMode ? "none" : "";
     if (cropMode) resetViewTransform();
+    else endGuideMode();
     scheduleRender();
   }
 
@@ -3008,6 +3560,7 @@
     cropRatio = activeState.cropRatio;
     cropRect = { ...activeState.cropRect };
     rotation = activeState.rotation;
+    straighten = activeState.straighten;
     flipX = activeState.flipX;
     flipY = activeState.flipY;
     currentPreset = activeState.currentPreset;
@@ -3038,6 +3591,7 @@
       cropRatio = pasted.cropRatio;
       cropRect = { ...pasted.cropRect };
       rotation = pasted.rotation;
+      straighten = pasted.straighten;
       flipX = pasted.flipX;
       flipY = pasted.flipY;
       currentPreset = "custom";
@@ -3155,6 +3709,24 @@
     });
   });
 
+  straightenAngleInput.addEventListener("input", () => {
+    setStraightenValue(straightenAngleInput.value);
+  });
+  straightenAngleInput.addEventListener("change", pushHistory);
+
+  rotationZones.forEach((zone) => {
+    zone.addEventListener("pointerdown", beginRotationInteraction);
+    zone.addEventListener("pointermove", moveRotationInteraction);
+    zone.addEventListener("pointerup", endRotationInteraction);
+    zone.addEventListener("pointercancel", endRotationInteraction);
+  });
+
+  document.getElementById("uprightAuto").addEventListener("click", () => applyUpright("auto"));
+  document.getElementById("uprightLevel").addEventListener("click", () => applyUpright("horizontal"));
+  document.getElementById("uprightVertical").addEventListener("click", () => applyUpright("vertical"));
+  document.getElementById("uprightGuided").addEventListener("click", toggleGuideMode);
+  document.getElementById("uprightReset").addEventListener("click", () => applyUpright("reset"));
+
   document.getElementById("rotateLeft").addEventListener("click", () => {
     rotation = (rotation - 90 + 360) % 360;
     scheduleRender();
@@ -3208,6 +3780,10 @@
   cropOverlay.addEventListener("pointermove", moveCropInteraction);
   cropOverlay.addEventListener("pointerup", endCropInteraction);
   cropOverlay.addEventListener("pointercancel", endCropInteraction);
+  canvasStage.addEventListener("pointerdown", beginGuideInteraction);
+  canvasStage.addEventListener("pointermove", moveGuideInteraction);
+  canvasStage.addEventListener("pointerup", endGuideInteraction);
+  canvasStage.addEventListener("pointercancel", endGuideInteraction);
   canvasStage.addEventListener("wheel", zoomCanvasAt, { passive: false });
   canvasStage.addEventListener("pointerdown", beginViewPan);
   canvasStage.addEventListener("pointermove", moveViewPan);
@@ -3227,6 +3803,7 @@
     if (event.key === "Escape") {
       closePhotoContextMenu();
       closePresetDialog();
+      endGuideMode();
     }
     if (event.key === "\\" && getActivePhoto()) setBefore(!showBefore);
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
@@ -3235,7 +3812,6 @@
     }
   });
 
-  document.getElementById("fitButton").addEventListener("click", () => resetViewTransform());
   document.getElementById("zoomButton").addEventListener("click", () => resetViewTransform());
   exportButton.addEventListener("click", () => exportImage());
 
