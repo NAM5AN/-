@@ -1235,6 +1235,363 @@
       display: none;
     }
   }
+
+  /* 체험단 매니저 공통 톤
+     편집 기능의 밀도는 유지하면서 base.css의 종이·카드·테라코타 토큰으로
+     화면 전체를 통일한다. 사진 자체가 가장 진한 요소가 되도록 작업대만
+     중립적인 웜 그레이로 남긴다. */
+  :root {
+    --editor-bg: var(--paper);
+    --editor-panel: var(--paper);
+    --editor-panel-2: var(--card);
+    --editor-line: var(--line);
+    --editor-text: var(--ink);
+    --editor-muted: var(--ink-soft);
+    --editor-accent: var(--terra);
+  }
+
+  .editor-shell {
+    border-color: var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow);
+  }
+
+  .editor-topbar {
+    border-color: var(--line);
+    background: var(--paper);
+  }
+
+  .mode-tab {
+    color: var(--ink-faint);
+  }
+
+  .mode-tab:hover,
+  .mode-tab.active {
+    color: var(--ink);
+  }
+
+  .small-button {
+    color: var(--ink-soft);
+  }
+
+  .small-button:hover:not(:disabled) {
+    border-color: var(--line);
+    background: var(--card);
+    color: var(--terra);
+  }
+
+  .export-button {
+    border-color: var(--terra);
+    box-shadow: 0 2px 7px rgba(194, 84, 43, 0.16);
+  }
+
+  .side-panel,
+  .workspace-toolbar,
+  .workspace-footer,
+  .filmstrip {
+    background: var(--paper);
+  }
+
+  .left-panel,
+  .right-panel,
+  .panel-heading,
+  .workspace-toolbar,
+  .workspace-footer,
+  .filmstrip,
+  .histogram,
+  .quick-adjust-actions,
+  .adjust-section,
+  .crop-controls {
+    border-color: var(--line);
+  }
+
+  .panel-heading {
+    color: var(--ink);
+  }
+
+  .panel-heading span {
+    color: var(--ink-faint);
+  }
+
+  .upload-card {
+    border-color: var(--line);
+    background: var(--card);
+    color: var(--ink);
+  }
+
+  .upload-card:hover,
+  .upload-card.dragging {
+    border-color: var(--terra-soft);
+    background: rgba(194, 84, 43, 0.05);
+  }
+
+  .upload-icon {
+    color: var(--terra);
+  }
+
+  .upload-card small {
+    color: var(--ink-faint);
+  }
+
+  .preset-button {
+    color: var(--ink-soft);
+  }
+
+  .preset-button:hover {
+    background: var(--card);
+  }
+
+  .preset-button.active {
+    border-color: var(--terra-soft);
+    background: rgba(194, 84, 43, 0.08);
+    color: var(--ink);
+  }
+
+  .preset-copy span {
+    color: var(--ink-faint);
+  }
+
+  .preset-check {
+    color: var(--terra);
+  }
+
+  .workspace {
+    background:
+      radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.9), rgba(245, 239, 230, 0.78) 48%, rgba(232, 223, 211, 0.72) 100%);
+  }
+
+  .workspace-toolbar {
+    color: var(--ink-faint);
+  }
+
+  .workspace-title strong {
+    color: var(--ink);
+  }
+
+  .workspace-title span {
+    color: var(--ink-faint);
+  }
+
+  .canvas-stage {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.22)),
+      radial-gradient(circle at 50% 42%, #fdfaf6 0, #f2ebe2 58%, #e9e0d5 100%);
+  }
+
+  .canvas-frame {
+    border: 1px solid rgba(107, 93, 84, 0.16);
+    background: #e8e0d6;
+    box-shadow: 0 12px 32px rgba(42, 37, 34, 0.18);
+  }
+
+  .drop-overlay {
+    border-color: var(--terra-soft);
+    background: rgba(251, 247, 240, 0.94);
+    color: var(--terra);
+  }
+
+  .workspace-footer,
+  .compare-button,
+  .zoom-button {
+    color: var(--ink-soft);
+  }
+
+  .compare-button:hover,
+  .compare-button.active,
+  .zoom-button:hover {
+    color: var(--terra);
+  }
+
+  .compare-button kbd {
+    border-color: var(--line);
+    background: var(--card);
+    color: var(--ink-faint);
+  }
+
+  .photo-thumb {
+    border-color: transparent;
+    background: #e9e1d7;
+    color: var(--ink);
+    opacity: 0.76;
+  }
+
+  .photo-thumb:hover,
+  .photo-thumb.active {
+    border-color: var(--terra);
+    opacity: 1;
+    box-shadow: 0 3px 9px rgba(42, 37, 34, 0.12);
+  }
+
+  .photo-thumb.selected:not(.active) {
+    border-color: var(--terra-soft);
+  }
+
+  .filmstrip-empty {
+    color: var(--ink-faint);
+  }
+
+  .filmstrip-empty::before,
+  .filmstrip-add {
+    border-color: var(--line);
+    background: var(--card);
+    color: var(--ink-faint);
+  }
+
+  .filmstrip-add:hover {
+    border-color: var(--terra);
+    color: var(--terra);
+  }
+
+  .empty-state {
+    color: var(--ink-soft);
+  }
+
+  .empty-state-icon {
+    border-color: var(--terra-soft);
+    background: var(--card);
+    color: var(--terra);
+    box-shadow: var(--shadow);
+  }
+
+  .empty-state strong {
+    color: var(--ink);
+  }
+
+  .empty-state p,
+  .editor-shell.empty .workspace-footer {
+    color: var(--ink-faint);
+  }
+
+  .empty-state button {
+    border-color: var(--terra);
+  }
+
+  .histogram {
+    background: var(--card);
+  }
+
+  .histogram-meta {
+    color: var(--ink-faint);
+  }
+
+  .quick-adjust-actions {
+    background: var(--paper);
+  }
+
+  .quick-adjust-actions button {
+    border-color: var(--line);
+    background: var(--card);
+    color: var(--ink-soft);
+  }
+
+  .quick-adjust-actions button:hover:not(:disabled) {
+    border-color: var(--terra-soft);
+    background: rgba(194, 84, 43, 0.06);
+    color: var(--terra);
+  }
+
+  .section-title {
+    color: var(--ink);
+  }
+
+  .section-title button {
+    color: var(--ink-faint);
+  }
+
+  .slider-row {
+    color: var(--ink-soft);
+  }
+
+  .slider-row output {
+    color: var(--ink-faint);
+  }
+
+  .slider-row input::-webkit-slider-runnable-track {
+    background: linear-gradient(90deg, #b8ada1, #6b5d54);
+  }
+
+  .slider-row input::-webkit-slider-thumb {
+    border-color: var(--paper);
+    background: var(--ink-soft);
+    box-shadow: 0 0 0 1px var(--ink-faint);
+  }
+
+  .slider-row input:hover::-webkit-slider-thumb {
+    border-color: white;
+    background: var(--terra);
+    box-shadow: 0 0 0 1px var(--terra);
+  }
+
+  .ratio-buttons button,
+  .transform-buttons button {
+    border-color: var(--line);
+    background: var(--card);
+    color: var(--ink-soft);
+  }
+
+  .ratio-buttons button:hover,
+  .ratio-buttons button.active,
+  .transform-buttons button:hover {
+    border-color: var(--terra-soft);
+    background: rgba(194, 84, 43, 0.06);
+    color: var(--terra);
+  }
+
+  .context-menu {
+    border-color: var(--line);
+    background: var(--paper);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .context-menu button {
+    color: var(--ink);
+  }
+
+  .context-menu button:hover:not(:disabled) {
+    background: rgba(194, 84, 43, 0.08);
+    color: var(--terra);
+  }
+
+  .context-menu button:disabled {
+    color: var(--ink-faint);
+  }
+
+  .context-menu-separator {
+    background: var(--line);
+  }
+
+  .dialog-backdrop {
+    background: rgba(42, 37, 34, 0.42);
+    backdrop-filter: blur(3px);
+  }
+
+  .preset-dialog {
+    border-color: var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .preset-dialog p {
+    color: var(--ink-soft);
+  }
+
+  .preset-dialog input {
+    border-color: var(--line);
+    background: var(--card);
+    color: var(--ink);
+  }
+
+  .dialog-actions button {
+    border-color: var(--line);
+    background: var(--card);
+    color: var(--ink-soft);
+  }
+
+  .dialog-actions button[type="submit"] {
+    border-color: var(--terra);
+  }
 </style>
 </head>
 <body>
