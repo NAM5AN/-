@@ -1,0 +1,1576 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>사진 편집기 - 체험단 매니저</title>
+<meta name="description" content="사진을 올리고 밝기, 색감, 자르기, 회전을 조정한 뒤 고화질로 저장하세요. 모든 편집은 브라우저 안에서 처리됩니다." />
+<link rel="stylesheet" href="/styles/base.css" />
+<style>
+  :root {
+    --editor-bg: #171715;
+    --editor-panel: #211f1c;
+    --editor-panel-2: #2a2723;
+    --editor-line: #3a3631;
+    --editor-text: #ece8e1;
+    --editor-muted: #9c958b;
+    --editor-accent: var(--terra);
+  }
+
+  body {
+    min-height: 100vh;
+    padding-bottom: 72px;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--terra);
+    outline-offset: 2px;
+  }
+
+  .tool-header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 0;
+  }
+
+  .tool-header-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .tool-header-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    transition: 0.15s ease;
+  }
+
+  .tool-header-back:hover {
+    border-color: var(--terra);
+    color: var(--terra);
+    transform: translateX(-2px);
+  }
+
+  .tool-header-logo {
+    display: inline-block;
+    line-height: 0;
+  }
+
+  .tool-header-logo img {
+    display: block;
+    width: auto;
+    height: 28px;
+  }
+
+  .tool-hero {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 20px 30px;
+    text-align: center;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 14px;
+    padding: 5px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--terra);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .eyebrow::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sage);
+    content: "";
+  }
+
+  .tool-hero h1 {
+    margin-bottom: 10px;
+    font-size: 38px;
+  }
+
+  .tool-hero h1 em {
+    color: var(--terra);
+    font-style: italic;
+  }
+
+  .tool-hero p {
+    max-width: 660px;
+    margin: 0 auto;
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1.75;
+    word-break: keep-all;
+  }
+
+  .privacy-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 14px;
+    color: var(--ink-faint);
+    font-size: 12px;
+  }
+
+  .privacy-note b {
+    color: var(--sage);
+    font-weight: 700;
+  }
+
+  .editor-wrap {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .editor-shell {
+    overflow: hidden;
+    border: 1px solid #3a3631;
+    border-radius: 18px;
+    background: var(--editor-bg);
+    box-shadow: var(--shadow-lift);
+    color: var(--editor-text);
+  }
+
+  .editor-topbar {
+    height: 54px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--editor-line);
+    background: #1d1b18;
+  }
+
+  .editor-brand,
+  .top-actions,
+  .mode-tabs {
+    display: flex;
+    align-items: center;
+  }
+
+  .editor-brand {
+    gap: 9px;
+    color: #d7d1c8;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .editor-mark {
+    display: grid;
+    width: 29px;
+    height: 29px;
+    place-items: center;
+    border: 1px solid #b8623d;
+    border-radius: 7px;
+    background: #43271b;
+    color: #e8a383;
+    font-family: var(--font-serif);
+    font-size: 13px;
+  }
+
+  .mode-tabs {
+    height: 100%;
+    gap: 26px;
+  }
+
+  .mode-tab {
+    position: relative;
+    height: 100%;
+    border: 0;
+    background: none;
+    color: #817a71;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .mode-tab.active {
+    color: var(--editor-text);
+  }
+
+  .mode-tab.active::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: var(--editor-accent);
+    content: "";
+  }
+
+  .top-actions {
+    justify-content: flex-end;
+    gap: 7px;
+  }
+
+  .small-button,
+  .export-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    transition: 0.15s ease;
+  }
+
+  .small-button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #9f988e;
+    font-size: 17px;
+  }
+
+  .small-button:hover:not(:disabled) {
+    border-color: var(--editor-line);
+    background: var(--editor-panel-2);
+    color: white;
+  }
+
+  .small-button:disabled {
+    cursor: default;
+    opacity: 0.28;
+  }
+
+  .export-button {
+    min-width: 76px;
+    height: 32px;
+    padding: 0 14px;
+    border: 1px solid #a94824;
+    background: var(--terra);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .export-button:hover {
+    background: #a8431f;
+  }
+
+  .editor-main {
+    min-height: 610px;
+    display: grid;
+    grid-template-columns: 218px minmax(360px, 1fr) 292px;
+  }
+
+  .side-panel {
+    min-width: 0;
+    background: var(--editor-panel);
+  }
+
+  .left-panel {
+    border-right: 1px solid var(--editor-line);
+  }
+
+  .right-panel {
+    border-left: 1px solid var(--editor-line);
+  }
+
+  .panel-heading {
+    height: 43px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--editor-line);
+    color: #d7d1c8;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .panel-heading span {
+    color: #756e65;
+    font-size: 9px;
+    font-weight: 500;
+  }
+
+  .upload-card {
+    margin: 12px;
+    padding: 20px 12px;
+    border: 1px dashed #514a42;
+    border-radius: 11px;
+    background: #25221e;
+    color: #c9c2b9;
+    text-align: center;
+    transition: 0.15s ease;
+  }
+
+  .upload-card:hover,
+  .upload-card.dragging {
+    border-color: var(--terra-soft);
+    background: #30241e;
+  }
+
+  .upload-card button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+  }
+
+  .upload-icon {
+    display: block;
+    margin-bottom: 7px;
+    color: #d88762;
+    font-size: 25px;
+  }
+
+  .upload-card strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+
+  .upload-card small {
+    color: #776f66;
+    font-size: 9px;
+  }
+
+  #fileInput {
+    display: none;
+  }
+
+  .preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 495px;
+    overflow-y: auto;
+    padding: 0 9px 14px;
+  }
+
+  .preset-button {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 58px 1fr auto;
+    gap: 9px;
+    align-items: center;
+    padding: 5px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: #d4cec5;
+    text-align: left;
+  }
+
+  .preset-button:hover {
+    background: #2b2823;
+  }
+
+  .preset-button.active {
+    border-color: #7f432c;
+    background: #3b281f;
+  }
+
+  .preset-thumb {
+    width: 58px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: 4px;
+    background-image: url("/images/photo-editor-sample.jpg");
+    background-position: center;
+    background-size: cover;
+  }
+
+  .preset-copy {
+    min-width: 0;
+  }
+
+  .preset-copy strong,
+  .preset-copy span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .preset-copy strong {
+    margin-bottom: 2px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .preset-copy span {
+    color: #7f786f;
+    font-size: 8px;
+  }
+
+  .preset-check {
+    color: var(--terra-soft);
+    font-size: 11px;
+  }
+
+  .workspace {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: 44px minmax(0, 1fr) 42px 86px;
+    background:
+      radial-gradient(circle at 50% 42%, #302e2a 0, #22211f 44%, #171715 77%);
+  }
+
+  .workspace-toolbar,
+  .workspace-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--editor-line);
+    background: #1c1b19;
+  }
+
+  .workspace-toolbar {
+    color: #827b72;
+  }
+
+  .workspace-title {
+    text-align: center;
+  }
+
+  .workspace-title strong,
+  .workspace-title span {
+    display: block;
+  }
+
+  .workspace-title strong {
+    color: #cfc8be;
+    font-size: 10px;
+  }
+
+  .workspace-title span {
+    margin-top: 1px;
+    color: #686159;
+    font-size: 8px;
+  }
+
+  .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .canvas-stage {
+    position: relative;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 24px 30px;
+  }
+
+  .canvas-frame {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #0c0c0b;
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.48);
+  }
+
+  #previewCanvas {
+    max-width: 100%;
+    max-height: 415px;
+    display: block;
+  }
+
+  .before-label {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: none;
+    padding: 4px 7px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.66);
+    color: white;
+    font-size: 9px;
+  }
+
+  .before-label.visible {
+    display: block;
+  }
+
+  .drop-overlay {
+    position: absolute;
+    inset: 16px;
+    z-index: 3;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #e59b79;
+    border-radius: 12px;
+    background: rgba(39, 27, 21, 0.92);
+    color: white;
+    font-family: var(--font-serif);
+    font-size: 18px;
+  }
+
+  .drop-overlay.visible {
+    display: flex;
+  }
+
+  .workspace-footer {
+    border-top: 1px solid var(--editor-line);
+    border-bottom: 0;
+    color: #8e877e;
+    font-size: 10px;
+  }
+
+  .compare-button,
+  .zoom-button {
+    border: 0;
+    background: transparent;
+    color: #918a81;
+    font-size: 10px;
+  }
+
+  .compare-button:hover,
+  .compare-button.active,
+  .zoom-button:hover {
+    color: white;
+  }
+
+  .compare-button kbd {
+    margin-left: 5px;
+    padding: 1px 4px;
+    border: 1px solid #4b4640;
+    border-radius: 3px;
+    color: #756e66;
+    font-size: 8px;
+  }
+
+  .filmstrip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    overflow-x: auto;
+    padding: 9px 12px;
+    border-top: 1px solid var(--editor-line);
+    background: #1d1b18;
+  }
+
+  .filmstrip button {
+    position: relative;
+    width: 92px;
+    height: 62px;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    background-position: center;
+    background-size: cover;
+    opacity: 0.72;
+    transition: 0.15s ease;
+  }
+
+  .filmstrip button:hover,
+  .filmstrip button.active {
+    border-color: #e4ddd4;
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+
+  .histogram {
+    position: relative;
+    height: 92px;
+    padding: 10px 14px 18px;
+    border-bottom: 1px solid var(--editor-line);
+    background: #1c1a18;
+  }
+
+  #histogramCanvas {
+    width: 100%;
+    height: 62px;
+    display: block;
+  }
+
+  .histogram-meta {
+    position: absolute;
+    right: 14px;
+    bottom: 5px;
+    color: #6f685f;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 8px;
+  }
+
+  .right-scroll {
+    max-height: 475px;
+    overflow-y: auto;
+  }
+
+  .adjust-section {
+    padding: 0 14px 12px;
+    border-bottom: 1px solid var(--editor-line);
+  }
+
+  .section-title {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #d6d0c7;
+    font-family: var(--font-serif);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .section-title button {
+    border: 0;
+    background: transparent;
+    color: #7e776e;
+    font-family: var(--font-body);
+    font-size: 9px;
+  }
+
+  .slider-row {
+    height: 28px;
+    display: grid;
+    grid-template-columns: 66px 1fr 32px;
+    gap: 7px;
+    align-items: center;
+    color: #bcb5ac;
+    font-size: 9px;
+  }
+
+  .slider-row output {
+    color: #888178;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 8px;
+    text-align: right;
+  }
+
+  .slider-row input {
+    width: 100%;
+    height: 14px;
+    margin: 0;
+    appearance: none;
+    background: transparent;
+    cursor: ew-resize;
+  }
+
+  .slider-row input::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #6b645c, #c8c0b6);
+  }
+
+  .slider-row.color-slider input::-webkit-slider-runnable-track {
+    background: linear-gradient(90deg, #4a80c3, #b7b2aa 50%, #d2834e);
+  }
+
+  .slider-row.tint-slider input::-webkit-slider-runnable-track {
+    background: linear-gradient(90deg, #53815b, #b7b2aa 50%, #a6538d);
+  }
+
+  .slider-row input::-webkit-slider-thumb {
+    width: 10px;
+    height: 10px;
+    margin-top: -4px;
+    appearance: none;
+    border: 2px solid #ddd6cd;
+    border-radius: 50%;
+    background: #2a2723;
+  }
+
+  .slider-row input:hover::-webkit-slider-thumb {
+    border-color: white;
+    background: var(--terra);
+  }
+
+  .crop-controls {
+    display: none;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--editor-line);
+  }
+
+  .crop-controls.visible {
+    display: block;
+  }
+
+  .ratio-buttons,
+  .transform-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .ratio-buttons {
+    margin-bottom: 11px;
+  }
+
+  .ratio-buttons button,
+  .transform-buttons button {
+    min-width: 48px;
+    padding: 6px 8px;
+    border: 1px solid var(--editor-line);
+    border-radius: 6px;
+    background: var(--editor-panel-2);
+    color: #aaa39a;
+    font-size: 9px;
+  }
+
+  .ratio-buttons button:hover,
+  .ratio-buttons button.active,
+  .transform-buttons button:hover {
+    border-color: var(--terra-soft);
+    color: #f0eae2;
+  }
+
+  .help-card {
+    max-width: 980px;
+    margin: 24px auto 0;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: var(--paper);
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .help-card strong {
+    color: var(--ink);
+  }
+
+  .toast {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 15px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow-lift);
+    font-size: 12px;
+  }
+
+  .toast.visible {
+    display: flex;
+    animation: toast-in 0.18s ease-out;
+  }
+
+  .toast b {
+    color: var(--sage);
+  }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 1080px) {
+    .editor-main {
+      grid-template-columns: 0 minmax(360px, 1fr) 280px;
+    }
+
+    .left-panel {
+      overflow: hidden;
+      border: 0;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .tool-header-logo img {
+      height: 24px;
+    }
+
+    .tool-hero {
+      padding-top: 36px;
+    }
+
+    .tool-hero h1 {
+      font-size: 31px;
+    }
+
+    .editor-wrap {
+      padding: 0 10px;
+    }
+
+    .editor-shell {
+      border-radius: 13px;
+    }
+
+    .editor-topbar {
+      grid-template-columns: auto 1fr auto;
+    }
+
+    .editor-brand > span:last-child {
+      display: none;
+    }
+
+    .mode-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .editor-main {
+      min-height: 520px;
+      grid-template-columns: 1fr;
+    }
+
+    .right-panel {
+      display: block;
+      border-top: 1px solid var(--editor-line);
+      border-left: 0;
+    }
+
+    .histogram {
+      display: none;
+    }
+
+    .right-scroll {
+      max-height: 340px;
+    }
+
+    .workspace {
+      grid-template-rows: 42px minmax(0, 1fr) 40px 72px;
+    }
+
+    .canvas-stage {
+      padding: 18px 10px;
+    }
+
+    #previewCanvas {
+      max-height: 320px;
+    }
+
+    .filmstrip button {
+      width: 78px;
+      height: 52px;
+    }
+
+    .workspace-title span {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header class="tool-header">
+  <div class="tool-header-inner">
+    <a href="/?view=tools" class="tool-header-back">← 도구 목록</a>
+    <a href="/" class="tool-header-logo" aria-label="체험단 매니저 홈">
+      <img src="/images/logo.png" alt="체험단 매니저" />
+    </a>
+  </div>
+</header>
+
+<section class="tool-hero">
+  <span class="eyebrow">BROWSER PHOTO LAB</span>
+  <h1>사진 <em>편집기</em></h1>
+  <p>복잡한 프로그램 없이 사진의 빛과 색을 다듬고, 원하는 비율로 자른 뒤 고화질로 저장하세요.</p>
+  <span class="privacy-note"><b>✓</b> 사진은 서버로 전송되지 않고 내 브라우저 안에서만 처리됩니다.</span>
+</section>
+
+<div class="editor-wrap">
+  <main class="editor-shell" aria-label="사진 편집 작업 영역">
+    <header class="editor-topbar">
+      <div class="editor-brand">
+        <span class="editor-mark">빛</span>
+        <span>PHOTO LAB</span>
+      </div>
+      <nav class="mode-tabs" aria-label="편집 모드">
+        <button class="mode-tab active" data-mode="edit">보정</button>
+        <button class="mode-tab" data-mode="crop">자르기</button>
+      </nav>
+      <div class="top-actions">
+        <button class="small-button" id="undoButton" type="button" title="실행 취소" aria-label="실행 취소">↶</button>
+        <button class="small-button" id="redoButton" type="button" title="다시 실행" aria-label="다시 실행">↷</button>
+        <button class="export-button" id="exportButton" type="button">저장하기</button>
+      </div>
+    </header>
+
+    <div class="editor-main">
+      <aside class="side-panel left-panel">
+        <div class="panel-heading">내 사진 <span>LOCAL ONLY</span></div>
+        <div class="upload-card" id="uploadCard">
+          <button type="button" id="uploadButton">
+            <span class="upload-icon">＋</span>
+            <strong>사진 불러오기</strong>
+            <small>JPG · PNG · WEBP</small>
+          </button>
+          <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" />
+        </div>
+        <div class="panel-heading">추천 프리셋 <span>6</span></div>
+        <div class="preset-list" id="presetList">
+          <button class="preset-button active" data-preset="original" type="button">
+            <span class="preset-thumb"></span>
+            <span class="preset-copy"><strong>원본</strong><span>Natural</span></span>
+            <span class="preset-check">✓</span>
+          </button>
+          <button class="preset-button" data-preset="warm" type="button">
+            <span class="preset-thumb" style="filter:brightness(1.07) contrast(1.08) saturate(1.16) sepia(.12)"></span>
+            <span class="preset-copy"><strong>따뜻한 오후</strong><span>Warm & soft</span></span>
+            <span class="preset-check"></span>
+          </button>
+          <button class="preset-button" data-preset="forest" type="button">
+            <span class="preset-thumb" style="filter:contrast(1.1) saturate(.86) hue-rotate(8deg)"></span>
+            <span class="preset-copy"><strong>고요한 숲</strong><span>Muted green</span></span>
+            <span class="preset-check"></span>
+          </button>
+          <button class="preset-button" data-preset="cinema" type="button">
+            <span class="preset-thumb" style="filter:contrast(1.2) saturate(.8) sepia(.08)"></span>
+            <span class="preset-copy"><strong>시네마</strong><span>Deep contrast</span></span>
+            <span class="preset-check"></span>
+          </button>
+          <button class="preset-button" data-preset="matte" type="button">
+            <span class="preset-thumb" style="filter:contrast(.88) brightness(1.06) saturate(.8)"></span>
+            <span class="preset-copy"><strong>크림 매트</strong><span>Soft fade</span></span>
+            <span class="preset-check"></span>
+          </button>
+          <button class="preset-button" data-preset="mono" type="button">
+            <span class="preset-thumb" style="filter:grayscale(1) contrast(1.16)"></span>
+            <span class="preset-copy"><strong>기록 흑백</strong><span>Classic B&W</span></span>
+            <span class="preset-check"></span>
+          </button>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <div class="workspace-toolbar">
+          <div class="toolbar-group">
+            <button class="small-button" id="resetButton" type="button" title="모든 보정 초기화" aria-label="모든 보정 초기화">↺</button>
+          </div>
+          <div class="workspace-title">
+            <strong id="fileName">sample-landscape.jpg</strong>
+            <span id="fileMeta">샘플 사진 · 브라우저 편집</span>
+          </div>
+          <div class="toolbar-group">
+            <button class="small-button" id="quickUploadButton" type="button" title="사진 불러오기" aria-label="사진 불러오기">＋</button>
+            <button class="small-button" id="fitButton" type="button" title="화면에 맞춤" aria-label="화면에 맞춤">⌗</button>
+          </div>
+        </div>
+
+        <div class="canvas-stage" id="canvasStage">
+          <div class="canvas-frame" id="canvasFrame">
+            <canvas id="previewCanvas" aria-label="편집 중인 사진 미리보기"></canvas>
+            <span class="before-label" id="beforeLabel">편집 전</span>
+          </div>
+          <div class="drop-overlay" id="dropOverlay">사진을 여기에 놓으세요</div>
+        </div>
+
+        <div class="workspace-footer">
+          <button class="compare-button" id="compareButton" type="button">원본 비교 <kbd>\</kbd></button>
+          <span id="dimensions">— × — px</span>
+          <button class="zoom-button" id="zoomButton" type="button">화면 맞춤</button>
+        </div>
+
+        <div class="filmstrip" id="filmstrip" aria-label="빠른 스타일">
+          <button class="active" type="button" data-preset="original" aria-label="원본" style="background-image:url('/images/photo-editor-sample.jpg')"></button>
+          <button type="button" data-preset="warm" aria-label="따뜻한 오후" style="background-image:url('/images/photo-editor-sample.jpg');filter:brightness(1.07) contrast(1.08) saturate(1.16) sepia(.12)"></button>
+          <button type="button" data-preset="forest" aria-label="고요한 숲" style="background-image:url('/images/photo-editor-sample.jpg');filter:contrast(1.1) saturate(.86) hue-rotate(8deg)"></button>
+          <button type="button" data-preset="cinema" aria-label="시네마" style="background-image:url('/images/photo-editor-sample.jpg');filter:contrast(1.2) saturate(.8) sepia(.08)"></button>
+          <button type="button" data-preset="matte" aria-label="크림 매트" style="background-image:url('/images/photo-editor-sample.jpg');filter:contrast(.88) brightness(1.06) saturate(.8)"></button>
+          <button type="button" data-preset="mono" aria-label="기록 흑백" style="background-image:url('/images/photo-editor-sample.jpg');filter:grayscale(1) contrast(1.16)"></button>
+        </div>
+      </section>
+
+      <aside class="side-panel right-panel">
+        <div class="panel-heading">히스토그램 <span>RGB</span></div>
+        <div class="histogram">
+          <canvas id="histogramCanvas" width="256" height="62" aria-label="사진 히스토그램"></canvas>
+          <span class="histogram-meta">LIVE PREVIEW</span>
+        </div>
+
+        <div class="crop-controls" id="cropControls">
+          <div class="section-title"><span>자르기 및 회전</span></div>
+          <div class="ratio-buttons" id="ratioButtons">
+            <button class="active" type="button" data-ratio="original">원본</button>
+            <button type="button" data-ratio="1:1">1 : 1</button>
+            <button type="button" data-ratio="4:5">4 : 5</button>
+            <button type="button" data-ratio="16:9">16 : 9</button>
+          </div>
+          <div class="transform-buttons">
+            <button id="rotateLeft" type="button">↶ 90°</button>
+            <button id="rotateRight" type="button">↷ 90°</button>
+            <button id="flipHorizontal" type="button">↔ 반전</button>
+            <button id="flipVertical" type="button">↕ 반전</button>
+          </div>
+        </div>
+
+        <div class="right-scroll" id="adjustmentsPanel">
+          <section class="adjust-section">
+            <div class="section-title"><span>빛</span><button id="autoButton" type="button">자동</button></div>
+            <label class="slider-row"><span>노출</span><input data-adjustment="exposure" type="range" min="-2" max="2" step="0.05" value="0" /><output>0</output></label>
+            <label class="slider-row"><span>대비</span><input data-adjustment="contrast" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+            <label class="slider-row"><span>하이라이트</span><input data-adjustment="highlights" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+            <label class="slider-row"><span>그림자</span><input data-adjustment="shadows" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+            <label class="slider-row"><span>흰색 계열</span><input data-adjustment="whites" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+            <label class="slider-row"><span>검정 계열</span><input data-adjustment="blacks" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+          </section>
+
+          <section class="adjust-section">
+            <div class="section-title"><span>색상</span></div>
+            <label class="slider-row color-slider"><span>색온도</span><input data-adjustment="temperature" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+            <label class="slider-row tint-slider"><span>색조</span><input data-adjustment="tint" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+            <label class="slider-row"><span>생동감</span><input data-adjustment="vibrance" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+            <label class="slider-row"><span>채도</span><input data-adjustment="saturation" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+          </section>
+
+          <section class="adjust-section">
+            <div class="section-title"><span>효과</span></div>
+            <label class="slider-row"><span>명료도</span><input data-adjustment="clarity" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+            <label class="slider-row"><span>안개 제거</span><input data-adjustment="dehaze" type="range" min="-100" max="100" value="0" /><output>0</output></label>
+            <label class="slider-row"><span>비네팅</span><input data-adjustment="vignette" type="range" min="0" max="100" value="0" /><output>0</output></label>
+          </section>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <div class="help-card">
+    <strong>사용 안내</strong> · 사진을 불러온 뒤 오른쪽 슬라이더나 프리셋으로 보정하세요. 자르기 탭에서는 비율과 회전 방향을 선택할 수 있습니다. <strong>저장하기</strong>를 누르면 원본 크기에 맞춰 JPEG 파일로 내려받습니다. 모든 처리는 기기 안에서 이루어집니다.
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"><b>✓</b><span>편집한 사진을 저장했습니다.</span></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const neutral = {
+    exposure: 0,
+    contrast: 0,
+    highlights: 0,
+    shadows: 0,
+    whites: 0,
+    blacks: 0,
+    temperature: 0,
+    tint: 0,
+    vibrance: 0,
+    saturation: 0,
+    clarity: 0,
+    dehaze: 0,
+    vignette: 0
+  };
+
+  const presets = {
+    original: { ...neutral },
+    warm: { ...neutral, exposure: 0.28, contrast: 10, highlights: -18, shadows: 18, temperature: 24, vibrance: 18, saturation: 7, vignette: 8 },
+    forest: { ...neutral, exposure: 0.12, contrast: 13, highlights: -24, shadows: 12, temperature: -8, tint: -12, vibrance: -4, saturation: -7, dehaze: 9 },
+    cinema: { ...neutral, exposure: -0.08, contrast: 26, highlights: -34, shadows: 8, blacks: -18, temperature: 8, saturation: -16, clarity: 15, vignette: 28 },
+    matte: { ...neutral, exposure: 0.22, contrast: -13, highlights: -20, shadows: 32, blacks: 24, temperature: 11, saturation: -17, vignette: 6 },
+    mono: { ...neutral, contrast: 22, highlights: -18, shadows: 15, blacks: -12, saturation: -100, clarity: 24, vignette: 18 }
+  };
+
+  const previewCanvas = document.getElementById("previewCanvas");
+  const previewContext = previewCanvas.getContext("2d", { willReadFrequently: true });
+  const histogramCanvas = document.getElementById("histogramCanvas");
+  const histogramContext = histogramCanvas.getContext("2d");
+  const fileInput = document.getElementById("fileInput");
+  const uploadCard = document.getElementById("uploadCard");
+  const dropOverlay = document.getElementById("dropOverlay");
+  const beforeLabel = document.getElementById("beforeLabel");
+  const compareButton = document.getElementById("compareButton");
+  const undoButton = document.getElementById("undoButton");
+  const redoButton = document.getElementById("redoButton");
+  const dimensions = document.getElementById("dimensions");
+  const fileName = document.getElementById("fileName");
+  const fileMeta = document.getElementById("fileMeta");
+  const cropControls = document.getElementById("cropControls");
+  const adjustmentsPanel = document.getElementById("adjustmentsPanel");
+  const toast = document.getElementById("toast");
+  const sliderInputs = Array.from(document.querySelectorAll("[data-adjustment]"));
+  const modeTabs = Array.from(document.querySelectorAll(".mode-tab"));
+  const presetButtons = Array.from(document.querySelectorAll("[data-preset]"));
+  const ratioButtons = Array.from(document.querySelectorAll("[data-ratio]"));
+
+  let sourceImage = new Image();
+  let adjustments = { ...neutral };
+  let cropRatio = "original";
+  let rotation = 0;
+  let flipX = 1;
+  let flipY = 1;
+  let showBefore = false;
+  let currentPreset = "original";
+  let currentFileBase = "sample-landscape";
+  let renderFrame = 0;
+  let history = [];
+  let historyIndex = -1;
+
+  sourceImage.crossOrigin = "anonymous";
+
+  function currentSnapshot() {
+    return {
+      adjustments: { ...adjustments },
+      cropRatio,
+      rotation,
+      flipX,
+      flipY,
+      currentPreset
+    };
+  }
+
+  function pushHistory() {
+    const snapshot = currentSnapshot();
+    history = history.slice(0, historyIndex + 1);
+    history.push(snapshot);
+    if (history.length > 40) history.shift();
+    historyIndex = history.length - 1;
+    updateHistoryButtons();
+  }
+
+  function restoreSnapshot(snapshot) {
+    adjustments = { ...snapshot.adjustments };
+    cropRatio = snapshot.cropRatio;
+    rotation = snapshot.rotation;
+    flipX = snapshot.flipX;
+    flipY = snapshot.flipY;
+    currentPreset = snapshot.currentPreset;
+    syncControls();
+    scheduleRender();
+  }
+
+  function updateHistoryButtons() {
+    undoButton.disabled = historyIndex <= 0;
+    redoButton.disabled = historyIndex >= history.length - 1;
+  }
+
+  function formatValue(value) {
+    const number = Number(value);
+    if (number === 0) return "0";
+    const rounded = Number.isInteger(number) ? number : number.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+    return number > 0 ? `+${rounded}` : String(rounded);
+  }
+
+  function syncControls() {
+    sliderInputs.forEach((input) => {
+      input.value = adjustments[input.dataset.adjustment];
+      input.parentElement.querySelector("output").textContent = formatValue(input.value);
+    });
+
+    presetButtons.forEach((button) => {
+      const active = button.dataset.preset === currentPreset;
+      button.classList.toggle("active", active);
+      const check = button.querySelector(".preset-check");
+      if (check) check.textContent = active ? "✓" : "";
+    });
+
+    ratioButtons.forEach((button) => {
+      button.classList.toggle("active", button.dataset.ratio === cropRatio);
+    });
+  }
+
+  function getCropRect(image) {
+    let x = 0;
+    let y = 0;
+    let width = image.naturalWidth || image.width;
+    let height = image.naturalHeight || image.height;
+    if (cropRatio === "original") return { x, y, width, height };
+
+    const [ratioWidth, ratioHeight] = cropRatio.split(":").map(Number);
+    const targetRatio = ratioWidth / ratioHeight;
+    const sourceRatio = width / height;
+
+    if (sourceRatio > targetRatio) {
+      const nextWidth = height * targetRatio;
+      x = (width - nextWidth) / 2;
+      width = nextWidth;
+    } else {
+      const nextHeight = width / targetRatio;
+      y = (height - nextHeight) / 2;
+      height = nextHeight;
+    }
+    return { x, y, width, height };
+  }
+
+  function buildFilter(values) {
+    const brightness = Math.max(0.05, 1 + values.exposure * 0.22 + values.shadows * 0.0012 + values.whites * 0.001 + values.highlights * 0.0005);
+    const contrast = Math.max(0.05, 1 + values.contrast * 0.007 + values.clarity * 0.0028 + values.dehaze * 0.0025 - values.blacks * 0.0012);
+    const saturation = Math.max(0, 1 + values.saturation * 0.01 + values.vibrance * 0.005);
+    const sepia = Math.max(0, values.temperature) * 0.003;
+    const hue = values.tint * 0.08 + Math.min(0, values.temperature) * 0.11;
+    return `brightness(${brightness}) contrast(${contrast}) saturate(${saturation}) sepia(${sepia}) hue-rotate(${hue}deg)`;
+  }
+
+  function renderToCanvas(canvas, context, maxWidth, maxHeight, before = false) {
+    const crop = getCropRect(sourceImage);
+    const rotated = Math.abs(rotation % 180) === 90;
+    const baseWidth = rotated ? crop.height : crop.width;
+    const baseHeight = rotated ? crop.width : crop.height;
+    const scale = Math.min(1, maxWidth / baseWidth, maxHeight / baseHeight);
+    const outputWidth = Math.max(1, Math.round(baseWidth * scale));
+    const outputHeight = Math.max(1, Math.round(baseHeight * scale));
+
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+    context.clearRect(0, 0, outputWidth, outputHeight);
+    context.save();
+    context.translate(outputWidth / 2, outputHeight / 2);
+    context.rotate(rotation * Math.PI / 180);
+    context.scale(flipX, flipY);
+    context.filter = before ? "none" : buildFilter(adjustments);
+
+    const drawWidth = crop.width * scale;
+    const drawHeight = crop.height * scale;
+    context.drawImage(
+      sourceImage,
+      crop.x,
+      crop.y,
+      crop.width,
+      crop.height,
+      -drawWidth / 2,
+      -drawHeight / 2,
+      drawWidth,
+      drawHeight
+    );
+    context.restore();
+    context.filter = "none";
+
+    if (!before) {
+      applyColorOverlays(context, outputWidth, outputHeight);
+    }
+    return { width: Math.round(baseWidth), height: Math.round(baseHeight) };
+  }
+
+  function applyColorOverlays(context, width, height) {
+    if (adjustments.temperature !== 0) {
+      context.save();
+      context.globalCompositeOperation = "soft-light";
+      context.globalAlpha = Math.min(Math.abs(adjustments.temperature) / 280, 0.3);
+      context.fillStyle = adjustments.temperature > 0 ? "#ff873a" : "#397ddd";
+      context.fillRect(0, 0, width, height);
+      context.restore();
+    }
+
+    if (adjustments.tint !== 0) {
+      context.save();
+      context.globalCompositeOperation = "soft-light";
+      context.globalAlpha = Math.min(Math.abs(adjustments.tint) / 360, 0.22);
+      context.fillStyle = adjustments.tint > 0 ? "#b94e9d" : "#4c9a66";
+      context.fillRect(0, 0, width, height);
+      context.restore();
+    }
+
+    if (adjustments.vignette > 0) {
+      const gradient = context.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.72);
+      gradient.addColorStop(0, "rgba(0,0,0,0)");
+      gradient.addColorStop(0.55, "rgba(0,0,0,0)");
+      gradient.addColorStop(1, `rgba(0,0,0,${Math.min(adjustments.vignette / 90, 0.82)})`);
+      context.save();
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, width, height);
+      context.restore();
+    }
+  }
+
+  function renderHistogram() {
+    const width = histogramCanvas.width;
+    const height = histogramCanvas.height;
+    histogramContext.clearRect(0, 0, width, height);
+    if (!previewCanvas.width || !previewCanvas.height) return;
+
+    const sampleCanvas = document.createElement("canvas");
+    sampleCanvas.width = 128;
+    sampleCanvas.height = 72;
+    const sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
+    sampleContext.drawImage(previewCanvas, 0, 0, 128, 72);
+    const pixels = sampleContext.getImageData(0, 0, 128, 72).data;
+    const red = new Array(64).fill(0);
+    const green = new Array(64).fill(0);
+    const blue = new Array(64).fill(0);
+
+    for (let index = 0; index < pixels.length; index += 4) {
+      red[Math.min(63, pixels[index] >> 2)] += 1;
+      green[Math.min(63, pixels[index + 1] >> 2)] += 1;
+      blue[Math.min(63, pixels[index + 2] >> 2)] += 1;
+    }
+
+    const maxValue = Math.max(...red, ...green, ...blue, 1);
+    [
+      [red, "rgba(238,93,74,.58)"],
+      [green, "rgba(101,181,117,.50)"],
+      [blue, "rgba(91,141,224,.56)"]
+    ].forEach(([values, color]) => {
+      histogramContext.beginPath();
+      histogramContext.moveTo(0, height);
+      values.forEach((value, index) => {
+        const x = index / 63 * width;
+        const y = height - value / maxValue * (height - 3);
+        histogramContext.lineTo(x, y);
+      });
+      histogramContext.lineTo(width, height);
+      histogramContext.closePath();
+      histogramContext.fillStyle = color;
+      histogramContext.fill();
+    });
+  }
+
+  function scheduleRender() {
+    cancelAnimationFrame(renderFrame);
+    renderFrame = requestAnimationFrame(() => {
+      if (!sourceImage.complete || !sourceImage.naturalWidth) return;
+      const dimensionsValue = renderToCanvas(previewCanvas, previewContext, 1500, 920, showBefore);
+      dimensions.textContent = `${dimensionsValue.width.toLocaleString()} × ${dimensionsValue.height.toLocaleString()} px`;
+      beforeLabel.classList.toggle("visible", showBefore);
+      compareButton.classList.toggle("active", showBefore);
+      renderHistogram();
+    });
+  }
+
+  function applyPreset(name, commit = true) {
+    adjustments = { ...(presets[name] || neutral) };
+    currentPreset = name;
+    syncControls();
+    scheduleRender();
+    if (commit) pushHistory();
+  }
+
+  function setMode(mode) {
+    modeTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.mode === mode));
+    const cropMode = mode === "crop";
+    cropControls.classList.toggle("visible", cropMode);
+    adjustmentsPanel.style.display = cropMode ? "none" : "";
+  }
+
+  async function loadFile(file) {
+    if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      showToast("JPG, PNG, WEBP 사진만 불러올 수 있습니다.", false);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const nextImage = new Image();
+    nextImage.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      sourceImage = nextImage;
+      currentFileBase = file.name.replace(/\.[^.]+$/, "") || "edited-photo";
+      fileName.textContent = file.name;
+      fileMeta.textContent = `${(file.size / 1024 / 1024).toFixed(1)} MB · 기기에서만 처리`;
+      adjustments = { ...neutral };
+      cropRatio = "original";
+      rotation = 0;
+      flipX = 1;
+      flipY = 1;
+      currentPreset = "original";
+      history = [];
+      historyIndex = -1;
+      syncControls();
+      pushHistory();
+      scheduleRender();
+    };
+    nextImage.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      showToast("사진을 불러오지 못했습니다.", false);
+    };
+    nextImage.src = objectUrl;
+  }
+
+  function showToast(message, success = true) {
+    toast.querySelector("b").textContent = success ? "✓" : "!";
+    toast.querySelector("span").textContent = message;
+    toast.classList.add("visible");
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => toast.classList.remove("visible"), 2400);
+  }
+
+  function exportImage() {
+    if (!sourceImage.naturalWidth) return;
+    const crop = getCropRect(sourceImage);
+    const rotated = Math.abs(rotation % 180) === 90;
+    const outputWidth = Math.round(rotated ? crop.height : crop.width);
+    const outputHeight = Math.round(rotated ? crop.width : crop.height);
+    const exportCanvas = document.createElement("canvas");
+    const exportContext = exportCanvas.getContext("2d");
+    renderToCanvas(exportCanvas, exportContext, outputWidth, outputHeight, false);
+    exportCanvas.toBlob((blob) => {
+      if (!blob) {
+        showToast("사진 저장에 실패했습니다.", false);
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${currentFileBase}-edited.jpg`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast("편집한 사진을 저장했습니다.");
+    }, "image/jpeg", 0.94);
+  }
+
+  document.getElementById("uploadButton").addEventListener("click", () => fileInput.click());
+  document.getElementById("quickUploadButton").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (event) => loadFile(event.target.files[0]));
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    document.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      dropOverlay.classList.add("visible");
+      uploadCard.classList.add("dragging");
+    });
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    document.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      if (eventName === "drop") loadFile(event.dataTransfer.files[0]);
+      dropOverlay.classList.remove("visible");
+      uploadCard.classList.remove("dragging");
+    });
+  });
+
+  sliderInputs.forEach((input) => {
+    input.addEventListener("input", () => {
+      adjustments[input.dataset.adjustment] = Number(input.value);
+      input.parentElement.querySelector("output").textContent = formatValue(input.value);
+      currentPreset = "custom";
+      syncControls();
+      scheduleRender();
+    });
+    input.addEventListener("change", pushHistory);
+  });
+
+  presetButtons.forEach((button) => {
+    button.addEventListener("click", () => applyPreset(button.dataset.preset));
+  });
+
+  modeTabs.forEach((tab) => {
+    tab.addEventListener("click", () => setMode(tab.dataset.mode));
+  });
+
+  ratioButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      cropRatio = button.dataset.ratio;
+      currentPreset = "custom";
+      syncControls();
+      scheduleRender();
+      pushHistory();
+    });
+  });
+
+  document.getElementById("rotateLeft").addEventListener("click", () => {
+    rotation = (rotation - 90 + 360) % 360;
+    scheduleRender();
+    pushHistory();
+  });
+
+  document.getElementById("rotateRight").addEventListener("click", () => {
+    rotation = (rotation + 90) % 360;
+    scheduleRender();
+    pushHistory();
+  });
+
+  document.getElementById("flipHorizontal").addEventListener("click", () => {
+    flipX *= -1;
+    scheduleRender();
+    pushHistory();
+  });
+
+  document.getElementById("flipVertical").addEventListener("click", () => {
+    flipY *= -1;
+    scheduleRender();
+    pushHistory();
+  });
+
+  document.getElementById("autoButton").addEventListener("click", () => {
+    adjustments = { ...neutral, exposure: 0.24, contrast: 12, highlights: -28, shadows: 25, whites: 8, blacks: -7, temperature: 5, vibrance: 15, clarity: 8 };
+    currentPreset = "custom";
+    syncControls();
+    scheduleRender();
+    pushHistory();
+  });
+
+  document.getElementById("resetButton").addEventListener("click", () => {
+    adjustments = { ...neutral };
+    cropRatio = "original";
+    rotation = 0;
+    flipX = 1;
+    flipY = 1;
+    currentPreset = "original";
+    syncControls();
+    scheduleRender();
+    pushHistory();
+  });
+
+  undoButton.addEventListener("click", () => {
+    if (historyIndex <= 0) return;
+    historyIndex -= 1;
+    restoreSnapshot(history[historyIndex]);
+    updateHistoryButtons();
+  });
+
+  redoButton.addEventListener("click", () => {
+    if (historyIndex >= history.length - 1) return;
+    historyIndex += 1;
+    restoreSnapshot(history[historyIndex]);
+    updateHistoryButtons();
+  });
+
+  function setBefore(value) {
+    showBefore = value;
+    scheduleRender();
+  }
+
+  compareButton.addEventListener("click", () => setBefore(!showBefore));
+  compareButton.addEventListener("pointerdown", () => setBefore(true));
+  compareButton.addEventListener("pointerup", () => setBefore(false));
+  compareButton.addEventListener("pointerleave", () => setBefore(false));
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "\\") setBefore(!showBefore);
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+      event.preventDefault();
+      event.shiftKey ? redoButton.click() : undoButton.click();
+    }
+  });
+
+  document.getElementById("fitButton").addEventListener("click", scheduleRender);
+  document.getElementById("zoomButton").addEventListener("click", scheduleRender);
+  document.getElementById("exportButton").addEventListener("click", exportImage);
+
+  sourceImage.onload = () => {
+    history = [];
+    historyIndex = -1;
+    syncControls();
+    pushHistory();
+    scheduleRender();
+  };
+  sourceImage.onerror = () => showToast("샘플 사진을 불러오지 못했습니다.", false);
+  sourceImage.src = "/images/photo-editor-sample.jpg";
+})();
+</script>
+</body>
+</html>
