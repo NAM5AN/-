@@ -242,7 +242,7 @@
   }
 
   .editor-main {
-    min-height: 610px;
+    height: 720px;
     display: grid;
     grid-template-columns: 218px minmax(360px, 1fr) 292px;
   }
@@ -257,6 +257,7 @@
   }
 
   .right-panel {
+    overflow: hidden;
     border-left: 1px solid var(--editor-line);
   }
 
@@ -369,6 +370,8 @@
     background:
       linear-gradient(140deg, rgba(255,255,255,.18), transparent 42%),
       linear-gradient(135deg, #688178 0 48%, #b9825f 49% 70%, #453b33 71%);
+    background-position: center;
+    background-size: cover;
   }
 
   .preset-copy {
@@ -471,8 +474,81 @@
 
   #previewCanvas {
     max-width: 100%;
-    max-height: 415px;
+    max-height: 500px;
     display: block;
+  }
+
+  .crop-overlay {
+    position: absolute;
+    z-index: 2;
+    display: none;
+    border: 1px solid rgba(255,255,255,.95);
+    box-shadow: 0 0 0 9999px rgba(0,0,0,.56);
+    cursor: move;
+    touch-action: none;
+  }
+
+  .crop-overlay.visible {
+    display: block;
+  }
+
+  .crop-overlay::before,
+  .crop-overlay::after {
+    position: absolute;
+    pointer-events: none;
+    content: "";
+  }
+
+  .crop-overlay::before {
+    top: 33.333%;
+    right: 0;
+    bottom: 33.333%;
+    left: 0;
+    border-top: 1px solid rgba(255,255,255,.35);
+    border-bottom: 1px solid rgba(255,255,255,.35);
+  }
+
+  .crop-overlay::after {
+    top: 0;
+    right: 33.333%;
+    bottom: 0;
+    left: 33.333%;
+    border-right: 1px solid rgba(255,255,255,.35);
+    border-left: 1px solid rgba(255,255,255,.35);
+  }
+
+  .crop-handle {
+    position: absolute;
+    z-index: 1;
+    width: 12px;
+    height: 12px;
+    border: 2px solid white;
+    background: #25221e;
+    border-radius: 50%;
+  }
+
+  .crop-handle[data-crop-handle="nw"] {
+    top: -1px;
+    left: -1px;
+    cursor: nwse-resize;
+  }
+
+  .crop-handle[data-crop-handle="ne"] {
+    top: -1px;
+    right: -1px;
+    cursor: nesw-resize;
+  }
+
+  .crop-handle[data-crop-handle="sw"] {
+    bottom: -1px;
+    left: -1px;
+    cursor: nesw-resize;
+  }
+
+  .crop-handle[data-crop-handle="se"] {
+    right: -1px;
+    bottom: -1px;
+    cursor: nwse-resize;
   }
 
   .before-label {
@@ -570,6 +646,28 @@
     border-color: #e4ddd4;
     opacity: 1;
     transform: translateY(-1px);
+  }
+
+  .photo-thumb.selected:not(.active) {
+    border-color: var(--terra-soft);
+    opacity: 1;
+  }
+
+  .photo-thumb.selected::before {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 2;
+    width: 15px;
+    height: 15px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--terra);
+    color: white;
+    content: "✓";
+    font-size: 9px;
+    font-weight: 700;
   }
 
   .photo-thumb img {
@@ -735,6 +833,78 @@
     background: #3d3934;
   }
 
+  .dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(16,14,12,.68);
+  }
+
+  .dialog-backdrop[hidden] {
+    display: none;
+  }
+
+  .preset-dialog {
+    width: min(360px, 100%);
+    padding: 20px;
+    border: 1px solid #4c463f;
+    border-radius: 12px;
+    background: #25221e;
+    color: #e7e1d8;
+    box-shadow: 0 24px 70px rgba(0,0,0,.5);
+  }
+
+  .preset-dialog h2 {
+    margin: 0 0 7px;
+    font-family: var(--font-serif);
+    font-size: 18px;
+  }
+
+  .preset-dialog p {
+    margin: 0 0 15px;
+    color: #928a80;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .preset-dialog input {
+    width: 100%;
+    height: 38px;
+    padding: 0 11px;
+    border: 1px solid #514b44;
+    border-radius: 7px;
+    background: #1b1916;
+    color: white;
+    font-size: 12px;
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+    margin-top: 16px;
+  }
+
+  .dialog-actions button {
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid #4d4740;
+    border-radius: 7px;
+    background: #302c27;
+    color: #c9c1b7;
+    font-size: 11px;
+  }
+
+  .dialog-actions button[type="submit"] {
+    border-color: #a94824;
+    background: var(--terra);
+    color: white;
+    font-weight: 700;
+  }
+
   .histogram {
     position: relative;
     height: 92px;
@@ -759,8 +929,8 @@
   }
 
   .right-scroll {
-    max-height: 475px;
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .adjust-section {
@@ -970,6 +1140,7 @@
     }
 
     .editor-main {
+      height: auto;
       min-height: 520px;
       grid-template-columns: 1fr;
     }
@@ -985,7 +1156,7 @@
     }
 
     .right-scroll {
-      max-height: 340px;
+      max-height: none;
     }
 
     .workspace {
@@ -1106,6 +1277,12 @@
         <div class="canvas-stage" id="canvasStage">
           <div class="canvas-frame" id="canvasFrame">
             <canvas id="previewCanvas" aria-label="편집 중인 사진 미리보기"></canvas>
+            <div class="crop-overlay" id="cropOverlay" aria-label="자르기 영역">
+              <span class="crop-handle" data-crop-handle="nw" aria-hidden="true"></span>
+              <span class="crop-handle" data-crop-handle="ne" aria-hidden="true"></span>
+              <span class="crop-handle" data-crop-handle="sw" aria-hidden="true"></span>
+              <span class="crop-handle" data-crop-handle="se" aria-hidden="true"></span>
+            </div>
             <span class="before-label" id="beforeLabel">편집 전</span>
           </div>
           <div class="empty-state" id="emptyState">
@@ -1182,7 +1359,7 @@
   </main>
 
   <div class="help-card">
-    <strong>사용 안내</strong> · 사진을 여러 장 불러온 뒤 하단 목록에서 전환하며 각각 보정할 수 있습니다. 사진을 우클릭하면 추출, 프리셋 저장, 설정값 복사와 붙여넣기 메뉴가 열립니다. <strong>저장하기</strong>를 누르면 선택한 사진을 JPEG 파일로 내려받습니다.
+    <strong>사용 안내</strong> · 하단 사진을 Shift+클릭하면 범위로 여러 장을 선택할 수 있습니다. 자르기 탭에서는 흰색 영역을 드래그해 옮기거나 모서리를 잡아 크기를 조절하세요. 사진을 우클릭하면 추출, 프리셋 저장, 설정값 복사와 붙여넣기 메뉴가 열립니다.
   </div>
 </div>
 
@@ -1192,6 +1369,18 @@
   <div class="context-menu-separator"></div>
   <button type="button" role="menuitem" data-action="copy-settings">설정값 복사</button>
   <button type="button" role="menuitem" data-action="paste-settings" disabled>설정값 붙여넣기</button>
+</div>
+
+<div class="dialog-backdrop" id="presetDialogBackdrop" hidden>
+  <form class="preset-dialog" id="presetDialog" aria-labelledby="presetDialogTitle">
+    <h2 id="presetDialogTitle">프리셋 저장</h2>
+    <p>현재 사진의 빛과 색상 보정값을 새 프리셋으로 저장합니다.</p>
+    <input id="presetNameInput" type="text" maxlength="40" autocomplete="off" required aria-label="프리셋 이름" />
+    <div class="dialog-actions">
+      <button type="button" id="cancelPresetButton">취소</button>
+      <button type="submit">저장</button>
+    </div>
+  </form>
 </div>
 
 <div class="toast" id="toast" role="status"><b>✓</b><span>편집한 사진을 저장했습니다.</span></div>
@@ -1229,6 +1418,8 @@
   const previewContext = previewCanvas.getContext("2d", { willReadFrequently: true });
   const histogramCanvas = document.getElementById("histogramCanvas");
   const histogramContext = histogramCanvas.getContext("2d");
+  const canvasFrame = document.getElementById("canvasFrame");
+  const cropOverlay = document.getElementById("cropOverlay");
   const fileInput = document.getElementById("fileInput");
   const editorShell = document.querySelector(".editor-shell");
   const uploadCard = document.getElementById("uploadCard");
@@ -1246,6 +1437,9 @@
   const filmstrip = document.getElementById("filmstrip");
   const presetList = document.getElementById("presetList");
   const photoContextMenu = document.getElementById("photoContextMenu");
+  const presetDialogBackdrop = document.getElementById("presetDialogBackdrop");
+  const presetDialog = document.getElementById("presetDialog");
+  const presetNameInput = document.getElementById("presetNameInput");
   const exportButton = document.getElementById("exportButton");
   const toast = document.getElementById("toast");
   const sliderInputs = Array.from(document.querySelectorAll("[data-adjustment]"));
@@ -1255,6 +1449,7 @@
   let sourceImage = null;
   let adjustments = { ...neutral };
   let cropRatio = "original";
+  let cropRect = { x: 0, y: 0, width: 1, height: 1 };
   let rotation = 0;
   let flipX = 1;
   let flipY = 1;
@@ -1268,7 +1463,12 @@
   let activePhotoId = null;
   let copiedSettings = null;
   let contextPhotoId = null;
+  let presetPhotoId = null;
   let savedPresets = [];
+  let currentMode = "edit";
+  let selectedPhotoIds = new Set();
+  let selectionAnchorId = null;
+  let cropInteraction = null;
 
   function getPresetButtons() {
     return Array.from(presetList.querySelectorAll("[data-preset]"));
@@ -1278,6 +1478,7 @@
     return {
       adjustments: { ...neutral, ...(snapshot?.adjustments || {}) },
       cropRatio: snapshot?.cropRatio || "original",
+      cropRect: normalizeCropRect(snapshot?.cropRect),
       rotation: Number(snapshot?.rotation) || 0,
       flipX: snapshot?.flipX === -1 ? -1 : 1,
       flipY: snapshot?.flipY === -1 ? -1 : 1,
@@ -1293,6 +1494,7 @@
     return cloneSnapshot({
       adjustments: { ...adjustments },
       cropRatio,
+      cropRect: { ...cropRect },
       rotation,
       flipX,
       flipY,
@@ -1322,6 +1524,7 @@
   function restoreSnapshot(snapshot) {
     adjustments = { ...snapshot.adjustments };
     cropRatio = snapshot.cropRatio;
+    cropRect = { ...snapshot.cropRect };
     rotation = snapshot.rotation;
     flipX = snapshot.flipX;
     flipY = snapshot.flipY;
@@ -1399,6 +1602,21 @@
       button.append(thumb, copy, check);
       presetList.append(button);
     });
+    updatePresetPreviews();
+  }
+
+  function updatePresetPreviews() {
+    const photo = getActivePhoto();
+    getPresetButtons().forEach((button) => {
+      const thumb = button.querySelector(".preset-thumb");
+      if (!thumb) return;
+      if (!photo) {
+        thumb.style.removeProperty("background-image");
+        return;
+      }
+      thumb.style.backgroundImage = `url("${photo.url}")`;
+      thumb.style.filter = buildFilter(presets[button.dataset.preset] || neutral);
+    });
   }
 
   function renderFilmstrip() {
@@ -1415,6 +1633,7 @@
       const button = document.createElement("button");
       button.className = "photo-thumb";
       button.classList.toggle("active", photo.id === activePhotoId);
+      button.classList.toggle("selected", selectedPhotoIds.has(photo.id));
       button.type = "button";
       button.dataset.photoId = photo.id;
       button.title = `${photo.file.name} · 우클릭하여 사진 메뉴 열기`;
@@ -1440,6 +1659,47 @@
     addButton.setAttribute("aria-label", "사진 더 추가");
     addButton.textContent = "＋";
     filmstrip.append(addButton);
+  }
+
+  function selectPhotoRange(photoId) {
+    const anchorIndex = photos.findIndex((photo) => photo.id === selectionAnchorId);
+    const targetIndex = photos.findIndex((photo) => photo.id === photoId);
+    if (anchorIndex < 0 || targetIndex < 0) {
+      selectedPhotoIds = new Set([photoId]);
+      selectionAnchorId = photoId;
+      selectPhoto(photoId, { preserveSelection: true });
+      return;
+    }
+
+    const start = Math.min(anchorIndex, targetIndex);
+    const end = Math.max(anchorIndex, targetIndex);
+    selectedPhotoIds = new Set(photos.slice(start, end + 1).map((photo) => photo.id));
+    selectPhoto(photoId, { preserveSelection: true, updateAnchor: false });
+  }
+
+  function handlePhotoSelection(event, photoId) {
+    if (event.shiftKey && selectionAnchorId) {
+      selectPhotoRange(photoId);
+      return;
+    }
+
+    if (event.ctrlKey || event.metaKey) {
+      if (selectedPhotoIds.has(photoId) && selectedPhotoIds.size > 1) {
+        selectedPhotoIds.delete(photoId);
+        const nextActiveId = activePhotoId === photoId ? [...selectedPhotoIds][0] : activePhotoId;
+        selectionAnchorId = photoId;
+        selectPhoto(nextActiveId, { preserveSelection: true, updateAnchor: false });
+        return;
+      }
+      selectedPhotoIds.add(photoId);
+      selectionAnchorId = photoId;
+      selectPhoto(photoId, { preserveSelection: true });
+      return;
+    }
+
+    selectedPhotoIds = new Set([photoId]);
+    selectionAnchorId = photoId;
+    selectPhoto(photoId, { preserveSelection: true });
   }
 
   function updateEditorAvailability() {
@@ -1473,13 +1733,16 @@
       histogramContext.clearRect(0, 0, histogramCanvas.width, histogramCanvas.height);
       beforeLabel.classList.remove("visible");
       compareButton.classList.remove("active");
+      cropOverlay.classList.remove("visible");
     }
     updateHistoryButtons();
   }
 
-  function selectPhoto(photoId) {
+  function selectPhoto(photoId, options = {}) {
     const nextPhoto = photos.find((photo) => photo.id === photoId);
     if (!nextPhoto) return;
+    if (!options.preserveSelection) selectedPhotoIds = new Set([photoId]);
+    if (options.updateAnchor !== false) selectionAnchorId = photoId;
     persistActivePhoto();
     activePhotoId = nextPhoto.id;
     sourceImage = nextPhoto.image;
@@ -1488,6 +1751,7 @@
     const state = cloneSnapshot(nextPhoto.state);
     adjustments = { ...state.adjustments };
     cropRatio = state.cropRatio;
+    cropRect = { ...state.cropRect };
     rotation = state.rotation;
     flipX = state.flipX;
     flipY = state.flipY;
@@ -1498,34 +1762,111 @@
 
     const photoIndex = photos.indexOf(nextPhoto) + 1;
     fileName.textContent = nextPhoto.file.name;
-    fileMeta.textContent = `${(nextPhoto.file.size / 1024 / 1024).toFixed(1)} MB · ${photoIndex}/${photos.length}`;
+    const selectionMeta = selectedPhotoIds.size > 1 ? ` · ${selectedPhotoIds.size}장 선택` : "";
+    fileMeta.textContent = `${(nextPhoto.file.size / 1024 / 1024).toFixed(1)} MB · ${photoIndex}/${photos.length}${selectionMeta}`;
     syncControls();
+    updatePresetPreviews();
     updateEditorAvailability();
     renderFilmstrip();
     scheduleRender();
   }
 
-  function getCropRect(image, ratio = cropRatio) {
-    let x = 0;
-    let y = 0;
-    let width = image.naturalWidth || image.width;
-    let height = image.naturalHeight || image.height;
-    if (ratio === "original") return { x, y, width, height };
+  function clamp(value, minimum, maximum) {
+    return Math.min(maximum, Math.max(minimum, value));
+  }
 
-    const [ratioWidth, ratioHeight] = ratio.split(":").map(Number);
-    const targetRatio = ratioWidth / ratioHeight;
-    const sourceRatio = width / height;
+  function normalizeCropRect(rect) {
+    const width = clamp(Number(rect?.width) || 1, 0.04, 1);
+    const height = clamp(Number(rect?.height) || 1, 0.04, 1);
+    return {
+      x: clamp(Number(rect?.x) || 0, 0, 1 - width),
+      y: clamp(Number(rect?.y) || 0, 0, 1 - height),
+      width,
+      height
+    };
+  }
 
+  function getRatioValue(image, ratio = cropRatio) {
+    if (!image?.naturalWidth) return 1;
+    if (ratio === "original") return image.naturalWidth / image.naturalHeight;
+    const [width, height] = ratio.split(":").map(Number);
+    return width / height;
+  }
+
+  function createCropRectForRatio(image, ratio) {
+    if (!image?.naturalWidth || ratio === "original") return { x: 0, y: 0, width: 1, height: 1 };
+    const sourceRatio = image.naturalWidth / image.naturalHeight;
+    const targetRatio = getRatioValue(image, ratio);
     if (sourceRatio > targetRatio) {
-      const nextWidth = height * targetRatio;
-      x = (width - nextWidth) / 2;
-      width = nextWidth;
-    } else {
-      const nextHeight = width / targetRatio;
-      y = (height - nextHeight) / 2;
-      height = nextHeight;
+      const width = targetRatio / sourceRatio;
+      return { x: (1 - width) / 2, y: 0, width, height: 1 };
     }
-    return { x, y, width, height };
+    const height = sourceRatio / targetRatio;
+    return { x: 0, y: (1 - height) / 2, width: 1, height };
+  }
+
+  function getCropRect(image, normalizedRect = cropRect) {
+    const imageWidth = image.naturalWidth || image.width;
+    const imageHeight = image.naturalHeight || image.height;
+    const rect = normalizeCropRect(normalizedRect);
+    return {
+      x: rect.x * imageWidth,
+      y: rect.y * imageHeight,
+      width: rect.width * imageWidth,
+      height: rect.height * imageHeight
+    };
+  }
+
+  function sourceToDisplayPoint(point, state = currentSnapshot()) {
+    const sourceX = state.flipX === -1 ? 1 - point.x : point.x;
+    const sourceY = state.flipY === -1 ? 1 - point.y : point.y;
+    const normalizedRotation = ((state.rotation % 360) + 360) % 360;
+    if (normalizedRotation === 90) return { x: 1 - sourceY, y: sourceX };
+    if (normalizedRotation === 180) return { x: 1 - sourceX, y: 1 - sourceY };
+    if (normalizedRotation === 270) return { x: sourceY, y: 1 - sourceX };
+    return { x: sourceX, y: sourceY };
+  }
+
+  function displayToSourcePoint(point, state = currentSnapshot()) {
+    const normalizedRotation = ((state.rotation % 360) + 360) % 360;
+    let sourceX = point.x;
+    let sourceY = point.y;
+    if (normalizedRotation === 90) {
+      sourceX = point.y;
+      sourceY = 1 - point.x;
+    } else if (normalizedRotation === 180) {
+      sourceX = 1 - point.x;
+      sourceY = 1 - point.y;
+    } else if (normalizedRotation === 270) {
+      sourceX = 1 - point.y;
+      sourceY = point.x;
+    }
+    return {
+      x: state.flipX === -1 ? 1 - sourceX : sourceX,
+      y: state.flipY === -1 ? 1 - sourceY : sourceY
+    };
+  }
+
+  function transformRect(rect, transformPoint) {
+    const points = [
+      transformPoint({ x: rect.x, y: rect.y }),
+      transformPoint({ x: rect.x + rect.width, y: rect.y }),
+      transformPoint({ x: rect.x, y: rect.y + rect.height }),
+      transformPoint({ x: rect.x + rect.width, y: rect.y + rect.height })
+    ];
+    const left = Math.min(...points.map((point) => point.x));
+    const right = Math.max(...points.map((point) => point.x));
+    const top = Math.min(...points.map((point) => point.y));
+    const bottom = Math.max(...points.map((point) => point.y));
+    return normalizeCropRect({ x: left, y: top, width: right - left, height: bottom - top });
+  }
+
+  function sourceRectToDisplayRect(rect, state = currentSnapshot()) {
+    return transformRect(normalizeCropRect(rect), (point) => sourceToDisplayPoint(point, state));
+  }
+
+  function displayRectToSourceRect(rect, state = currentSnapshot()) {
+    return transformRect(normalizeCropRect(rect), (point) => displayToSourcePoint(point, state));
   }
 
   function buildFilter(values) {
@@ -1537,9 +1878,11 @@
     return `brightness(${brightness}) contrast(${contrast}) saturate(${saturation}) sepia(${sepia}) hue-rotate(${hue}deg)`;
   }
 
-  function renderToCanvas(canvas, context, maxWidth, maxHeight, before = false, image = sourceImage, state = currentSnapshot()) {
+  function renderToCanvas(canvas, context, maxWidth, maxHeight, before = false, image = sourceImage, state = currentSnapshot(), applyCrop = true) {
     if (!image?.naturalWidth) return { width: 0, height: 0 };
-    const crop = getCropRect(image, state.cropRatio);
+    const crop = applyCrop
+      ? getCropRect(image, state.cropRect)
+      : { x: 0, y: 0, width: image.naturalWidth, height: image.naturalHeight };
     const rotated = Math.abs(state.rotation % 180) === 90;
     const baseWidth = rotated ? crop.height : crop.width;
     const baseHeight = rotated ? crop.width : crop.height;
@@ -1651,15 +1994,131 @@
     });
   }
 
+  function updateOutputDimensions() {
+    if (!sourceImage?.naturalWidth) return;
+    const crop = getCropRect(sourceImage, cropRect);
+    const rotated = Math.abs(rotation % 180) === 90;
+    const width = Math.round(rotated ? crop.height : crop.width);
+    const height = Math.round(rotated ? crop.width : crop.height);
+    dimensions.textContent = `${width.toLocaleString()} × ${height.toLocaleString()} px`;
+  }
+
+  function updateCropOverlay() {
+    const visible = currentMode === "crop" && Boolean(getActivePhoto()) && sourceImage?.naturalWidth;
+    cropOverlay.classList.toggle("visible", Boolean(visible));
+    if (!visible) return;
+
+    const canvasBounds = previewCanvas.getBoundingClientRect();
+    const frameBounds = canvasFrame.getBoundingClientRect();
+    const displayRect = sourceRectToDisplayRect(cropRect);
+    cropOverlay.style.left = `${canvasBounds.left - frameBounds.left + displayRect.x * canvasBounds.width}px`;
+    cropOverlay.style.top = `${canvasBounds.top - frameBounds.top + displayRect.y * canvasBounds.height}px`;
+    cropOverlay.style.width = `${displayRect.width * canvasBounds.width}px`;
+    cropOverlay.style.height = `${displayRect.height * canvasBounds.height}px`;
+  }
+
+  function resizeDisplayCrop(startRect, pointer, handle, canvasBounds) {
+    const anchors = {
+      nw: { x: startRect.x + startRect.width, y: startRect.y + startRect.height, signX: -1, signY: -1 },
+      ne: { x: startRect.x, y: startRect.y + startRect.height, signX: 1, signY: -1 },
+      sw: { x: startRect.x + startRect.width, y: startRect.y, signX: -1, signY: 1 },
+      se: { x: startRect.x, y: startRect.y, signX: 1, signY: 1 }
+    };
+    const anchor = anchors[handle] || anchors.se;
+    const rotated = Math.abs(rotation % 180) === 90;
+    const pixelRatio = rotated ? 1 / getRatioValue(sourceImage, cropRatio) : getRatioValue(sourceImage, cropRatio);
+    const normalizedRatio = pixelRatio * canvasBounds.height / canvasBounds.width;
+    const minimumWidth = Math.min(0.2, 42 / Math.max(canvasBounds.width, 1));
+    const maximumWidth = anchor.signX > 0 ? 1 - anchor.x : anchor.x;
+    const maximumHeight = anchor.signY > 0 ? 1 - anchor.y : anchor.y;
+    const rawWidth = Math.abs(pointer.x - anchor.x);
+    const rawHeight = Math.abs(pointer.y - anchor.y);
+    let width = Math.max(rawWidth, rawHeight * normalizedRatio, minimumWidth);
+    let height = width / normalizedRatio;
+
+    if (width > maximumWidth) {
+      width = maximumWidth;
+      height = width / normalizedRatio;
+    }
+    if (height > maximumHeight) {
+      height = maximumHeight;
+      width = height * normalizedRatio;
+    }
+
+    return normalizeCropRect({
+      x: anchor.signX > 0 ? anchor.x : anchor.x - width,
+      y: anchor.signY > 0 ? anchor.y : anchor.y - height,
+      width,
+      height
+    });
+  }
+
+  function beginCropInteraction(event) {
+    if (currentMode !== "crop" || !getActivePhoto() || event.button !== 0) return;
+    event.preventDefault();
+    const canvasBounds = previewCanvas.getBoundingClientRect();
+    const handle = event.target.closest("[data-crop-handle]")?.dataset.cropHandle || "move";
+    cropInteraction = {
+      pointerId: event.pointerId,
+      action: handle,
+      startX: event.clientX,
+      startY: event.clientY,
+      canvasBounds,
+      state: currentSnapshot(),
+      displayRect: sourceRectToDisplayRect(cropRect)
+    };
+    cropOverlay.setPointerCapture(event.pointerId);
+  }
+
+  function moveCropInteraction(event) {
+    if (!cropInteraction || event.pointerId !== cropInteraction.pointerId) return;
+    event.preventDefault();
+    const { canvasBounds, displayRect, action, startX, startY, state } = cropInteraction;
+    const deltaX = (event.clientX - startX) / Math.max(canvasBounds.width, 1);
+    const deltaY = (event.clientY - startY) / Math.max(canvasBounds.height, 1);
+    let nextDisplayRect;
+
+    if (action === "move") {
+      nextDisplayRect = {
+        x: clamp(displayRect.x + deltaX, 0, 1 - displayRect.width),
+        y: clamp(displayRect.y + deltaY, 0, 1 - displayRect.height),
+        width: displayRect.width,
+        height: displayRect.height
+      };
+    } else {
+      const pointer = {
+        x: clamp((event.clientX - canvasBounds.left) / Math.max(canvasBounds.width, 1), 0, 1),
+        y: clamp((event.clientY - canvasBounds.top) / Math.max(canvasBounds.height, 1), 0, 1)
+      };
+      nextDisplayRect = resizeDisplayCrop(displayRect, pointer, action, canvasBounds);
+    }
+
+    cropRect = displayRectToSourceRect(nextDisplayRect, state);
+    currentPreset = "custom";
+    persistActivePhoto();
+    updateCropOverlay();
+    updateOutputDimensions();
+  }
+
+  function endCropInteraction(event) {
+    if (!cropInteraction || event.pointerId !== cropInteraction.pointerId) return;
+    cropInteraction = null;
+    syncControls();
+    pushHistory();
+    scheduleRender();
+  }
+
   function scheduleRender() {
     cancelAnimationFrame(renderFrame);
     renderFrame = requestAnimationFrame(() => {
       if (!sourceImage?.complete || !sourceImage.naturalWidth || !getActivePhoto()) return;
-      const dimensionsValue = renderToCanvas(previewCanvas, previewContext, 1500, 920, showBefore);
-      dimensions.textContent = `${dimensionsValue.width.toLocaleString()} × ${dimensionsValue.height.toLocaleString()} px`;
+      const cropMode = currentMode === "crop";
+      renderToCanvas(previewCanvas, previewContext, 1500, 1100, showBefore, sourceImage, currentSnapshot(), !cropMode);
+      updateOutputDimensions();
       beforeLabel.classList.toggle("visible", showBefore);
       compareButton.classList.toggle("active", showBefore);
       renderHistogram();
+      updateCropOverlay();
     });
   }
 
@@ -1673,10 +2132,12 @@
   }
 
   function setMode(mode) {
+    currentMode = mode;
     modeTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.mode === mode));
     const cropMode = mode === "crop";
     cropControls.classList.toggle("visible", cropMode);
     adjustmentsPanel.style.display = cropMode ? "none" : "";
+    scheduleRender();
   }
 
   function isSupportedImage(file) {
@@ -1727,7 +2188,7 @@
     renderFilmstrip();
     if (!hadPhotos) selectPhoto(loadedPhotos[0].id);
     else {
-      fileMeta.textContent = `${(getActivePhoto().file.size / 1024 / 1024).toFixed(1)} MB · ${photos.indexOf(getActivePhoto()) + 1}/${photos.length}`;
+      selectPhoto(activePhotoId, { preserveSelection: true, updateAnchor: false });
       showToast(`${loadedPhotos.length}장의 사진을 추가했습니다.`);
     }
 
@@ -1748,7 +2209,7 @@
     if (!photo?.image?.naturalWidth) return;
     if (photo.id === activePhotoId) persistActivePhoto();
     const state = cloneSnapshot(photo.state);
-    const crop = getCropRect(photo.image, state.cropRatio);
+    const crop = getCropRect(photo.image, state.cropRect);
     const rotated = Math.abs(state.rotation % 180) === 90;
     const outputWidth = Math.round(rotated ? crop.height : crop.width);
     const outputHeight = Math.round(rotated ? crop.width : crop.height);
@@ -1771,30 +2232,45 @@
     }, "image/jpeg", 0.94);
   }
 
-  function savePreset(photo = getActivePhoto()) {
+  function openPresetDialog(photo = getActivePhoto()) {
     if (!photo) return;
-    persistActivePhoto();
-    const defaultName = `내 프리셋 ${savedPresets.length + 1}`;
-    const name = window.prompt("저장할 프리셋 이름을 입력하세요.", defaultName)?.trim();
-    if (!name) return;
+    if (photo.id === activePhotoId) persistActivePhoto();
+    presetPhotoId = photo.id;
+    presetNameInput.value = `내 프리셋 ${savedPresets.length + 1}`;
+    presetDialogBackdrop.hidden = false;
+    requestAnimationFrame(() => {
+      presetNameInput.focus();
+      presetNameInput.select();
+    });
+  }
 
+  function closePresetDialog() {
+    presetDialogBackdrop.hidden = true;
+    presetPhotoId = null;
+  }
+
+  function savePreset(name) {
+    const photo = photos.find((item) => item.id === presetPhotoId);
+    const trimmedName = name.trim();
+    if (!photo || !trimmedName) return;
     const item = {
       id: `saved-${Date.now()}`,
-      name: name.slice(0, 40),
+      name: trimmedName.slice(0, 40),
       adjustments: { ...photo.state.adjustments }
     };
     presets[item.id] = { ...neutral, ...item.adjustments };
     savedPresets.push(item);
+    let persisted = true;
     try {
       localStorage.setItem("photo-editor-presets", JSON.stringify(savedPresets));
     } catch {
-      showToast("브라우저 저장 공간에 프리셋을 저장하지 못했습니다.", false);
-      return;
+      persisted = false;
     }
     renderSavedPresets();
     updateEditorAvailability();
     syncControls();
-    showToast(`‘${item.name}’ 프리셋을 저장했습니다.`);
+    closePresetDialog();
+    showToast(persisted ? `‘${item.name}’ 프리셋을 저장했습니다.` : `‘${item.name}’ 프리셋을 현재 세션에 저장했습니다.`);
   }
 
   function copyPhotoSettings(photo = getActivePhoto()) {
@@ -1811,6 +2287,7 @@
     const pasted = cloneSnapshot(copiedSettings);
     adjustments = { ...pasted.adjustments };
     cropRatio = pasted.cropRatio;
+    cropRect = { ...pasted.cropRect };
     rotation = pasted.rotation;
     flipX = pasted.flipX;
     flipY = pasted.flipY;
@@ -1830,7 +2307,8 @@
     const photo = photos.find((item) => item.id === photoId);
     if (!photo) return;
     event.preventDefault();
-    selectPhoto(photoId);
+    if (selectedPhotoIds.has(photoId)) selectPhoto(photoId, { preserveSelection: true, updateAnchor: false });
+    else selectPhoto(photoId);
     contextPhotoId = photoId;
     photoContextMenu.querySelector('[data-action="paste-settings"]').disabled = !copiedSettings;
     photoContextMenu.hidden = false;
@@ -1892,7 +2370,7 @@
       return;
     }
     const photoButton = event.target.closest("[data-photo-id]");
-    if (photoButton) selectPhoto(photoButton.dataset.photoId);
+    if (photoButton) handlePhotoSelection(event, photoButton.dataset.photoId);
   });
 
   filmstrip.addEventListener("contextmenu", (event) => {
@@ -1907,6 +2385,7 @@
   ratioButtons.forEach((button) => {
     button.addEventListener("click", () => {
       cropRatio = button.dataset.ratio;
+      cropRect = createCropRectForRatio(sourceImage, cropRatio);
       currentPreset = "custom";
       syncControls();
       scheduleRender();
@@ -1949,6 +2428,7 @@
   document.getElementById("resetButton").addEventListener("click", () => {
     adjustments = { ...neutral };
     cropRatio = "original";
+    cropRect = { x: 0, y: 0, width: 1, height: 1 };
     rotation = 0;
     flipX = 1;
     flipY = 1;
@@ -1982,8 +2462,25 @@
   compareButton.addEventListener("pointerup", () => setBefore(false));
   compareButton.addEventListener("pointerleave", () => setBefore(false));
 
+  cropOverlay.addEventListener("pointerdown", beginCropInteraction);
+  cropOverlay.addEventListener("pointermove", moveCropInteraction);
+  cropOverlay.addEventListener("pointerup", endCropInteraction);
+  cropOverlay.addEventListener("pointercancel", endCropInteraction);
+
+  presetDialog.addEventListener("submit", (event) => {
+    event.preventDefault();
+    savePreset(presetNameInput.value);
+  });
+  document.getElementById("cancelPresetButton").addEventListener("click", closePresetDialog);
+  presetDialogBackdrop.addEventListener("pointerdown", (event) => {
+    if (event.target === presetDialogBackdrop) closePresetDialog();
+  });
+
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closePhotoContextMenu();
+    if (event.key === "Escape") {
+      closePhotoContextMenu();
+      closePresetDialog();
+    }
     if (event.key === "\\" && getActivePhoto()) setBefore(!showBefore);
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
       event.preventDefault();
@@ -2000,7 +2497,7 @@
     if (!menuItem || menuItem.disabled) return;
     const photo = photos.find((item) => item.id === contextPhotoId) || getActivePhoto();
     if (menuItem.dataset.action === "export") exportImage(photo);
-    if (menuItem.dataset.action === "save-preset") savePreset(photo);
+    if (menuItem.dataset.action === "save-preset") openPresetDialog(photo);
     if (menuItem.dataset.action === "copy-settings") copyPhotoSettings(photo);
     if (menuItem.dataset.action === "paste-settings") pastePhotoSettings(photo);
     closePhotoContextMenu();
@@ -2009,7 +2506,10 @@
   document.addEventListener("pointerdown", (event) => {
     if (!photoContextMenu.hidden && !photoContextMenu.contains(event.target)) closePhotoContextMenu();
   });
-  window.addEventListener("resize", closePhotoContextMenu);
+  window.addEventListener("resize", () => {
+    closePhotoContextMenu();
+    scheduleRender();
+  });
   window.addEventListener("scroll", closePhotoContextMenu, true);
   window.addEventListener("beforeunload", () => {
     photos.forEach((photo) => URL.revokeObjectURL(photo.url));
