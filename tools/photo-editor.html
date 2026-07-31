@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>사진 편집기 - 체험단 매니저</title>
+<title>포토 에디터 - 체험단 매니저</title>
 <meta name="description" content="사진을 올리고 밝기, 색감, 자르기, 회전을 조정한 뒤 고화질로 저장하세요. 모든 편집은 브라우저 안에서 처리됩니다." />
 <link rel="stylesheet" href="/styles/base.css" />
 <style>
@@ -90,31 +90,8 @@
   .tool-hero {
     max-width: 900px;
     margin: 0 auto;
-    padding: 48px 20px 30px;
+    padding: 40px 20px 30px;
     text-align: center;
-  }
-
-  .eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-bottom: 14px;
-    padding: 5px 12px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--paper);
-    color: var(--terra);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-  }
-
-  .eyebrow::before {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--sage);
-    content: "";
   }
 
   .tool-hero h1 {
@@ -168,38 +145,17 @@
   .editor-topbar {
     height: 54px;
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: 1fr auto;
     align-items: center;
     padding: 0 14px;
     border-bottom: 1px solid var(--editor-line);
     background: #1d1b18;
   }
 
-  .editor-brand,
   .top-actions,
   .mode-tabs {
     display: flex;
     align-items: center;
-  }
-
-  .editor-brand {
-    gap: 9px;
-    color: #d7d1c8;
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  .editor-mark {
-    display: grid;
-    width: 29px;
-    height: 29px;
-    place-items: center;
-    border: 1px solid #b8623d;
-    border-radius: 7px;
-    background: #43271b;
-    color: #e8a383;
-    font-family: var(--font-serif);
-    font-size: 13px;
   }
 
   .mode-tabs {
@@ -278,6 +234,11 @@
 
   .export-button:hover {
     background: #a8431f;
+  }
+
+  .export-button:disabled {
+    cursor: default;
+    opacity: 0.38;
   }
 
   .editor-main {
@@ -390,6 +351,11 @@
     background: #2b2823;
   }
 
+  .preset-button:disabled {
+    cursor: default;
+    opacity: 0.35;
+  }
+
   .preset-button.active {
     border-color: #7f432c;
     background: #3b281f;
@@ -400,9 +366,9 @@
     height: 40px;
     overflow: hidden;
     border-radius: 4px;
-    background-image: url("/images/photo-editor-sample.jpg");
-    background-position: center;
-    background-size: cover;
+    background:
+      linear-gradient(140deg, rgba(255,255,255,.18), transparent 42%),
+      linear-gradient(135deg, #688178 0 48%, #b9825f 49% 70%, #453b33 71%);
   }
 
   .preset-copy {
@@ -584,25 +550,189 @@
     background: #1d1b18;
   }
 
-  .filmstrip button {
+  .photo-thumb {
     position: relative;
-    width: 92px;
+    width: 104px;
     height: 62px;
     flex: 0 0 auto;
     overflow: hidden;
+    padding: 0;
     border: 2px solid transparent;
     border-radius: 4px;
-    background-position: center;
-    background-size: cover;
+    background: #292622;
+    color: white;
     opacity: 0.72;
     transition: 0.15s ease;
   }
 
-  .filmstrip button:hover,
-  .filmstrip button.active {
+  .photo-thumb:hover,
+  .photo-thumb.active {
     border-color: #e4ddd4;
     opacity: 1;
     transform: translateY(-1px);
+  }
+
+  .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  .photo-thumb-name {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: hidden;
+    padding: 12px 5px 4px;
+    background: linear-gradient(transparent, rgba(0,0,0,.78));
+    color: #f3efe9;
+    font-size: 8px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .filmstrip-empty {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #777067;
+    font-size: 10px;
+  }
+
+  .filmstrip-empty::before {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 1px dashed #4b4640;
+    border-radius: 5px;
+    color: #9a9187;
+    content: "＋";
+    font-size: 16px;
+  }
+
+  .filmstrip-add {
+    width: 52px;
+    height: 62px;
+    flex: 0 0 auto;
+    border: 1px dashed #504a43;
+    border-radius: 4px;
+    background: transparent;
+    color: #9c958b;
+    font-size: 20px;
+  }
+
+  .filmstrip-add:hover {
+    border-color: #8e5a43;
+    color: #e4ddd4;
+  }
+
+  .empty-state {
+    display: none;
+    max-width: 360px;
+    align-items: center;
+    flex-direction: column;
+    padding: 36px 28px;
+    color: #a69f96;
+    text-align: center;
+  }
+
+  .editor-shell.empty .empty-state {
+    display: flex;
+  }
+
+  .editor-shell.empty .canvas-frame {
+    display: none;
+  }
+
+  .empty-state-icon {
+    width: 66px;
+    height: 52px;
+    display: grid;
+    margin-bottom: 17px;
+    place-items: center;
+    border: 1px solid #514b44;
+    border-radius: 11px;
+    background: #27241f;
+    color: #d88762;
+    font-size: 28px;
+  }
+
+  .empty-state strong {
+    margin-bottom: 7px;
+    color: #e4dfd7;
+    font-size: 15px;
+  }
+
+  .empty-state p {
+    margin: 0 0 17px;
+    color: #827b72;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .empty-state button {
+    height: 34px;
+    padding: 0 16px;
+    border: 1px solid #a94824;
+    border-radius: 7px;
+    background: var(--terra);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .editor-shell.empty .workspace-footer {
+    color: #666059;
+  }
+
+  .context-menu {
+    position: fixed;
+    z-index: 1000;
+    width: 190px;
+    overflow: hidden;
+    padding: 5px;
+    border: 1px solid #4a453e;
+    border-radius: 8px;
+    background: #26231f;
+    box-shadow: 0 14px 34px rgba(0,0,0,.38);
+  }
+
+  .context-menu[hidden] {
+    display: none;
+  }
+
+  .context-menu button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 9px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #ddd7ce;
+    font-size: 11px;
+    text-align: left;
+  }
+
+  .context-menu button:hover:not(:disabled) {
+    background: #3a302a;
+    color: white;
+  }
+
+  .context-menu button:disabled {
+    cursor: default;
+    color: #625d56;
+  }
+
+  .context-menu-separator {
+    height: 1px;
+    margin: 4px 5px;
+    background: #3d3934;
   }
 
   .histogram {
@@ -831,16 +961,11 @@
     }
 
     .editor-topbar {
-      grid-template-columns: auto 1fr auto;
-    }
-
-    .editor-brand > span:last-child {
-      display: none;
+      grid-template-columns: 1fr auto;
     }
 
     .mode-tabs {
       display: flex;
-      justify-content: center;
       gap: 14px;
     }
 
@@ -875,7 +1000,7 @@
       max-height: 320px;
     }
 
-    .filmstrip button {
+    .photo-thumb {
       width: 78px;
       height: 52px;
     }
@@ -898,8 +1023,7 @@
 </header>
 
 <section class="tool-hero">
-  <span class="eyebrow">BROWSER PHOTO LAB</span>
-  <h1>사진 <em>편집기</em></h1>
+  <h1>포토 <em>에디터</em></h1>
   <p>복잡한 프로그램 없이 사진의 빛과 색을 다듬고, 원하는 비율로 자른 뒤 고화질로 저장하세요.</p>
   <span class="privacy-note"><b>✓</b> 사진은 서버로 전송되지 않고 내 브라우저 안에서만 처리됩니다.</span>
 </section>
@@ -907,10 +1031,6 @@
 <div class="editor-wrap">
   <main class="editor-shell" aria-label="사진 편집 작업 영역">
     <header class="editor-topbar">
-      <div class="editor-brand">
-        <span class="editor-mark">빛</span>
-        <span>PHOTO LAB</span>
-      </div>
       <nav class="mode-tabs" aria-label="편집 모드">
         <button class="mode-tab active" data-mode="edit">보정</button>
         <button class="mode-tab" data-mode="crop">자르기</button>
@@ -924,14 +1044,14 @@
 
     <div class="editor-main">
       <aside class="side-panel left-panel">
-        <div class="panel-heading">내 사진 <span>LOCAL ONLY</span></div>
+        <div class="panel-heading">내 사진</div>
         <div class="upload-card" id="uploadCard">
           <button type="button" id="uploadButton">
             <span class="upload-icon">＋</span>
             <strong>사진 불러오기</strong>
-            <small>JPG · PNG · WEBP</small>
+            <small>여러 장 선택 가능 · JPG · PNG · WEBP</small>
           </button>
-          <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" />
+          <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple />
         </div>
         <div class="panel-heading">추천 프리셋 <span>6</span></div>
         <div class="preset-list" id="presetList">
@@ -974,8 +1094,8 @@
             <button class="small-button" id="resetButton" type="button" title="모든 보정 초기화" aria-label="모든 보정 초기화">↺</button>
           </div>
           <div class="workspace-title">
-            <strong id="fileName">sample-landscape.jpg</strong>
-            <span id="fileMeta">샘플 사진 · 브라우저 편집</span>
+            <strong id="fileName">사진 없음</strong>
+            <span id="fileMeta">사진을 추가해 편집을 시작하세요</span>
           </div>
           <div class="toolbar-group">
             <button class="small-button" id="quickUploadButton" type="button" title="사진 불러오기" aria-label="사진 불러오기">＋</button>
@@ -988,6 +1108,12 @@
             <canvas id="previewCanvas" aria-label="편집 중인 사진 미리보기"></canvas>
             <span class="before-label" id="beforeLabel">편집 전</span>
           </div>
+          <div class="empty-state" id="emptyState">
+            <span class="empty-state-icon">＋</span>
+            <strong>사진을 추가해 편집을 시작하세요</strong>
+            <p>사진을 끌어다 놓거나 불러오기 버튼을 눌러<br />한 장 또는 여러 장을 추가할 수 있습니다.</p>
+            <button type="button" id="emptyUploadButton">사진 불러오기</button>
+          </div>
           <div class="drop-overlay" id="dropOverlay">사진을 여기에 놓으세요</div>
         </div>
 
@@ -997,13 +1123,8 @@
           <button class="zoom-button" id="zoomButton" type="button">화면 맞춤</button>
         </div>
 
-        <div class="filmstrip" id="filmstrip" aria-label="빠른 스타일">
-          <button class="active" type="button" data-preset="original" aria-label="원본" style="background-image:url('/images/photo-editor-sample.jpg')"></button>
-          <button type="button" data-preset="warm" aria-label="따뜻한 오후" style="background-image:url('/images/photo-editor-sample.jpg');filter:brightness(1.07) contrast(1.08) saturate(1.16) sepia(.12)"></button>
-          <button type="button" data-preset="forest" aria-label="고요한 숲" style="background-image:url('/images/photo-editor-sample.jpg');filter:contrast(1.1) saturate(.86) hue-rotate(8deg)"></button>
-          <button type="button" data-preset="cinema" aria-label="시네마" style="background-image:url('/images/photo-editor-sample.jpg');filter:contrast(1.2) saturate(.8) sepia(.08)"></button>
-          <button type="button" data-preset="matte" aria-label="크림 매트" style="background-image:url('/images/photo-editor-sample.jpg');filter:contrast(.88) brightness(1.06) saturate(.8)"></button>
-          <button type="button" data-preset="mono" aria-label="기록 흑백" style="background-image:url('/images/photo-editor-sample.jpg');filter:grayscale(1) contrast(1.16)"></button>
+        <div class="filmstrip" id="filmstrip" aria-label="업로드한 사진 목록">
+          <div class="filmstrip-empty">업로드한 사진이 여기에 표시됩니다.</div>
         </div>
       </section>
 
@@ -1061,8 +1182,16 @@
   </main>
 
   <div class="help-card">
-    <strong>사용 안내</strong> · 사진을 불러온 뒤 오른쪽 슬라이더나 프리셋으로 보정하세요. 자르기 탭에서는 비율과 회전 방향을 선택할 수 있습니다. <strong>저장하기</strong>를 누르면 원본 크기에 맞춰 JPEG 파일로 내려받습니다. 모든 처리는 기기 안에서 이루어집니다.
+    <strong>사용 안내</strong> · 사진을 여러 장 불러온 뒤 하단 목록에서 전환하며 각각 보정할 수 있습니다. 사진을 우클릭하면 추출, 프리셋 저장, 설정값 복사와 붙여넣기 메뉴가 열립니다. <strong>저장하기</strong>를 누르면 선택한 사진을 JPEG 파일로 내려받습니다.
   </div>
+</div>
+
+<div class="context-menu" id="photoContextMenu" role="menu" hidden>
+  <button type="button" role="menuitem" data-action="export">해당 사진만 추출</button>
+  <button type="button" role="menuitem" data-action="save-preset">프리셋 저장</button>
+  <div class="context-menu-separator"></div>
+  <button type="button" role="menuitem" data-action="copy-settings">설정값 복사</button>
+  <button type="button" role="menuitem" data-action="paste-settings" disabled>설정값 붙여넣기</button>
 </div>
 
 <div class="toast" id="toast" role="status"><b>✓</b><span>편집한 사진을 저장했습니다.</span></div>
@@ -1101,7 +1230,9 @@
   const histogramCanvas = document.getElementById("histogramCanvas");
   const histogramContext = histogramCanvas.getContext("2d");
   const fileInput = document.getElementById("fileInput");
+  const editorShell = document.querySelector(".editor-shell");
   const uploadCard = document.getElementById("uploadCard");
+  const emptyUploadButton = document.getElementById("emptyUploadButton");
   const dropOverlay = document.getElementById("dropOverlay");
   const beforeLabel = document.getElementById("beforeLabel");
   const compareButton = document.getElementById("compareButton");
@@ -1112,13 +1243,16 @@
   const fileMeta = document.getElementById("fileMeta");
   const cropControls = document.getElementById("cropControls");
   const adjustmentsPanel = document.getElementById("adjustmentsPanel");
+  const filmstrip = document.getElementById("filmstrip");
+  const presetList = document.getElementById("presetList");
+  const photoContextMenu = document.getElementById("photoContextMenu");
+  const exportButton = document.getElementById("exportButton");
   const toast = document.getElementById("toast");
   const sliderInputs = Array.from(document.querySelectorAll("[data-adjustment]"));
   const modeTabs = Array.from(document.querySelectorAll(".mode-tab"));
-  const presetButtons = Array.from(document.querySelectorAll("[data-preset]"));
   const ratioButtons = Array.from(document.querySelectorAll("[data-ratio]"));
 
-  let sourceImage = new Image();
+  let sourceImage = null;
   let adjustments = { ...neutral };
   let cropRatio = "original";
   let rotation = 0;
@@ -1126,30 +1260,62 @@
   let flipY = 1;
   let showBefore = false;
   let currentPreset = "original";
-  let currentFileBase = "sample-landscape";
+  let currentFileBase = "edited-photo";
   let renderFrame = 0;
   let history = [];
   let historyIndex = -1;
+  let photos = [];
+  let activePhotoId = null;
+  let copiedSettings = null;
+  let contextPhotoId = null;
+  let savedPresets = [];
 
-  sourceImage.crossOrigin = "anonymous";
+  function getPresetButtons() {
+    return Array.from(presetList.querySelectorAll("[data-preset]"));
+  }
+
+  function cloneSnapshot(snapshot) {
+    return {
+      adjustments: { ...neutral, ...(snapshot?.adjustments || {}) },
+      cropRatio: snapshot?.cropRatio || "original",
+      rotation: Number(snapshot?.rotation) || 0,
+      flipX: snapshot?.flipX === -1 ? -1 : 1,
+      flipY: snapshot?.flipY === -1 ? -1 : 1,
+      currentPreset: snapshot?.currentPreset || "original"
+    };
+  }
+
+  function getActivePhoto() {
+    return photos.find((photo) => photo.id === activePhotoId) || null;
+  }
 
   function currentSnapshot() {
-    return {
+    return cloneSnapshot({
       adjustments: { ...adjustments },
       cropRatio,
       rotation,
       flipX,
       flipY,
       currentPreset
-    };
+    });
+  }
+
+  function persistActivePhoto() {
+    const photo = getActivePhoto();
+    if (!photo) return;
+    photo.state = currentSnapshot();
+    photo.history = history.map(cloneSnapshot);
+    photo.historyIndex = historyIndex;
   }
 
   function pushHistory() {
+    if (!getActivePhoto()) return;
     const snapshot = currentSnapshot();
     history = history.slice(0, historyIndex + 1);
     history.push(snapshot);
     if (history.length > 40) history.shift();
     historyIndex = history.length - 1;
+    persistActivePhoto();
     updateHistoryButtons();
   }
 
@@ -1161,12 +1327,14 @@
     flipY = snapshot.flipY;
     currentPreset = snapshot.currentPreset;
     syncControls();
+    persistActivePhoto();
     scheduleRender();
   }
 
   function updateHistoryButtons() {
-    undoButton.disabled = historyIndex <= 0;
-    redoButton.disabled = historyIndex >= history.length - 1;
+    const hasPhoto = Boolean(getActivePhoto());
+    undoButton.disabled = !hasPhoto || historyIndex <= 0;
+    redoButton.disabled = !hasPhoto || historyIndex >= history.length - 1;
   }
 
   function formatValue(value) {
@@ -1182,7 +1350,7 @@
       input.parentElement.querySelector("output").textContent = formatValue(input.value);
     });
 
-    presetButtons.forEach((button) => {
+    getPresetButtons().forEach((button) => {
       const active = button.dataset.preset === currentPreset;
       button.classList.toggle("active", active);
       const check = button.querySelector(".preset-check");
@@ -1194,14 +1362,157 @@
     });
   }
 
-  function getCropRect(image) {
+  function loadSavedPresets() {
+    try {
+      const stored = JSON.parse(localStorage.getItem("photo-editor-presets") || "[]");
+      savedPresets = Array.isArray(stored) ? stored.filter((item) => item?.id && item?.name && item?.adjustments) : [];
+      savedPresets.forEach((item) => {
+        presets[item.id] = { ...neutral, ...item.adjustments };
+      });
+    } catch {
+      savedPresets = [];
+    }
+  }
+
+  function renderSavedPresets() {
+    presetList.querySelectorAll(".saved-preset").forEach((button) => button.remove());
+    savedPresets.forEach((item) => {
+      const button = document.createElement("button");
+      button.className = "preset-button saved-preset";
+      button.dataset.preset = item.id;
+      button.type = "button";
+
+      const thumb = document.createElement("span");
+      thumb.className = "preset-thumb";
+      thumb.style.filter = buildFilter(presets[item.id]);
+
+      const copy = document.createElement("span");
+      copy.className = "preset-copy";
+      const name = document.createElement("strong");
+      name.textContent = item.name;
+      const detail = document.createElement("span");
+      detail.textContent = "내 프리셋";
+      copy.append(name, detail);
+
+      const check = document.createElement("span");
+      check.className = "preset-check";
+      button.append(thumb, copy, check);
+      presetList.append(button);
+    });
+  }
+
+  function renderFilmstrip() {
+    filmstrip.replaceChildren();
+    if (!photos.length) {
+      const empty = document.createElement("div");
+      empty.className = "filmstrip-empty";
+      empty.textContent = "업로드한 사진이 여기에 표시됩니다.";
+      filmstrip.append(empty);
+      return;
+    }
+
+    photos.forEach((photo) => {
+      const button = document.createElement("button");
+      button.className = "photo-thumb";
+      button.classList.toggle("active", photo.id === activePhotoId);
+      button.type = "button";
+      button.dataset.photoId = photo.id;
+      button.title = `${photo.file.name} · 우클릭하여 사진 메뉴 열기`;
+      button.setAttribute("aria-label", `${photo.file.name} 선택`);
+
+      const image = document.createElement("img");
+      image.src = photo.url;
+      image.alt = "";
+      image.draggable = false;
+
+      const name = document.createElement("span");
+      name.className = "photo-thumb-name";
+      name.textContent = photo.file.name;
+      button.append(image, name);
+      filmstrip.append(button);
+    });
+
+    const addButton = document.createElement("button");
+    addButton.className = "filmstrip-add";
+    addButton.type = "button";
+    addButton.dataset.action = "add-photos";
+    addButton.title = "사진 더 추가";
+    addButton.setAttribute("aria-label", "사진 더 추가");
+    addButton.textContent = "＋";
+    filmstrip.append(addButton);
+  }
+
+  function updateEditorAvailability() {
+    const hasPhoto = Boolean(getActivePhoto());
+    editorShell.classList.toggle("empty", !hasPhoto);
+    [
+      exportButton,
+      compareButton,
+      document.getElementById("resetButton"),
+      document.getElementById("fitButton"),
+      document.getElementById("zoomButton"),
+      document.getElementById("autoButton"),
+      document.getElementById("rotateLeft"),
+      document.getElementById("rotateRight"),
+      document.getElementById("flipHorizontal"),
+      document.getElementById("flipVertical"),
+      ...modeTabs,
+      ...ratioButtons,
+      ...sliderInputs,
+      ...getPresetButtons()
+    ].forEach((control) => {
+      if (control) control.disabled = !hasPhoto;
+    });
+
+    if (!hasPhoto) {
+      fileName.textContent = "사진 없음";
+      fileMeta.textContent = "사진을 추가해 편집을 시작하세요";
+      dimensions.textContent = "— × — px";
+      previewCanvas.width = 1;
+      previewCanvas.height = 1;
+      histogramContext.clearRect(0, 0, histogramCanvas.width, histogramCanvas.height);
+      beforeLabel.classList.remove("visible");
+      compareButton.classList.remove("active");
+    }
+    updateHistoryButtons();
+  }
+
+  function selectPhoto(photoId) {
+    const nextPhoto = photos.find((photo) => photo.id === photoId);
+    if (!nextPhoto) return;
+    persistActivePhoto();
+    activePhotoId = nextPhoto.id;
+    sourceImage = nextPhoto.image;
+    currentFileBase = nextPhoto.file.name.replace(/\.[^.]+$/, "") || "edited-photo";
+
+    const state = cloneSnapshot(nextPhoto.state);
+    adjustments = { ...state.adjustments };
+    cropRatio = state.cropRatio;
+    rotation = state.rotation;
+    flipX = state.flipX;
+    flipY = state.flipY;
+    currentPreset = state.currentPreset;
+    history = (nextPhoto.history || [state]).map(cloneSnapshot);
+    historyIndex = Math.min(Math.max(nextPhoto.historyIndex ?? history.length - 1, 0), history.length - 1);
+    showBefore = false;
+
+    const photoIndex = photos.indexOf(nextPhoto) + 1;
+    fileName.textContent = nextPhoto.file.name;
+    fileMeta.textContent = `${(nextPhoto.file.size / 1024 / 1024).toFixed(1)} MB · ${photoIndex}/${photos.length}`;
+    syncControls();
+    updateEditorAvailability();
+    renderFilmstrip();
+    scheduleRender();
+  }
+
+  function getCropRect(image, ratio = cropRatio) {
     let x = 0;
     let y = 0;
     let width = image.naturalWidth || image.width;
     let height = image.naturalHeight || image.height;
-    if (cropRatio === "original") return { x, y, width, height };
+    if (ratio === "original") return { x, y, width, height };
 
-    const [ratioWidth, ratioHeight] = cropRatio.split(":").map(Number);
+    const [ratioWidth, ratioHeight] = ratio.split(":").map(Number);
     const targetRatio = ratioWidth / ratioHeight;
     const sourceRatio = width / height;
 
@@ -1226,9 +1537,10 @@
     return `brightness(${brightness}) contrast(${contrast}) saturate(${saturation}) sepia(${sepia}) hue-rotate(${hue}deg)`;
   }
 
-  function renderToCanvas(canvas, context, maxWidth, maxHeight, before = false) {
-    const crop = getCropRect(sourceImage);
-    const rotated = Math.abs(rotation % 180) === 90;
+  function renderToCanvas(canvas, context, maxWidth, maxHeight, before = false, image = sourceImage, state = currentSnapshot()) {
+    if (!image?.naturalWidth) return { width: 0, height: 0 };
+    const crop = getCropRect(image, state.cropRatio);
+    const rotated = Math.abs(state.rotation % 180) === 90;
     const baseWidth = rotated ? crop.height : crop.width;
     const baseHeight = rotated ? crop.width : crop.height;
     const scale = Math.min(1, maxWidth / baseWidth, maxHeight / baseHeight);
@@ -1240,14 +1552,14 @@
     context.clearRect(0, 0, outputWidth, outputHeight);
     context.save();
     context.translate(outputWidth / 2, outputHeight / 2);
-    context.rotate(rotation * Math.PI / 180);
-    context.scale(flipX, flipY);
-    context.filter = before ? "none" : buildFilter(adjustments);
+    context.rotate(state.rotation * Math.PI / 180);
+    context.scale(state.flipX, state.flipY);
+    context.filter = before ? "none" : buildFilter(state.adjustments);
 
     const drawWidth = crop.width * scale;
     const drawHeight = crop.height * scale;
     context.drawImage(
-      sourceImage,
+      image,
       crop.x,
       crop.y,
       crop.width,
@@ -1261,35 +1573,35 @@
     context.filter = "none";
 
     if (!before) {
-      applyColorOverlays(context, outputWidth, outputHeight);
+      applyColorOverlays(context, outputWidth, outputHeight, state.adjustments);
     }
     return { width: Math.round(baseWidth), height: Math.round(baseHeight) };
   }
 
-  function applyColorOverlays(context, width, height) {
-    if (adjustments.temperature !== 0) {
+  function applyColorOverlays(context, width, height, values = adjustments) {
+    if (values.temperature !== 0) {
       context.save();
       context.globalCompositeOperation = "soft-light";
-      context.globalAlpha = Math.min(Math.abs(adjustments.temperature) / 280, 0.3);
-      context.fillStyle = adjustments.temperature > 0 ? "#ff873a" : "#397ddd";
+      context.globalAlpha = Math.min(Math.abs(values.temperature) / 280, 0.3);
+      context.fillStyle = values.temperature > 0 ? "#ff873a" : "#397ddd";
       context.fillRect(0, 0, width, height);
       context.restore();
     }
 
-    if (adjustments.tint !== 0) {
+    if (values.tint !== 0) {
       context.save();
       context.globalCompositeOperation = "soft-light";
-      context.globalAlpha = Math.min(Math.abs(adjustments.tint) / 360, 0.22);
-      context.fillStyle = adjustments.tint > 0 ? "#b94e9d" : "#4c9a66";
+      context.globalAlpha = Math.min(Math.abs(values.tint) / 360, 0.22);
+      context.fillStyle = values.tint > 0 ? "#b94e9d" : "#4c9a66";
       context.fillRect(0, 0, width, height);
       context.restore();
     }
 
-    if (adjustments.vignette > 0) {
+    if (values.vignette > 0) {
       const gradient = context.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.72);
       gradient.addColorStop(0, "rgba(0,0,0,0)");
       gradient.addColorStop(0.55, "rgba(0,0,0,0)");
-      gradient.addColorStop(1, `rgba(0,0,0,${Math.min(adjustments.vignette / 90, 0.82)})`);
+      gradient.addColorStop(1, `rgba(0,0,0,${Math.min(values.vignette / 90, 0.82)})`);
       context.save();
       context.fillStyle = gradient;
       context.fillRect(0, 0, width, height);
@@ -1342,7 +1654,7 @@
   function scheduleRender() {
     cancelAnimationFrame(renderFrame);
     renderFrame = requestAnimationFrame(() => {
-      if (!sourceImage.complete || !sourceImage.naturalWidth) return;
+      if (!sourceImage?.complete || !sourceImage.naturalWidth || !getActivePhoto()) return;
       const dimensionsValue = renderToCanvas(previewCanvas, previewContext, 1500, 920, showBefore);
       dimensions.textContent = `${dimensionsValue.width.toLocaleString()} × ${dimensionsValue.height.toLocaleString()} px`;
       beforeLabel.classList.toggle("visible", showBefore);
@@ -1352,6 +1664,7 @@
   }
 
   function applyPreset(name, commit = true) {
+    if (!getActivePhoto()) return;
     adjustments = { ...(presets[name] || neutral) };
     currentPreset = name;
     syncControls();
@@ -1366,37 +1679,61 @@
     adjustmentsPanel.style.display = cropMode ? "none" : "";
   }
 
-  async function loadFile(file) {
-    if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type)) {
+  function isSupportedImage(file) {
+    return /^image\/(jpeg|png|webp)$/.test(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name);
+  }
+
+  function createPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        const initialState = cloneSnapshot();
+        resolve({
+          id: globalThis.crypto?.randomUUID?.() || `photo-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file,
+          url: objectUrl,
+          image,
+          state: initialState,
+          history: [cloneSnapshot(initialState)],
+          historyIndex: 0
+        });
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error(file.name));
+      };
+      image.src = objectUrl;
+    });
+  }
+
+  async function loadFiles(fileList) {
+    const files = Array.from(fileList || []);
+    const validFiles = files.filter(isSupportedImage);
+    if (!validFiles.length) {
       showToast("JPG, PNG, WEBP 사진만 불러올 수 있습니다.", false);
       return;
     }
 
-    const objectUrl = URL.createObjectURL(file);
-    const nextImage = new Image();
-    nextImage.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      sourceImage = nextImage;
-      currentFileBase = file.name.replace(/\.[^.]+$/, "") || "edited-photo";
-      fileName.textContent = file.name;
-      fileMeta.textContent = `${(file.size / 1024 / 1024).toFixed(1)} MB · 기기에서만 처리`;
-      adjustments = { ...neutral };
-      cropRatio = "original";
-      rotation = 0;
-      flipX = 1;
-      flipY = 1;
-      currentPreset = "original";
-      history = [];
-      historyIndex = -1;
-      syncControls();
-      pushHistory();
-      scheduleRender();
-    };
-    nextImage.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
+    const hadPhotos = photos.length > 0;
+    const results = await Promise.allSettled(validFiles.map(createPhoto));
+    const loadedPhotos = results.filter((result) => result.status === "fulfilled").map((result) => result.value);
+    if (!loadedPhotos.length) {
       showToast("사진을 불러오지 못했습니다.", false);
-    };
-    nextImage.src = objectUrl;
+      return;
+    }
+
+    photos.push(...loadedPhotos);
+    renderFilmstrip();
+    if (!hadPhotos) selectPhoto(loadedPhotos[0].id);
+    else {
+      fileMeta.textContent = `${(getActivePhoto().file.size / 1024 / 1024).toFixed(1)} MB · ${photos.indexOf(getActivePhoto()) + 1}/${photos.length}`;
+      showToast(`${loadedPhotos.length}장의 사진을 추가했습니다.`);
+    }
+
+    if (loadedPhotos.length !== validFiles.length || validFiles.length !== files.length) {
+      showToast("일부 파일은 지원되지 않아 제외했습니다.", false);
+    }
   }
 
   function showToast(message, success = true) {
@@ -1407,15 +1744,17 @@
     showToast.timer = window.setTimeout(() => toast.classList.remove("visible"), 2400);
   }
 
-  function exportImage() {
-    if (!sourceImage.naturalWidth) return;
-    const crop = getCropRect(sourceImage);
-    const rotated = Math.abs(rotation % 180) === 90;
+  function exportImage(photo = getActivePhoto()) {
+    if (!photo?.image?.naturalWidth) return;
+    if (photo.id === activePhotoId) persistActivePhoto();
+    const state = cloneSnapshot(photo.state);
+    const crop = getCropRect(photo.image, state.cropRatio);
+    const rotated = Math.abs(state.rotation % 180) === 90;
     const outputWidth = Math.round(rotated ? crop.height : crop.width);
     const outputHeight = Math.round(rotated ? crop.width : crop.height);
     const exportCanvas = document.createElement("canvas");
     const exportContext = exportCanvas.getContext("2d");
-    renderToCanvas(exportCanvas, exportContext, outputWidth, outputHeight, false);
+    renderToCanvas(exportCanvas, exportContext, outputWidth, outputHeight, false, photo.image, state);
     exportCanvas.toBlob((blob) => {
       if (!blob) {
         showToast("사진 저장에 실패했습니다.", false);
@@ -1424,16 +1763,92 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${currentFileBase}-edited.jpg`;
+      const fileBase = photo.file.name.replace(/\.[^.]+$/, "") || currentFileBase;
+      link.download = `${fileBase}-edited.jpg`;
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       showToast("편집한 사진을 저장했습니다.");
     }, "image/jpeg", 0.94);
   }
 
+  function savePreset(photo = getActivePhoto()) {
+    if (!photo) return;
+    persistActivePhoto();
+    const defaultName = `내 프리셋 ${savedPresets.length + 1}`;
+    const name = window.prompt("저장할 프리셋 이름을 입력하세요.", defaultName)?.trim();
+    if (!name) return;
+
+    const item = {
+      id: `saved-${Date.now()}`,
+      name: name.slice(0, 40),
+      adjustments: { ...photo.state.adjustments }
+    };
+    presets[item.id] = { ...neutral, ...item.adjustments };
+    savedPresets.push(item);
+    try {
+      localStorage.setItem("photo-editor-presets", JSON.stringify(savedPresets));
+    } catch {
+      showToast("브라우저 저장 공간에 프리셋을 저장하지 못했습니다.", false);
+      return;
+    }
+    renderSavedPresets();
+    updateEditorAvailability();
+    syncControls();
+    showToast(`‘${item.name}’ 프리셋을 저장했습니다.`);
+  }
+
+  function copyPhotoSettings(photo = getActivePhoto()) {
+    if (!photo) return;
+    if (photo.id === activePhotoId) persistActivePhoto();
+    copiedSettings = cloneSnapshot(photo.state);
+    photoContextMenu.querySelector('[data-action="paste-settings"]').disabled = false;
+    showToast("사진의 설정값을 복사했습니다.");
+  }
+
+  function pastePhotoSettings(photo = getActivePhoto()) {
+    if (!photo || !copiedSettings) return;
+    if (photo.id !== activePhotoId) selectPhoto(photo.id);
+    const pasted = cloneSnapshot(copiedSettings);
+    adjustments = { ...pasted.adjustments };
+    cropRatio = pasted.cropRatio;
+    rotation = pasted.rotation;
+    flipX = pasted.flipX;
+    flipY = pasted.flipY;
+    currentPreset = "custom";
+    syncControls();
+    scheduleRender();
+    pushHistory();
+    showToast("복사한 설정값을 붙여넣었습니다.");
+  }
+
+  function closePhotoContextMenu() {
+    photoContextMenu.hidden = true;
+    contextPhotoId = null;
+  }
+
+  function openPhotoContextMenu(event, photoId) {
+    const photo = photos.find((item) => item.id === photoId);
+    if (!photo) return;
+    event.preventDefault();
+    selectPhoto(photoId);
+    contextPhotoId = photoId;
+    photoContextMenu.querySelector('[data-action="paste-settings"]').disabled = !copiedSettings;
+    photoContextMenu.hidden = false;
+
+    const menuRect = photoContextMenu.getBoundingClientRect();
+    const left = Math.max(8, Math.min(event.clientX, window.innerWidth - menuRect.width - 8));
+    const top = Math.max(8, Math.min(event.clientY, window.innerHeight - menuRect.height - 8));
+    photoContextMenu.style.left = `${left}px`;
+    photoContextMenu.style.top = `${top}px`;
+  }
+
   document.getElementById("uploadButton").addEventListener("click", () => fileInput.click());
   document.getElementById("quickUploadButton").addEventListener("click", () => fileInput.click());
-  fileInput.addEventListener("change", (event) => loadFile(event.target.files[0]));
+  emptyUploadButton.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (event) => {
+    loadFiles(event.target.files);
+    event.target.value = "";
+  });
 
   ["dragenter", "dragover"].forEach((eventName) => {
     document.addEventListener(eventName, (event) => {
@@ -1446,7 +1861,7 @@
   ["dragleave", "drop"].forEach((eventName) => {
     document.addEventListener(eventName, (event) => {
       event.preventDefault();
-      if (eventName === "drop") loadFile(event.dataTransfer.files[0]);
+      if (eventName === "drop") loadFiles(event.dataTransfer.files);
       dropOverlay.classList.remove("visible");
       uploadCard.classList.remove("dragging");
     });
@@ -1458,13 +1873,31 @@
       input.parentElement.querySelector("output").textContent = formatValue(input.value);
       currentPreset = "custom";
       syncControls();
+      persistActivePhoto();
       scheduleRender();
     });
     input.addEventListener("change", pushHistory);
   });
 
-  presetButtons.forEach((button) => {
-    button.addEventListener("click", () => applyPreset(button.dataset.preset));
+  presetList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-preset]");
+    if (!button || button.disabled) return;
+    applyPreset(button.dataset.preset);
+  });
+
+  filmstrip.addEventListener("click", (event) => {
+    const addButton = event.target.closest('[data-action="add-photos"]');
+    if (addButton) {
+      fileInput.click();
+      return;
+    }
+    const photoButton = event.target.closest("[data-photo-id]");
+    if (photoButton) selectPhoto(photoButton.dataset.photoId);
+  });
+
+  filmstrip.addEventListener("contextmenu", (event) => {
+    const photoButton = event.target.closest("[data-photo-id]");
+    if (photoButton) openPhotoContextMenu(event, photoButton.dataset.photoId);
   });
 
   modeTabs.forEach((tab) => {
@@ -1550,7 +1983,8 @@
   compareButton.addEventListener("pointerleave", () => setBefore(false));
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "\\") setBefore(!showBefore);
+    if (event.key === "Escape") closePhotoContextMenu();
+    if (event.key === "\\" && getActivePhoto()) setBefore(!showBefore);
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
       event.preventDefault();
       event.shiftKey ? redoButton.click() : undoButton.click();
@@ -1559,17 +1993,33 @@
 
   document.getElementById("fitButton").addEventListener("click", scheduleRender);
   document.getElementById("zoomButton").addEventListener("click", scheduleRender);
-  document.getElementById("exportButton").addEventListener("click", exportImage);
+  exportButton.addEventListener("click", () => exportImage());
 
-  sourceImage.onload = () => {
-    history = [];
-    historyIndex = -1;
-    syncControls();
-    pushHistory();
-    scheduleRender();
-  };
-  sourceImage.onerror = () => showToast("샘플 사진을 불러오지 못했습니다.", false);
-  sourceImage.src = "/images/photo-editor-sample.jpg";
+  photoContextMenu.addEventListener("click", (event) => {
+    const menuItem = event.target.closest("[data-action]");
+    if (!menuItem || menuItem.disabled) return;
+    const photo = photos.find((item) => item.id === contextPhotoId) || getActivePhoto();
+    if (menuItem.dataset.action === "export") exportImage(photo);
+    if (menuItem.dataset.action === "save-preset") savePreset(photo);
+    if (menuItem.dataset.action === "copy-settings") copyPhotoSettings(photo);
+    if (menuItem.dataset.action === "paste-settings") pastePhotoSettings(photo);
+    closePhotoContextMenu();
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!photoContextMenu.hidden && !photoContextMenu.contains(event.target)) closePhotoContextMenu();
+  });
+  window.addEventListener("resize", closePhotoContextMenu);
+  window.addEventListener("scroll", closePhotoContextMenu, true);
+  window.addEventListener("beforeunload", () => {
+    photos.forEach((photo) => URL.revokeObjectURL(photo.url));
+  });
+
+  loadSavedPresets();
+  renderSavedPresets();
+  renderFilmstrip();
+  syncControls();
+  updateEditorAvailability();
 })();
 </script>
 </body>
