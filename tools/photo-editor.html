@@ -210,6 +210,13 @@
     font-size: 17px;
   }
 
+  .small-button.fit-view-button {
+    width: auto;
+    padding: 0 9px;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
   .small-button:hover:not(:disabled) {
     border-color: var(--editor-line);
     background: var(--editor-panel-2);
@@ -460,6 +467,14 @@
     padding: 24px 30px;
   }
 
+  .canvas-stage.zoomed {
+    cursor: grab;
+  }
+
+  .canvas-stage.panning {
+    cursor: grabbing;
+  }
+
   .canvas-frame {
     position: relative;
     max-width: 100%;
@@ -470,12 +485,20 @@
     overflow: hidden;
     background: #0c0c0b;
     box-shadow: 0 16px 42px rgba(0, 0, 0, 0.48);
+    transform-origin: center;
+    transition: transform 0.12s ease-out;
+    will-change: transform;
+  }
+
+  .canvas-stage.panning .canvas-frame {
+    transition: none;
   }
 
   #previewCanvas {
     max-width: 100%;
     max-height: 500px;
     display: block;
+    user-select: none;
   }
 
   .crop-overlay {
@@ -670,7 +693,8 @@
     font-weight: 700;
   }
 
-  .photo-thumb img {
+  .photo-thumb img,
+  .photo-thumb-preview {
     width: 100%;
     height: 100%;
     display: block;
@@ -926,6 +950,37 @@
     color: #6f685f;
     font-family: ui-monospace, Consolas, monospace;
     font-size: 8px;
+  }
+
+  .quick-adjust-actions {
+    height: 43px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    align-items: center;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--editor-line);
+    background: #211f1c;
+  }
+
+  .quick-adjust-actions button {
+    height: 27px;
+    border: 1px solid #49443d;
+    border-radius: 6px;
+    background: #2a2723;
+    color: #aaa39a;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .quick-adjust-actions button:hover:not(:disabled) {
+    border-color: var(--terra-soft);
+    color: #f5efe7;
+  }
+
+  .quick-adjust-actions button:disabled {
+    cursor: default;
+    opacity: 0.35;
   }
 
   .right-scroll {
@@ -1195,7 +1250,7 @@
 
 <section class="tool-hero">
   <h1>포토 <em>에디터</em></h1>
-  <p>복잡한 프로그램 없이 사진의 빛과 색을 다듬고, 원하는 비율로 자른 뒤 고화질로 저장하세요.</p>
+  <p>복잡한 프로그램 없이 사진을 쉽게 편집하세요.</p>
   <span class="privacy-note"><b>✓</b> 사진은 서버로 전송되지 않고 내 브라우저 안에서만 처리됩니다.</span>
 </section>
 
@@ -1224,7 +1279,7 @@
           </button>
           <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple />
         </div>
-        <div class="panel-heading">추천 프리셋 <span>6</span></div>
+        <div class="panel-heading">추천 프리셋</div>
         <div class="preset-list" id="presetList">
           <button class="preset-button active" data-preset="original" type="button">
             <span class="preset-thumb"></span>
@@ -1261,16 +1316,14 @@
 
       <section class="workspace">
         <div class="workspace-toolbar">
-          <div class="toolbar-group">
-            <button class="small-button" id="resetButton" type="button" title="모든 보정 초기화" aria-label="모든 보정 초기화">↺</button>
-          </div>
+          <div class="toolbar-group"></div>
           <div class="workspace-title">
             <strong id="fileName">사진 없음</strong>
             <span id="fileMeta">사진을 추가해 편집을 시작하세요</span>
           </div>
           <div class="toolbar-group">
             <button class="small-button" id="quickUploadButton" type="button" title="사진 불러오기" aria-label="사진 불러오기">＋</button>
-            <button class="small-button" id="fitButton" type="button" title="화면에 맞춤" aria-label="화면에 맞춤">⌗</button>
+            <button class="small-button fit-view-button" id="fitButton" type="button" title="확대와 위치를 초기화하여 화면에 맞춤" aria-label="화면에 맞춤">맞춤</button>
           </div>
         </div>
 
@@ -1297,7 +1350,7 @@
         <div class="workspace-footer">
           <button class="compare-button" id="compareButton" type="button">원본 비교 <kbd>\</kbd></button>
           <span id="dimensions">— × — px</span>
-          <button class="zoom-button" id="zoomButton" type="button">화면 맞춤</button>
+          <button class="zoom-button" id="zoomButton" type="button">100% · 화면 맞춤</button>
         </div>
 
         <div class="filmstrip" id="filmstrip" aria-label="업로드한 사진 목록">
@@ -1310,6 +1363,12 @@
         <div class="histogram">
           <canvas id="histogramCanvas" width="256" height="62" aria-label="사진 히스토그램"></canvas>
           <span class="histogram-meta">LIVE PREVIEW</span>
+        </div>
+
+        <div class="quick-adjust-actions" aria-label="빠른 보정">
+          <button id="autoButton" type="button">자동</button>
+          <button id="monoButton" type="button">흑백</button>
+          <button id="resetButton" type="button">초기화</button>
         </div>
 
         <div class="crop-controls" id="cropControls">
@@ -1330,7 +1389,7 @@
 
         <div class="right-scroll" id="adjustmentsPanel">
           <section class="adjust-section">
-            <div class="section-title"><span>빛</span><button id="autoButton" type="button">자동</button></div>
+            <div class="section-title"><span>빛</span></div>
             <label class="slider-row"><span>노출</span><input data-adjustment="exposure" type="range" min="-2" max="2" step="0.05" value="0" /><output>0</output></label>
             <label class="slider-row"><span>대비</span><input data-adjustment="contrast" type="range" min="-100" max="100" value="0" /><output>0</output></label>
             <label class="slider-row"><span>하이라이트</span><input data-adjustment="highlights" type="range" min="-100" max="100" value="0" /><output>0</output></label>
@@ -1359,7 +1418,7 @@
   </main>
 
   <div class="help-card">
-    <strong>사용 안내</strong> · 하단 사진을 Shift+클릭하면 범위로 여러 장을 선택할 수 있습니다. 자르기 탭에서는 흰색 영역을 드래그해 옮기거나 모서리를 잡아 크기를 조절하세요. 사진을 우클릭하면 추출, 프리셋 저장, 설정값 복사와 붙여넣기 메뉴가 열립니다.
+    <strong>사용 안내</strong> · 사진 위에서 휠을 돌리면 확대되고, 확대한 사진을 드래그하면 위치를 옮길 수 있습니다. 하단 사진을 Shift+클릭하면 여러 장을 선택하며, 우클릭 메뉴에서 선택한 사진을 한 번에 추출할 수 있습니다.
   </div>
 </div>
 
@@ -1418,6 +1477,7 @@
   const previewContext = previewCanvas.getContext("2d", { willReadFrequently: true });
   const histogramCanvas = document.getElementById("histogramCanvas");
   const histogramContext = histogramCanvas.getContext("2d");
+  const canvasStage = document.getElementById("canvasStage");
   const canvasFrame = document.getElementById("canvasFrame");
   const cropOverlay = document.getElementById("cropOverlay");
   const fileInput = document.getElementById("fileInput");
@@ -1469,6 +1529,10 @@
   let selectedPhotoIds = new Set();
   let selectionAnchorId = null;
   let cropInteraction = null;
+  let viewScale = 1;
+  let viewOffsetX = 0;
+  let viewOffsetY = 0;
+  let panInteraction = null;
 
   function getPresetButtons() {
     return Array.from(presetList.querySelectorAll("[data-preset]"));
@@ -1626,6 +1690,13 @@
     });
   }
 
+  function updatePhotoThumbnail(photo) {
+    const canvas = photo?.thumbnailCanvas;
+    if (!canvas?.isConnected || !photo.image?.naturalWidth) return;
+    const context = canvas.getContext("2d");
+    renderToCanvas(canvas, context, 208, 124, false, photo.image, cloneSnapshot(photo.state));
+  }
+
   function renderFilmstrip() {
     filmstrip.replaceChildren();
     if (!photos.length) {
@@ -1646,16 +1717,17 @@
       button.title = `${photo.file.name} · 우클릭하여 사진 메뉴 열기`;
       button.setAttribute("aria-label", `${photo.file.name} 선택`);
 
-      const image = document.createElement("img");
-      image.src = photo.url;
-      image.alt = "";
-      image.draggable = false;
+      const preview = document.createElement("canvas");
+      preview.className = "photo-thumb-preview";
+      preview.setAttribute("aria-hidden", "true");
+      photo.thumbnailCanvas = preview;
 
       const name = document.createElement("span");
       name.className = "photo-thumb-name";
       name.textContent = photo.file.name;
-      button.append(image, name);
+      button.append(preview, name);
       filmstrip.append(button);
+      updatePhotoThumbnail(photo);
     });
 
     const addButton = document.createElement("button");
@@ -1719,6 +1791,7 @@
       document.getElementById("fitButton"),
       document.getElementById("zoomButton"),
       document.getElementById("autoButton"),
+      document.getElementById("monoButton"),
       document.getElementById("rotateLeft"),
       document.getElementById("rotateRight"),
       document.getElementById("flipHorizontal"),
@@ -1741,6 +1814,7 @@
       beforeLabel.classList.remove("visible");
       compareButton.classList.remove("active");
       cropOverlay.classList.remove("visible");
+      resetViewTransform(false);
     }
     updateHistoryButtons();
   }
@@ -1766,6 +1840,7 @@
     history = (nextPhoto.history || [state]).map(cloneSnapshot);
     historyIndex = Math.min(Math.max(nextPhoto.historyIndex ?? history.length - 1, 0), history.length - 1);
     showBefore = false;
+    resetViewTransform(false);
 
     const photoIndex = photos.indexOf(nextPhoto) + 1;
     fileName.textContent = nextPhoto.file.name;
@@ -1780,6 +1855,88 @@
 
   function clamp(value, minimum, maximum) {
     return Math.min(maximum, Math.max(minimum, value));
+  }
+
+  function clampViewOffsets() {
+    const stageWidth = canvasStage.clientWidth;
+    const stageHeight = canvasStage.clientHeight;
+    const scaledWidth = canvasFrame.offsetWidth * viewScale;
+    const scaledHeight = canvasFrame.offsetHeight * viewScale;
+    const maxX = Math.max(0, (scaledWidth - stageWidth) / 2);
+    const maxY = Math.max(0, (scaledHeight - stageHeight) / 2);
+    viewOffsetX = clamp(viewOffsetX, -maxX, maxX);
+    viewOffsetY = clamp(viewOffsetY, -maxY, maxY);
+  }
+
+  function updateViewTransform() {
+    clampViewOffsets();
+    canvasFrame.style.transform = `translate3d(${viewOffsetX}px, ${viewOffsetY}px, 0) scale(${viewScale})`;
+    canvasStage.classList.toggle("zoomed", viewScale > 1.001 && currentMode === "edit");
+    document.getElementById("zoomButton").textContent = `${Math.round(viewScale * 100)}% · 화면 맞춤`;
+  }
+
+  function resetViewTransform(animate = true) {
+    viewScale = 1;
+    viewOffsetX = 0;
+    viewOffsetY = 0;
+    canvasFrame.style.transition = animate ? "" : "none";
+    updateViewTransform();
+    if (!animate) {
+      requestAnimationFrame(() => {
+        canvasFrame.style.transition = "";
+      });
+    }
+  }
+
+  function zoomCanvasAt(event) {
+    if (currentMode !== "edit" || !getActivePhoto()) return;
+    event.preventDefault();
+    const previousScale = viewScale;
+    const nextScale = clamp(previousScale * Math.exp(-event.deltaY * 0.0015), 1, 5);
+    if (Math.abs(nextScale - previousScale) < 0.001) return;
+
+    const stageBounds = canvasStage.getBoundingClientRect();
+    const pointerX = event.clientX - (stageBounds.left + stageBounds.width / 2);
+    const pointerY = event.clientY - (stageBounds.top + stageBounds.height / 2);
+    const ratio = nextScale / previousScale;
+    viewOffsetX = pointerX - (pointerX - viewOffsetX) * ratio;
+    viewOffsetY = pointerY - (pointerY - viewOffsetY) * ratio;
+    viewScale = nextScale;
+    updateViewTransform();
+  }
+
+  function beginViewPan(event) {
+    if (
+      currentMode !== "edit"
+      || viewScale <= 1.001
+      || event.button !== 0
+      || !event.target.closest("#canvasFrame")
+    ) return;
+    event.preventDefault();
+    panInteraction = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: viewOffsetX,
+      offsetY: viewOffsetY
+    };
+    canvasStage.classList.add("panning");
+    canvasStage.setPointerCapture(event.pointerId);
+  }
+
+  function moveViewPan(event) {
+    if (!panInteraction || event.pointerId !== panInteraction.pointerId) return;
+    event.preventDefault();
+    viewOffsetX = panInteraction.offsetX + event.clientX - panInteraction.startX;
+    viewOffsetY = panInteraction.offsetY + event.clientY - panInteraction.startY;
+    updateViewTransform();
+  }
+
+  function endViewPan(event) {
+    if (!panInteraction || event.pointerId !== panInteraction.pointerId) return;
+    panInteraction = null;
+    canvasStage.classList.remove("panning");
+    if (canvasStage.hasPointerCapture(event.pointerId)) canvasStage.releasePointerCapture(event.pointerId);
   }
 
   function normalizeCropRect(rect) {
@@ -2126,6 +2283,8 @@
       compareButton.classList.toggle("active", showBefore);
       renderHistogram();
       updateCropOverlay();
+      updatePhotoThumbnail(getActivePhoto());
+      updateViewTransform();
     });
   }
 
@@ -2167,6 +2326,7 @@
     const cropMode = mode === "crop";
     cropControls.classList.toggle("visible", cropMode);
     adjustmentsPanel.style.display = cropMode ? "none" : "";
+    if (cropMode) resetViewTransform();
     scheduleRender();
   }
 
@@ -2235,9 +2395,8 @@
     showToast.timer = window.setTimeout(() => toast.classList.remove("visible"), 2400);
   }
 
-  function exportImage(photo = getActivePhoto()) {
-    if (!photo?.image?.naturalWidth) return;
-    if (photo.id === activePhotoId) persistActivePhoto();
+  function createExportBlob(photo) {
+    if (!photo?.image?.naturalWidth) return Promise.reject(new Error("invalid-photo"));
     const state = cloneSnapshot(photo.state);
     const crop = getCropRect(photo.image, state.cropRect);
     const rotated = Math.abs(state.rotation % 180) === 90;
@@ -2246,20 +2405,147 @@
     const exportCanvas = document.createElement("canvas");
     const exportContext = exportCanvas.getContext("2d");
     renderToCanvas(exportCanvas, exportContext, outputWidth, outputHeight, false, photo.image, state);
-    exportCanvas.toBlob((blob) => {
-      if (!blob) {
-        showToast("사진 저장에 실패했습니다.", false);
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
+    return new Promise((resolve, reject) => {
+      exportCanvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("blob-failed"));
+      }, "image/jpeg", 0.94);
+    });
+  }
+
+  function downloadBlob(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function crc32(bytes) {
+    if (!crc32.table) {
+      crc32.table = Array.from({ length: 256 }, (_, index) => {
+        let value = index;
+        for (let bit = 0; bit < 8; bit += 1) {
+          value = (value >>> 1) ^ ((value & 1) ? 0xedb88320 : 0);
+        }
+        return value >>> 0;
+      });
+    }
+    let value = 0xffffffff;
+    bytes.forEach((byte) => {
+      value = (value >>> 8) ^ crc32.table[(value ^ byte) & 0xff];
+    });
+    return (value ^ 0xffffffff) >>> 0;
+  }
+
+  async function createZipBlob(entries) {
+    const encoder = new TextEncoder();
+    const localParts = [];
+    const centralParts = [];
+    const now = new Date();
+    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+    const dosDate = ((Math.max(1980, now.getFullYear()) - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    let localOffset = 0;
+    let centralSize = 0;
+
+    for (const entry of entries) {
+      const fileName = encoder.encode(entry.name);
+      const data = new Uint8Array(await entry.blob.arrayBuffer());
+      const checksum = crc32(data);
+      const localHeader = new Uint8Array(30);
+      const localView = new DataView(localHeader.buffer);
+      localView.setUint32(0, 0x04034b50, true);
+      localView.setUint16(4, 20, true);
+      localView.setUint16(6, 0x0800, true);
+      localView.setUint16(8, 0, true);
+      localView.setUint16(10, dosTime, true);
+      localView.setUint16(12, dosDate, true);
+      localView.setUint32(14, checksum, true);
+      localView.setUint32(18, data.length, true);
+      localView.setUint32(22, data.length, true);
+      localView.setUint16(26, fileName.length, true);
+      localView.setUint16(28, 0, true);
+      localParts.push(localHeader, fileName, data);
+
+      const centralHeader = new Uint8Array(46);
+      const centralView = new DataView(centralHeader.buffer);
+      centralView.setUint32(0, 0x02014b50, true);
+      centralView.setUint16(4, 20, true);
+      centralView.setUint16(6, 20, true);
+      centralView.setUint16(8, 0x0800, true);
+      centralView.setUint16(10, 0, true);
+      centralView.setUint16(12, dosTime, true);
+      centralView.setUint16(14, dosDate, true);
+      centralView.setUint32(16, checksum, true);
+      centralView.setUint32(20, data.length, true);
+      centralView.setUint32(24, data.length, true);
+      centralView.setUint16(28, fileName.length, true);
+      centralView.setUint16(30, 0, true);
+      centralView.setUint16(32, 0, true);
+      centralView.setUint16(34, 0, true);
+      centralView.setUint16(36, 0, true);
+      centralView.setUint32(38, 0, true);
+      centralView.setUint32(42, localOffset, true);
+      centralParts.push(centralHeader, fileName);
+
+      localOffset += localHeader.length + fileName.length + data.length;
+      centralSize += centralHeader.length + fileName.length;
+    }
+
+    const end = new Uint8Array(22);
+    const endView = new DataView(end.buffer);
+    endView.setUint32(0, 0x06054b50, true);
+    endView.setUint16(4, 0, true);
+    endView.setUint16(6, 0, true);
+    endView.setUint16(8, entries.length, true);
+    endView.setUint16(10, entries.length, true);
+    endView.setUint32(12, centralSize, true);
+    endView.setUint32(16, localOffset, true);
+    endView.setUint16(20, 0, true);
+    return new Blob([...localParts, ...centralParts, end], { type: "application/zip" });
+  }
+
+  async function exportImage(photo = getActivePhoto()) {
+    if (!photo?.image?.naturalWidth) return;
+    if (photo.id === activePhotoId) persistActivePhoto();
+    try {
+      const blob = await createExportBlob(photo);
       const fileBase = photo.file.name.replace(/\.[^.]+$/, "") || currentFileBase;
-      link.download = `${fileBase}-edited.jpg`;
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadBlob(blob, `${fileBase}-edited.jpg`);
       showToast("편집한 사진을 저장했습니다.");
-    }, "image/jpeg", 0.94);
+    } catch {
+      showToast("사진 저장에 실패했습니다.", false);
+    }
+  }
+
+  async function exportPhotos(photoList) {
+    const targetPhotos = photoList.filter((photo) => photo?.image?.naturalWidth);
+    if (!targetPhotos.length) return;
+    if (targetPhotos.length === 1) {
+      exportImage(targetPhotos[0]);
+      return;
+    }
+
+    persistActivePhoto();
+    showToast(`선택한 ${targetPhotos.length}장의 사진을 준비하고 있습니다.`);
+    try {
+      const entries = [];
+      for (let index = 0; index < targetPhotos.length; index += 1) {
+        const photo = targetPhotos[index];
+        const blob = await createExportBlob(photo);
+        const fileBase = photo.file.name.replace(/\.[^.]+$/, "") || `photo-${index + 1}`;
+        entries.push({
+          name: `${String(index + 1).padStart(2, "0")}-${fileBase}-edited.jpg`,
+          blob
+        });
+      }
+      const archive = await createZipBlob(entries);
+      downloadBlob(archive, `photo-editor-${targetPhotos.length}-photos.zip`);
+      showToast(`선택한 ${targetPhotos.length}장의 사진을 ZIP으로 저장했습니다.`);
+    } catch {
+      showToast("선택한 사진들을 저장하지 못했습니다.", false);
+    }
   }
 
   function openPresetDialog(photo = getActivePhoto()) {
@@ -2324,6 +2610,64 @@
     photo.historyIndex = nextHistory.length - 1;
   }
 
+  function applyQuickAction(action) {
+    const activePhoto = getActivePhoto();
+    if (!activePhoto) return;
+    persistActivePhoto();
+    const targetPhotos = getSelectedTargetPhotos(activePhoto);
+    let actionPhrase = "";
+
+    targetPhotos.forEach((photo) => {
+      let nextState = cloneSnapshot(photo.state);
+      let presetName = "custom";
+      if (action === "auto") {
+        nextState.adjustments = {
+          ...neutral,
+          exposure: 0.24,
+          contrast: 12,
+          highlights: -28,
+          shadows: 25,
+          whites: 8,
+          blacks: -7,
+          temperature: 5,
+          vibrance: 15,
+          clarity: 8
+        };
+        actionPhrase = "자동 보정을";
+      } else if (action === "mono") {
+        nextState.adjustments = { ...presets.mono };
+        presetName = "mono";
+        actionPhrase = "흑백 효과를";
+      } else {
+        nextState = cloneSnapshot();
+        presetName = "original";
+        actionPhrase = "초기화를";
+      }
+      appendSettingsToPhoto(photo, nextState, presetName);
+    });
+
+    const activeState = cloneSnapshot(activePhoto.state);
+    adjustments = { ...activeState.adjustments };
+    cropRatio = activeState.cropRatio;
+    cropRect = { ...activeState.cropRect };
+    rotation = activeState.rotation;
+    flipX = activeState.flipX;
+    flipY = activeState.flipY;
+    currentPreset = activeState.currentPreset;
+    history = activePhoto.history.map(cloneSnapshot);
+    historyIndex = activePhoto.historyIndex;
+    syncControls();
+    scheduleRender();
+    updateHistoryButtons();
+    renderFilmstrip();
+    resetViewTransform();
+    showToast(
+      targetPhotos.length > 1
+        ? `선택한 ${targetPhotos.length}장의 사진에 ${actionPhrase} 적용했습니다.`
+        : `${actionPhrase} 적용했습니다.`
+    );
+  }
+
   function pastePhotoSettings(photo = getActivePhoto()) {
     if (!photo || !copiedSettings) return;
     persistActivePhoto();
@@ -2368,6 +2712,8 @@
     contextPhotoId = photoId;
     const pasteButton = photoContextMenu.querySelector('[data-action="paste-settings"]');
     const targetCount = selectedPhotoIds.has(photoId) ? selectedPhotoIds.size : 1;
+    const exportMenuButton = photoContextMenu.querySelector('[data-action="export"]');
+    exportMenuButton.textContent = targetCount > 1 ? `선택한 사진들 추출 (${targetCount}장)` : "해당 사진만 추출";
     pasteButton.disabled = !copiedSettings;
     pasteButton.textContent = targetCount > 1 ? `설정값 붙여넣기 (${targetCount}장)` : "설정값 붙여넣기";
     photoContextMenu.hidden = false;
@@ -2476,26 +2822,9 @@
     pushHistory();
   });
 
-  document.getElementById("autoButton").addEventListener("click", () => {
-    adjustments = { ...neutral, exposure: 0.24, contrast: 12, highlights: -28, shadows: 25, whites: 8, blacks: -7, temperature: 5, vibrance: 15, clarity: 8 };
-    currentPreset = "custom";
-    syncControls();
-    scheduleRender();
-    pushHistory();
-  });
-
-  document.getElementById("resetButton").addEventListener("click", () => {
-    adjustments = { ...neutral };
-    cropRatio = "original";
-    cropRect = { x: 0, y: 0, width: 1, height: 1 };
-    rotation = 0;
-    flipX = 1;
-    flipY = 1;
-    currentPreset = "original";
-    syncControls();
-    scheduleRender();
-    pushHistory();
-  });
+  document.getElementById("autoButton").addEventListener("click", () => applyQuickAction("auto"));
+  document.getElementById("monoButton").addEventListener("click", () => applyQuickAction("mono"));
+  document.getElementById("resetButton").addEventListener("click", () => applyQuickAction("reset"));
 
   undoButton.addEventListener("click", () => {
     if (historyIndex <= 0) return;
@@ -2522,6 +2851,11 @@
   cropOverlay.addEventListener("pointermove", moveCropInteraction);
   cropOverlay.addEventListener("pointerup", endCropInteraction);
   cropOverlay.addEventListener("pointercancel", endCropInteraction);
+  canvasStage.addEventListener("wheel", zoomCanvasAt, { passive: false });
+  canvasStage.addEventListener("pointerdown", beginViewPan);
+  canvasStage.addEventListener("pointermove", moveViewPan);
+  canvasStage.addEventListener("pointerup", endViewPan);
+  canvasStage.addEventListener("pointercancel", endViewPan);
 
   presetDialog.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -2544,15 +2878,15 @@
     }
   });
 
-  document.getElementById("fitButton").addEventListener("click", scheduleRender);
-  document.getElementById("zoomButton").addEventListener("click", scheduleRender);
+  document.getElementById("fitButton").addEventListener("click", () => resetViewTransform());
+  document.getElementById("zoomButton").addEventListener("click", () => resetViewTransform());
   exportButton.addEventListener("click", () => exportImage());
 
   photoContextMenu.addEventListener("click", (event) => {
     const menuItem = event.target.closest("[data-action]");
     if (!menuItem || menuItem.disabled) return;
     const photo = photos.find((item) => item.id === contextPhotoId) || getActivePhoto();
-    if (menuItem.dataset.action === "export") exportImage(photo);
+    if (menuItem.dataset.action === "export") exportPhotos(getSelectedTargetPhotos(photo));
     if (menuItem.dataset.action === "save-preset") openPresetDialog(photo);
     if (menuItem.dataset.action === "copy-settings") copyPhotoSettings(photo);
     if (menuItem.dataset.action === "paste-settings") pastePhotoSettings(photo);
@@ -2565,6 +2899,7 @@
   window.addEventListener("resize", () => {
     closePhotoContextMenu();
     scheduleRender();
+    updateViewTransform();
   });
   window.addEventListener("scroll", closePhotoContextMenu, true);
   window.addEventListener("beforeunload", () => {
