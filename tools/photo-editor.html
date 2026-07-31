@@ -1490,6 +1490,13 @@
     return photos.find((photo) => photo.id === activePhotoId) || null;
   }
 
+  function getSelectedTargetPhotos(photo = getActivePhoto()) {
+    if (!photo) return [];
+    return selectedPhotoIds.has(photo.id)
+      ? photos.filter((item) => selectedPhotoIds.has(item.id))
+      : [photo];
+  }
+
   function currentSnapshot() {
     return cloneSnapshot({
       adjustments: { ...adjustments },
@@ -2123,12 +2130,35 @@
   }
 
   function applyPreset(name, commit = true) {
-    if (!getActivePhoto()) return;
-    adjustments = { ...(presets[name] || neutral) };
-    currentPreset = name;
+    const activePhoto = getActivePhoto();
+    if (!activePhoto) return;
+    if (!commit) {
+      adjustments = { ...(presets[name] || neutral) };
+      currentPreset = name;
+      syncControls();
+      scheduleRender();
+      return;
+    }
+
+    persistActivePhoto();
+    const targetPhotos = getSelectedTargetPhotos(activePhoto);
+    targetPhotos.forEach((photo) => {
+      const nextState = cloneSnapshot(photo.state);
+      nextState.adjustments = { ...(presets[name] || neutral) };
+      nextState.currentPreset = name;
+      appendSettingsToPhoto(photo, nextState, name);
+    });
+
+    const activeState = cloneSnapshot(activePhoto.state);
+    adjustments = { ...activeState.adjustments };
+    currentPreset = activeState.currentPreset;
+    history = activePhoto.history.map(cloneSnapshot);
+    historyIndex = activePhoto.historyIndex;
     syncControls();
     scheduleRender();
-    if (commit) pushHistory();
+    updateHistoryButtons();
+    renderFilmstrip();
+    if (targetPhotos.length > 1) showToast(`선택한 ${targetPhotos.length}장의 사진에 프리셋을 적용했습니다.`);
   }
 
   function setMode(mode) {
@@ -2281,21 +2311,47 @@
     showToast("사진의 설정값을 복사했습니다.");
   }
 
+  function appendSettingsToPhoto(photo, settings, presetName = "custom") {
+    const nextState = cloneSnapshot(settings);
+    nextState.currentPreset = presetName;
+    let nextHistory = (photo.history || []).map(cloneSnapshot);
+    const currentIndex = Math.min(Math.max(photo.historyIndex ?? nextHistory.length - 1, -1), nextHistory.length - 1);
+    nextHistory = nextHistory.slice(0, currentIndex + 1);
+    nextHistory.push(cloneSnapshot(nextState));
+    if (nextHistory.length > 40) nextHistory.shift();
+    photo.state = nextState;
+    photo.history = nextHistory;
+    photo.historyIndex = nextHistory.length - 1;
+  }
+
   function pastePhotoSettings(photo = getActivePhoto()) {
     if (!photo || !copiedSettings) return;
-    if (photo.id !== activePhotoId) selectPhoto(photo.id);
-    const pasted = cloneSnapshot(copiedSettings);
-    adjustments = { ...pasted.adjustments };
-    cropRatio = pasted.cropRatio;
-    cropRect = { ...pasted.cropRect };
-    rotation = pasted.rotation;
-    flipX = pasted.flipX;
-    flipY = pasted.flipY;
-    currentPreset = "custom";
+    persistActivePhoto();
+    const targetPhotos = getSelectedTargetPhotos(photo);
+    targetPhotos.forEach((targetPhoto) => appendSettingsToPhoto(targetPhoto, copiedSettings));
+
+    const activePhoto = getActivePhoto();
+    if (activePhoto && targetPhotos.some((targetPhoto) => targetPhoto.id === activePhoto.id)) {
+      const pasted = cloneSnapshot(activePhoto.state);
+      adjustments = { ...pasted.adjustments };
+      cropRatio = pasted.cropRatio;
+      cropRect = { ...pasted.cropRect };
+      rotation = pasted.rotation;
+      flipX = pasted.flipX;
+      flipY = pasted.flipY;
+      currentPreset = "custom";
+      history = activePhoto.history.map(cloneSnapshot);
+      historyIndex = activePhoto.historyIndex;
+    }
     syncControls();
     scheduleRender();
-    pushHistory();
-    showToast("복사한 설정값을 붙여넣었습니다.");
+    updateHistoryButtons();
+    renderFilmstrip();
+    showToast(
+      targetPhotos.length > 1
+        ? `선택한 ${targetPhotos.length}장의 사진에 설정값을 붙여넣었습니다.`
+        : "복사한 설정값을 붙여넣었습니다."
+    );
   }
 
   function closePhotoContextMenu() {
@@ -2310,7 +2366,10 @@
     if (selectedPhotoIds.has(photoId)) selectPhoto(photoId, { preserveSelection: true, updateAnchor: false });
     else selectPhoto(photoId);
     contextPhotoId = photoId;
-    photoContextMenu.querySelector('[data-action="paste-settings"]').disabled = !copiedSettings;
+    const pasteButton = photoContextMenu.querySelector('[data-action="paste-settings"]');
+    const targetCount = selectedPhotoIds.has(photoId) ? selectedPhotoIds.size : 1;
+    pasteButton.disabled = !copiedSettings;
+    pasteButton.textContent = targetCount > 1 ? `설정값 붙여넣기 (${targetCount}장)` : "설정값 붙여넣기";
     photoContextMenu.hidden = false;
 
     const menuRect = photoContextMenu.getBoundingClientRect();
@@ -2458,9 +2517,6 @@
   }
 
   compareButton.addEventListener("click", () => setBefore(!showBefore));
-  compareButton.addEventListener("pointerdown", () => setBefore(true));
-  compareButton.addEventListener("pointerup", () => setBefore(false));
-  compareButton.addEventListener("pointerleave", () => setBefore(false));
 
   cropOverlay.addEventListener("pointerdown", beginCropInteraction);
   cropOverlay.addEventListener("pointermove", moveCropInteraction);
