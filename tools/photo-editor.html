@@ -1527,22 +1527,6 @@
     word-break: keep-all;
   }
 
-  .help-card {
-    max-width: 980px;
-    margin: 24px auto 0;
-    padding: 16px 18px;
-    border: 1px solid var(--line);
-    border-radius: 13px;
-    background: var(--paper);
-    color: var(--ink-soft);
-    font-size: 12px;
-    line-height: 1.7;
-  }
-
-  .help-card strong {
-    color: var(--ink);
-  }
-
   .toast {
     position: fixed;
     right: 22px;
@@ -2024,6 +2008,464 @@
   .dialog-actions button[type="submit"] {
     border-color: var(--terra);
   }
+
+  body.help-dialog-open {
+    overflow: hidden;
+  }
+
+  .help-button {
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .help-dialog-backdrop {
+    z-index: 1300;
+  }
+
+  .help-dialog {
+    width: min(960px, 100%);
+    height: min(720px, calc(100vh - 32px));
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 30px 90px rgba(42, 37, 34, 0.28);
+  }
+
+  .help-dialog-header,
+  .help-dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 15px 18px;
+    border-color: var(--line);
+  }
+
+  .help-dialog-header {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .help-dialog-header span:first-child {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--terra);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  .help-dialog-header h2 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: 20px;
+  }
+
+  .help-page-count {
+    flex: 0 0 auto;
+    min-width: 54px;
+    padding: 6px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--ink-faint);
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .help-pages {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px;
+  }
+
+  .help-page {
+    min-height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1.18fr) minmax(250px, 0.82fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .help-page[hidden] {
+    display: none;
+  }
+
+  .help-page.shortcuts-page {
+    grid-template-columns: 1fr;
+  }
+
+  .help-page-copy > span {
+    color: var(--terra);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+
+  .help-page-copy h3 {
+    margin: 5px 0 7px;
+    font-family: var(--font-serif);
+    font-size: 22px;
+  }
+
+  .help-page-copy > p {
+    margin: 0 0 15px;
+    color: var(--ink-soft);
+    font-size: 11px;
+    line-height: 1.65;
+    word-break: keep-all;
+  }
+
+  .help-shortcut-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .help-shortcut-item {
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--card);
+  }
+
+  .help-shortcut-item span {
+    color: var(--ink-soft);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .help-shortcut-keys {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 3px;
+  }
+
+  .help-shortcut-keys kbd {
+    min-width: 24px;
+    height: 24px;
+    display: inline-grid;
+    place-items: center;
+    padding: 0 6px;
+    border: 1px solid #d8cec1;
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    background: white;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .help-feature-list {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .help-feature-list li {
+    position: relative;
+    padding: 9px 10px 9px 28px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.58);
+    color: var(--ink-soft);
+    font-size: 10px;
+    line-height: 1.55;
+    word-break: keep-all;
+  }
+
+  .help-feature-list li::before {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: var(--terra);
+    font-weight: 900;
+    content: "✓";
+  }
+
+  .help-feature-list strong {
+    color: var(--ink);
+  }
+
+  .help-visual {
+    position: relative;
+    min-height: 340px;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: #eee6db;
+    box-shadow: inset 0 0 0 6px rgba(255, 255, 255, 0.42);
+  }
+
+  .help-visual > img {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+    object-fit: cover;
+  }
+
+  .help-visual-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 42%, rgba(42, 37, 34, 0.78));
+  }
+
+  .help-visual-label {
+    position: absolute;
+    top: 13px;
+    left: 13px;
+    z-index: 2;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: rgba(42, 37, 34, 0.8);
+    color: white;
+    font-size: 9px;
+    font-weight: 800;
+  }
+
+  .help-filmstrip-mock {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 8px;
+    border-radius: 9px;
+    background: rgba(42, 37, 34, 0.86);
+  }
+
+  .help-filmstrip-mock span {
+    height: 42px;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    background: url("/images/ads_pc.png") center / cover;
+  }
+
+  .help-filmstrip-mock span:nth-child(2) {
+    background-image: url("/images/ads_mo.png");
+  }
+
+  .help-filmstrip-mock span.selected {
+    border-color: var(--terra-soft);
+    box-shadow: 0 0 0 1px var(--terra);
+  }
+
+  .help-adjustment-mock {
+    position: absolute;
+    top: 38px;
+    right: 10px;
+    bottom: 10px;
+    z-index: 2;
+    width: 42%;
+    display: grid;
+    align-content: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(250, 247, 242, 0.94);
+  }
+
+  .help-adjustment-mock b {
+    color: var(--ink);
+    font-size: 10px;
+  }
+
+  .help-adjustment-mock span {
+    height: 4px;
+    position: relative;
+    border-radius: 999px;
+    background: #cfc5b8;
+  }
+
+  .help-adjustment-mock span::after {
+    width: 9px;
+    height: 9px;
+    position: absolute;
+    top: 50%;
+    left: var(--slider-position, 52%);
+    border: 2px solid var(--terra);
+    border-radius: 50%;
+    background: white;
+    content: "";
+    transform: translate(-50%, -50%);
+  }
+
+  .help-preset-mock {
+    position: absolute;
+    top: 42px;
+    bottom: 12px;
+    left: 12px;
+    z-index: 2;
+    width: 43%;
+    display: grid;
+    align-content: center;
+    gap: 6px;
+  }
+
+  .help-preset-mock span {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 7px;
+    background: rgba(42, 37, 34, 0.82);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .help-preset-mock b {
+    width: 17px;
+    height: 17px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    border-radius: 4px;
+    color: #ffc1a8;
+    font-size: 8px;
+  }
+
+  .help-crop-frame {
+    position: absolute;
+    inset: 38px 42px 34px;
+    z-index: 2;
+    border: 2px solid white;
+    background-image:
+      linear-gradient(to right, transparent 33.1%, rgba(255,255,255,.62) 33.3%, rgba(255,255,255,.62) 33.7%, transparent 33.9%, transparent 66.2%, rgba(255,255,255,.62) 66.4%, rgba(255,255,255,.62) 66.8%, transparent 67%),
+      linear-gradient(to bottom, transparent 33.1%, rgba(255,255,255,.62) 33.3%, rgba(255,255,255,.62) 33.7%, transparent 33.9%, transparent 66.2%, rgba(255,255,255,.62) 66.4%, rgba(255,255,255,.62) 66.8%, transparent 67%);
+    box-shadow: 0 0 0 999px rgba(42, 37, 34, 0.38);
+    transform: rotate(-4deg);
+  }
+
+  .help-crop-frame i {
+    width: 9px;
+    height: 9px;
+    position: absolute;
+    border: 2px solid white;
+    border-radius: 50%;
+    background: var(--terra);
+  }
+
+  .help-crop-frame i:nth-child(1) { top: -6px; left: -6px; }
+  .help-crop-frame i:nth-child(2) { top: -6px; right: -6px; }
+  .help-crop-frame i:nth-child(3) { right: -6px; bottom: -6px; }
+  .help-crop-frame i:nth-child(4) { bottom: -6px; left: -6px; }
+
+  .help-view-mock {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-right: 2px solid white;
+    background: url("/images/ads_pc.png") center / cover;
+    clip-path: inset(0 50% 0 0);
+    filter: grayscale(1);
+  }
+
+  .help-view-controls {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    z-index: 3;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 9px;
+    border-radius: 8px;
+    background: rgba(42, 37, 34, 0.84);
+  }
+
+  .help-view-controls span {
+    padding: 6px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    color: white;
+    font-size: 8px;
+    font-weight: 700;
+  }
+
+  .help-dialog-footer {
+    justify-content: flex-end;
+    border-top: 1px solid var(--line);
+  }
+
+  .help-dialog-footer button {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--card);
+    color: var(--ink-soft);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .help-dialog-footer button:hover:not(:disabled) {
+    border-color: var(--terra-soft);
+    color: var(--terra);
+  }
+
+  .help-dialog-footer button:disabled {
+    cursor: default;
+    opacity: 0.42;
+  }
+
+  .help-dialog-footer .help-close-button {
+    border-color: var(--terra);
+    background: var(--terra);
+    color: white;
+  }
+
+  @media (max-width: 760px) {
+    .help-dialog {
+      height: calc(100vh - 20px);
+    }
+
+    .help-pages {
+      padding: 15px;
+    }
+
+    .help-page {
+      grid-template-columns: 1fr;
+    }
+
+    .help-shortcut-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .help-visual {
+      min-height: 260px;
+    }
+
+    .help-dialog-footer {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .help-dialog-footer button {
+      padding: 0 7px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -2055,6 +2497,7 @@
         </span>
       </nav>
       <div class="top-actions">
+        <button class="small-button help-button" id="helpButton" type="button" title="도움말" aria-label="도움말" aria-haspopup="dialog" aria-controls="helpDialog">?</button>
         <button class="small-button fullscreen-button" id="fullscreenButton" type="button" title="전체화면 모드" aria-label="전체화면 모드" aria-pressed="false">⛶</button>
         <button class="export-button" id="exportButton" type="button" title="선택한 사진 저장 (Ctrl+S)" aria-keyshortcuts="Control+S">저장하기</button>
       </div>
@@ -2232,9 +2675,6 @@
     </div>
   </main>
 
-  <div class="help-card">
-    <strong>사용 안내</strong> · 보정 화면에서는 휠과 드래그로 사진을 확대·이동할 수 있습니다. 자르기 화면에서는 사진의 네 가장자리를 드래그해 기울기를 조정하며, Shift를 누르면 45° 단위로 맞춰집니다. 자동·가이드 맞춤도 사용할 수 있습니다. 하단 사진을 Shift+클릭하면 여러 장을 선택하며, 우클릭 메뉴에서 한 번에 추출할 수 있습니다.
-  </div>
 </div>
 
 <div class="context-menu" id="photoContextMenu" role="menu" hidden>
@@ -2257,6 +2697,167 @@
       <button type="submit">저장</button>
     </div>
   </form>
+</div>
+
+<div class="dialog-backdrop help-dialog-backdrop" id="helpDialogBackdrop" hidden>
+  <section class="help-dialog" id="helpDialog" role="dialog" aria-modal="true" aria-labelledby="helpDialogTitle">
+    <header class="help-dialog-header">
+      <div>
+        <span>PHOTO EDITOR GUIDE</span>
+        <h2 id="helpDialogTitle">포토 에디터 도움말</h2>
+      </div>
+      <span class="help-page-count" id="helpPageCount" aria-live="polite">1 / 6</span>
+    </header>
+
+    <div class="help-pages">
+      <article class="help-page shortcuts-page" data-help-page="0">
+        <div class="help-page-copy">
+          <span>01 · SHORTCUTS</span>
+          <h3>키보드로 더 빠르게 편집하기</h3>
+          <p>사진 목록과 편집 화면에서 바로 사용할 수 있는 단축키입니다. 프리셋 숫자는 왼쪽 목록의 현재 순서를 기준으로 합니다.</p>
+          <div class="help-shortcut-grid">
+            <div class="help-shortcut-item"><span>실행취소</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>Z</kbd></div></div>
+            <div class="help-shortcut-item"><span>복구</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>Y</kbd></div></div>
+            <div class="help-shortcut-item"><span>복구</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Z</kbd></div></div>
+            <div class="help-shortcut-item"><span>사진 전체 선택</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>A</kbd></div></div>
+            <div class="help-shortcut-item"><span>선택 사진 삭제</span><div class="help-shortcut-keys"><kbd>Delete</kbd></div></div>
+            <div class="help-shortcut-item"><span>보정·자르기 전환</span><div class="help-shortcut-keys"><kbd>Tab</kbd></div></div>
+            <div class="help-shortcut-item"><span>선택 사진 저장</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>S</kbd></div></div>
+            <div class="help-shortcut-item"><span>프리셋 적용</span><div class="help-shortcut-keys"><kbd>1</kbd><span>–</span><kbd>9</kbd></div></div>
+            <div class="help-shortcut-item"><span>이전·다음 사진</span><div class="help-shortcut-keys"><kbd>←</kbd><kbd>→</kbd></div></div>
+            <div class="help-shortcut-item"><span>원본 비교</span><div class="help-shortcut-keys"><kbd>\</kbd></div></div>
+            <div class="help-shortcut-item"><span>회전 45° 맞춤</span><div class="help-shortcut-keys"><kbd>Shift</kbd><span>+</span><kbd>드래그</kbd></div></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="help-page" data-help-page="1" hidden>
+        <figure class="help-visual">
+          <img src="/images/ads_pc.png" alt="사진 목록과 다중 선택 사용 예시" loading="lazy" />
+          <span class="help-visual-label">사진 불러오기와 선택</span>
+          <span class="help-visual-shade"></span>
+          <div class="help-filmstrip-mock" aria-hidden="true">
+            <span class="selected"></span><span class="selected"></span><span></span><span></span>
+          </div>
+        </figure>
+        <div class="help-page-copy">
+          <span>02 · PHOTO LIBRARY</span>
+          <h3>사진 불러오기와 목록 관리</h3>
+          <p>JPG·PNG·WEBP를 한 장 또는 여러 장 불러온 뒤, 하단 목록에서 편집할 사진을 선택합니다.</p>
+          <ul class="help-feature-list">
+            <li><strong>추가:</strong> 왼쪽 카드, 중앙 ＋, 하단 ＋ 버튼으로 사진을 더 불러옵니다.</li>
+            <li><strong>다중 선택:</strong> Shift+클릭은 구간 선택, Ctrl+클릭은 개별 추가·해제, Ctrl+A는 전체 선택입니다.</li>
+            <li><strong>이동:</strong> 하단 썸네일을 클릭하거나 ←·→ 키로 이전·다음 사진을 봅니다.</li>
+            <li><strong>우클릭 메뉴:</strong> 선택 사진 추출, 프리셋 저장, 설정 복사·붙여넣기, 사진 삭제를 실행합니다.</li>
+            <li><strong>삭제:</strong> 선택 후 Delete 키를 누르거나 우클릭 메뉴의 삭제를 선택합니다.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="help-page" data-help-page="2" hidden>
+        <figure class="help-visual">
+          <img src="/images/ads_pc.png" alt="빛과 색상 보정 패널 사용 예시" loading="lazy" />
+          <span class="help-visual-label">빛 · 색상 · 효과</span>
+          <div class="help-adjustment-mock" aria-hidden="true">
+            <b>빛과 색상 보정</b>
+            <span style="--slider-position:64%"></span>
+            <span style="--slider-position:38%"></span>
+            <span style="--slider-position:57%"></span>
+            <span style="--slider-position:72%"></span>
+            <span style="--slider-position:46%"></span>
+          </div>
+        </figure>
+        <div class="help-page-copy">
+          <span>03 · ADJUSTMENTS</span>
+          <h3>빛과 색을 섬세하게 보정하기</h3>
+          <p>오른쪽 막대를 움직이면 현재 사진에 즉시 적용됩니다. 여러 사진을 선택한 뒤 자동·흑백·초기화 또는 프리셋을 적용하면 모두 함께 바뀝니다.</p>
+          <ul class="help-feature-list">
+            <li><strong>빠른 보정:</strong> 자동은 기본 보정을 적용하고, 흑백은 색을 제거하며, 초기화는 모든 값을 원래대로 돌립니다.</li>
+            <li><strong>빛:</strong> 노출·대비·하이라이트·그림자·흰색 계열·검정 계열을 조절합니다.</li>
+            <li><strong>색상:</strong> 색온도·색조·생동감·채도로 전체 색감을 다듬습니다.</li>
+            <li><strong>효과:</strong> 명료도·안개 제거·비네팅으로 질감과 집중도를 조절합니다.</li>
+            <li><strong>기록:</strong> 상단 ↶·↷ 또는 Ctrl+Z, Ctrl+Y로 편집 단계를 되돌리고 복구합니다.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="help-page" data-help-page="3" hidden>
+        <figure class="help-visual">
+          <img src="/images/ads_pc.png" alt="프리셋 목록과 번호 단축키 사용 예시" loading="lazy" />
+          <span class="help-visual-label">프리셋과 설정값</span>
+          <span class="help-visual-shade"></span>
+          <div class="help-preset-mock" aria-hidden="true">
+            <span><b>1</b> 원본</span>
+            <span><b>2</b> 따뜻한 오후</span>
+            <span><b>3</b> 고요한 숲</span>
+            <span><b>4</b> 시네마</span>
+            <span><b>5</b> 크림 매트</span>
+          </div>
+        </figure>
+        <div class="help-page-copy">
+          <span>04 · PRESETS</span>
+          <h3>프리셋을 적용하고 정리하기</h3>
+          <p>왼쪽 프리셋을 클릭해 색감을 즉시 적용합니다. 여러 사진이 선택돼 있으면 같은 프리셋이 선택 사진 전체에 적용됩니다.</p>
+          <ul class="help-feature-list">
+            <li><strong>숫자 단축키:</strong> 위에서부터 1~9번이며, 10번째 이후 프리셋에는 번호가 표시되지 않습니다.</li>
+            <li><strong>순서 변경:</strong> 프리셋을 위아래로 드래그하면 순서와 숫자 단축키가 함께 갱신됩니다.</li>
+            <li><strong>나만의 프리셋:</strong> 사진 우클릭 → 프리셋 저장으로 현재 빛·색상 값을 저장합니다.</li>
+            <li><strong>설정 복사:</strong> 우클릭 메뉴에서 설정값을 복사한 뒤 다른 사진 한 장 또는 여러 장에 붙여넣습니다.</li>
+            <li><strong>미리보기:</strong> 프리셋 썸네일은 현재 사진에 적용될 색감을 미리 보여줍니다.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="help-page" data-help-page="4" hidden>
+        <figure class="help-visual">
+          <img src="/images/ads_mo.png" alt="자르기 격자와 자유 회전 사용 예시" loading="lazy" />
+          <span class="help-visual-label">자르기 · 회전 · 맞춤</span>
+          <div class="help-crop-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        </figure>
+        <div class="help-page-copy">
+          <span>05 · CROP & ROTATE</span>
+          <h3>원하는 비율과 각도로 맞추기</h3>
+          <p>상단 자르기 또는 Tab 키로 화면을 전환합니다. 프레임과 사진 위치를 조절해 원하는 구도를 만든 뒤 회전과 맞춤을 적용합니다.</p>
+          <ul class="help-feature-list">
+            <li><strong>비율:</strong> 원본·1:1·4:5·16:9 중 선택하고 자르기 영역의 모서리를 드래그해 크기를 바꿉니다.</li>
+            <li><strong>위치:</strong> 사진 또는 자르기 영역 안쪽을 드래그해 남길 부분을 이동합니다.</li>
+            <li><strong>회전·반전:</strong> 90° 회전과 좌우·상하 반전을 버튼으로 적용합니다.</li>
+            <li><strong>미세 회전:</strong> 사진의 네 가장자리에서 드래그하며, Shift를 누르면 45° 단위로 맞춰집니다.</li>
+            <li><strong>자동 맞춤:</strong> 자동·수평·수직으로 선을 분석하거나 가이드선을 직접 긋고, 재설정으로 맞춤을 해제합니다.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="help-page" data-help-page="5" hidden>
+        <figure class="help-visual">
+          <img src="/images/ads_pc.png" alt="원본 비교와 저장 기능 사용 예시" loading="lazy" />
+          <div class="help-view-mock" aria-hidden="true"></div>
+          <span class="help-visual-label">보기 · 비교 · 저장</span>
+          <div class="help-view-controls" aria-hidden="true">
+            <span>원본 비교 \</span><span>100% · 화면 맞춤</span><span>Ctrl+S 저장</span>
+          </div>
+        </figure>
+        <div class="help-page-copy">
+          <span>06 · VIEW & EXPORT</span>
+          <h3>확인하고 고화질로 저장하기</h3>
+          <p>확대 상태와 원본을 확인한 뒤 저장합니다. 모든 편집은 서버 전송 없이 현재 브라우저 안에서 처리됩니다.</p>
+          <ul class="help-feature-list">
+            <li><strong>확대·이동:</strong> 보정 화면에서 휠로 확대·축소하고, 확대된 사진을 드래그해 이동합니다.</li>
+            <li><strong>화면 맞춤:</strong> 하단 배율 버튼으로 확대와 위치를 한 번에 초기화합니다.</li>
+            <li><strong>원본 비교:</strong> 원본 비교 버튼 또는 \ 키로 편집 전·후를 빠르게 확인합니다.</li>
+            <li><strong>전체보기:</strong> 상단 ? 옆 버튼으로 편집기를 브라우저 창 크기에 맞게 넓혀 사용합니다.</li>
+            <li><strong>저장:</strong> 한 장은 JPG, 여러 장은 ZIP으로 저장되며 파일명 끝에 _01, _02 순서가 붙습니다.</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+
+    <footer class="help-dialog-footer">
+      <button type="button" id="helpPrevButton">이전 페이지</button>
+      <button type="button" id="helpNextButton">다음 페이지</button>
+      <button class="help-close-button" type="button" id="helpCloseButton">닫기</button>
+    </footer>
+  </section>
 </div>
 
 <div class="toast" id="toast" role="status"><b>✓</b><span>편집한 사진을 저장했습니다.</span></div>
@@ -2331,6 +2932,13 @@
   const presetDialogBackdrop = document.getElementById("presetDialogBackdrop");
   const presetDialog = document.getElementById("presetDialog");
   const presetNameInput = document.getElementById("presetNameInput");
+  const helpButton = document.getElementById("helpButton");
+  const helpDialogBackdrop = document.getElementById("helpDialogBackdrop");
+  const helpPages = Array.from(document.querySelectorAll("[data-help-page]"));
+  const helpPageCount = document.getElementById("helpPageCount");
+  const helpPrevButton = document.getElementById("helpPrevButton");
+  const helpNextButton = document.getElementById("helpNextButton");
+  const helpCloseButton = document.getElementById("helpCloseButton");
   const fullscreenButton = document.getElementById("fullscreenButton");
   const exportButton = document.getElementById("exportButton");
   const toast = document.getElementById("toast");
@@ -2371,6 +2979,8 @@
   let guideMode = false;
   let draggedPresetButton = null;
   let presetDragJustFinished = false;
+  let helpPageIndex = 0;
+  let helpReturnFocus = null;
 
   const presetOrderStorageKey = "photo-editor-preset-order";
 
@@ -2530,6 +3140,35 @@
       scheduleRender();
       updateViewTransform();
     });
+  }
+
+  function updateHelpPage(index) {
+    helpPageIndex = clamp(index, 0, helpPages.length - 1);
+    helpPages.forEach((page, pageIndex) => {
+      page.hidden = pageIndex !== helpPageIndex;
+    });
+    helpPageCount.textContent = `${helpPageIndex + 1} / ${helpPages.length}`;
+    helpPrevButton.disabled = helpPageIndex === 0;
+    helpNextButton.disabled = helpPageIndex === helpPages.length - 1;
+    document.querySelector(".help-pages").scrollTop = 0;
+  }
+
+  function openHelpDialog() {
+    closePhotoContextMenu();
+    closePresetDialog();
+    helpReturnFocus = document.activeElement;
+    updateHelpPage(0);
+    helpDialogBackdrop.hidden = false;
+    document.body.classList.add("help-dialog-open");
+    requestAnimationFrame(() => helpNextButton.focus());
+  }
+
+  function closeHelpDialog() {
+    if (helpDialogBackdrop.hidden) return;
+    helpDialogBackdrop.hidden = true;
+    document.body.classList.remove("help-dialog-open");
+    if (helpReturnFocus instanceof HTMLElement) helpReturnFocus.focus();
+    helpReturnFocus = null;
   }
 
   function formatValue(value) {
@@ -4241,12 +4880,55 @@
     if (event.target === presetDialogBackdrop) closePresetDialog();
   });
 
+  helpButton.addEventListener("click", openHelpDialog);
+  helpPrevButton.addEventListener("click", () => {
+    updateHelpPage(helpPageIndex - 1);
+    if (helpPrevButton.disabled) helpNextButton.focus();
+  });
+  helpNextButton.addEventListener("click", () => {
+    updateHelpPage(helpPageIndex + 1);
+    if (helpNextButton.disabled) helpCloseButton.focus();
+  });
+  helpCloseButton.addEventListener("click", closeHelpDialog);
+  helpDialogBackdrop.addEventListener("pointerdown", (event) => {
+    if (event.target === helpDialogBackdrop) closeHelpDialog();
+  });
+
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !helpDialogBackdrop.hidden) {
+      event.preventDefault();
+      closeHelpDialog();
+      return;
+    }
     if (event.key === "Escape") {
       closePhotoContextMenu();
       closePresetDialog();
       endGuideMode();
       if (editorShell.classList.contains("is-fullscreen")) setEditorFullscreen(false);
+    }
+
+    if (!helpDialogBackdrop.hidden) {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        updateHelpPage(helpPageIndex - 1);
+        if (helpPrevButton.disabled) helpNextButton.focus();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        updateHelpPage(helpPageIndex + 1);
+        if (helpNextButton.disabled) helpCloseButton.focus();
+      } else if (event.key === "Tab") {
+        const focusableButtons = [helpPrevButton, helpNextButton, helpCloseButton].filter((button) => !button.disabled);
+        const firstButton = focusableButtons[0];
+        const lastButton = focusableButtons[focusableButtons.length - 1];
+        if (event.shiftKey && document.activeElement === firstButton) {
+          event.preventDefault();
+          lastButton.focus();
+        } else if (!event.shiftKey && document.activeElement === lastButton) {
+          event.preventDefault();
+          firstButton.focus();
+        }
+      }
+      return;
     }
 
     const target = event.target;
