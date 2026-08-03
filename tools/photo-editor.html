@@ -142,6 +142,28 @@
     color: var(--editor-text);
   }
 
+  body.editor-maximized {
+    overflow: hidden;
+  }
+
+  .editor-shell.is-fullscreen {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 54px minmax(0, 1fr);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .editor-shell.is-fullscreen .editor-main {
+    height: auto;
+    min-height: 0;
+  }
+
   .editor-topbar {
     height: 54px;
     display: grid;
@@ -161,6 +183,16 @@
   .mode-tabs {
     height: 100%;
     gap: 26px;
+  }
+
+  .history-actions {
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: -12px;
+    padding-left: 10px;
+    border-left: 1px solid var(--editor-line);
   }
 
   .mode-tab {
@@ -208,6 +240,12 @@
     background: transparent;
     color: #9f988e;
     font-size: 17px;
+  }
+
+  .fullscreen-button[aria-pressed="true"] {
+    border-color: var(--editor-line);
+    background: var(--editor-panel-2);
+    color: white;
   }
 
   .small-button:hover:not(:disabled) {
@@ -1290,7 +1328,7 @@
     margin: 0;
     appearance: none;
     background: transparent;
-    cursor: ew-resize;
+    cursor: default;
   }
 
   .slider-row input::-webkit-slider-runnable-track {
@@ -1635,6 +1673,12 @@
     color: var(--terra);
   }
 
+  .fullscreen-button[aria-pressed="true"] {
+    border-color: var(--line);
+    background: var(--card);
+    color: var(--terra);
+  }
+
   .export-button {
     border-color: var(--terra);
     box-shadow: 0 2px 7px rgba(194, 84, 43, 0.16);
@@ -1970,10 +2014,13 @@
       <nav class="mode-tabs" aria-label="편집 모드">
         <button class="mode-tab active" data-mode="edit">보정</button>
         <button class="mode-tab" data-mode="crop">자르기</button>
+        <span class="history-actions" aria-label="편집 기록">
+          <button class="small-button" id="undoButton" type="button" title="실행 취소" aria-label="실행 취소">↶</button>
+          <button class="small-button" id="redoButton" type="button" title="다시 실행" aria-label="다시 실행">↷</button>
+        </span>
       </nav>
       <div class="top-actions">
-        <button class="small-button" id="undoButton" type="button" title="실행 취소" aria-label="실행 취소">↶</button>
-        <button class="small-button" id="redoButton" type="button" title="다시 실행" aria-label="다시 실행">↷</button>
+        <button class="small-button fullscreen-button" id="fullscreenButton" type="button" title="전체화면 모드" aria-label="전체화면 모드" aria-pressed="false">⛶</button>
         <button class="export-button" id="exportButton" type="button">저장하기</button>
       </div>
     </header>
@@ -2247,6 +2294,7 @@
   const presetDialogBackdrop = document.getElementById("presetDialogBackdrop");
   const presetDialog = document.getElementById("presetDialog");
   const presetNameInput = document.getElementById("presetNameInput");
+  const fullscreenButton = document.getElementById("fullscreenButton");
   const exportButton = document.getElementById("exportButton");
   const toast = document.getElementById("toast");
   const sliderInputs = Array.from(document.querySelectorAll("[data-adjustment]"));
@@ -2363,6 +2411,19 @@
     const hasPhoto = Boolean(getActivePhoto());
     undoButton.disabled = !hasPhoto || historyIndex <= 0;
     redoButton.disabled = !hasPhoto || historyIndex >= history.length - 1;
+  }
+
+  function setEditorFullscreen(value) {
+    const active = Boolean(value);
+    editorShell.classList.toggle("is-fullscreen", active);
+    document.body.classList.toggle("editor-maximized", active);
+    fullscreenButton.setAttribute("aria-pressed", String(active));
+    fullscreenButton.setAttribute("aria-label", active ? "전체화면 모드 종료" : "전체화면 모드");
+    fullscreenButton.title = active ? "전체화면 모드 종료" : "전체화면 모드";
+    requestAnimationFrame(() => {
+      scheduleRender();
+      updateViewTransform();
+    });
   }
 
   function formatValue(value) {
@@ -3596,6 +3657,12 @@
     }
   }
 
+  function createBatchExportName(photo, index) {
+    const fileBase = photo?.file?.name?.replace(/\.[^.]+$/, "") || `photo-${index + 1}`;
+    const sequence = String(index + 1).padStart(2, "0");
+    return `${fileBase}-edited_${sequence}.jpg`;
+  }
+
   async function exportPhotos(photoList) {
     const targetPhotos = photoList.filter((photo) => photo?.image?.naturalWidth);
     if (!targetPhotos.length) return;
@@ -3611,9 +3678,8 @@
       for (let index = 0; index < targetPhotos.length; index += 1) {
         const photo = targetPhotos[index];
         const blob = await createExportBlob(photo);
-        const fileBase = photo.file.name.replace(/\.[^.]+$/, "") || `photo-${index + 1}`;
         entries.push({
-          name: `${String(index + 1).padStart(2, "0")}-${fileBase}-edited.jpg`,
+          name: createBatchExportName(photo, index),
           blob
         });
       }
@@ -3979,6 +4045,7 @@
       closePhotoContextMenu();
       closePresetDialog();
       endGuideMode();
+      if (editorShell.classList.contains("is-fullscreen")) setEditorFullscreen(false);
     }
     if (event.key === "\\" && getActivePhoto()) setBefore(!showBefore);
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
@@ -3988,6 +4055,9 @@
   });
 
   document.getElementById("zoomButton").addEventListener("click", () => resetViewTransform());
+  fullscreenButton.addEventListener("click", () => {
+    setEditorFullscreen(!editorShell.classList.contains("is-fullscreen"));
+  });
   exportButton.addEventListener("click", () => exportImage());
 
   photoContextMenu.addEventListener("click", (event) => {
