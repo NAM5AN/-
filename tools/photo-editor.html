@@ -297,10 +297,56 @@
   }
 
   .upload-card button {
+    position: relative;
     width: 100%;
+    min-height: 88px;
+    overflow: hidden;
     border: 0;
     background: transparent;
     color: inherit;
+  }
+
+  .upload-preview {
+    width: 100%;
+    height: 116px;
+    display: none;
+    object-fit: contain;
+    background: #171715;
+  }
+
+  .upload-preview-action {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    display: none;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: rgba(28,27,25,.82);
+    color: white;
+    font-size: 8px;
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity .15s ease;
+  }
+
+  .upload-card.has-photo {
+    padding: 0;
+    border-style: solid;
+  }
+
+  .upload-card.has-photo .upload-empty-copy {
+    display: none;
+  }
+
+  .upload-card.has-photo .upload-preview,
+  .upload-card.has-photo .upload-preview-action {
+    display: flex;
+  }
+
+  .upload-card.has-photo:hover .upload-preview-action {
+    opacity: 1;
   }
 
   .upload-icon {
@@ -548,13 +594,10 @@
   .rotation-hit-zone {
     position: absolute;
     z-index: 5;
-    top: 42px;
-    bottom: 42px;
-    width: 34px;
     display: none;
     border: 0;
     background: transparent;
-    cursor: col-resize;
+    cursor: none;
     touch-action: none;
   }
 
@@ -563,11 +606,31 @@
   }
 
   .rotation-hit-zone.left {
+    top: 42px;
+    bottom: 42px;
     left: 0;
+    width: 34px;
   }
 
   .rotation-hit-zone.right {
+    top: 42px;
     right: 0;
+    bottom: 42px;
+    width: 34px;
+  }
+
+  .rotation-hit-zone.top {
+    top: 0;
+    right: 42px;
+    left: 42px;
+    height: 34px;
+  }
+
+  .rotation-hit-zone.bottom {
+    right: 42px;
+    bottom: 0;
+    left: 42px;
+    height: 34px;
   }
 
   .rotation-hit-zone::after {
@@ -594,9 +657,53 @@
     border-radius: 0 12px 12px 0;
   }
 
+  .rotation-hit-zone.top::after,
+  .rotation-hit-zone.bottom::after {
+    left: 50%;
+    width: 46px;
+    height: 19px;
+    transform: translateX(-50%);
+  }
+
+  .rotation-hit-zone.top::after {
+    top: 5px;
+    border-width: 2px 2px 0;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .rotation-hit-zone.bottom::after {
+    top: auto;
+    bottom: 5px;
+    border-width: 0 2px 2px;
+    border-radius: 0 0 12px 12px;
+  }
+
   .rotation-hit-zone:hover::after,
   .canvas-stage.rotation-dragging .rotation-hit-zone::after {
     opacity: 1;
+  }
+
+  .rotation-cursor {
+    position: absolute;
+    z-index: 10;
+    width: 30px;
+    height: 30px;
+    display: none;
+    pointer-events: none;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.68);
+    border-radius: 50%;
+    background: rgba(42,37,34,.86);
+    color: white;
+    box-shadow: 0 3px 12px rgba(0,0,0,.34);
+    font-size: 19px;
+    line-height: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  .rotation-cursor.visible {
+    display: flex;
   }
 
   .rotation-angle-hud {
@@ -1580,6 +1687,14 @@
     color: var(--ink-faint);
   }
 
+  .upload-preview {
+    background: #e8e0d6;
+  }
+
+  .upload-preview-action {
+    background: rgba(42, 37, 34, 0.82);
+  }
+
   .preset-button {
     color: var(--ink-soft);
   }
@@ -1868,9 +1983,13 @@
         <div class="panel-heading">내 사진</div>
         <div class="upload-card" id="uploadCard">
           <button type="button" id="uploadButton">
-            <span class="upload-icon">＋</span>
-            <strong>사진 불러오기</strong>
-            <small>여러 장 선택 가능 · JPG · PNG · WEBP</small>
+            <span class="upload-empty-copy">
+              <span class="upload-icon">＋</span>
+              <strong>사진 불러오기</strong>
+              <small>여러 장 선택 가능 · JPG · PNG · WEBP</small>
+            </span>
+            <canvas class="upload-preview" id="uploadPreview" aria-label="현재 설정이 적용된 완성본 미리보기"></canvas>
+            <span class="upload-preview-action">＋ 사진 더 추가</span>
           </button>
           <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple />
         </div>
@@ -1932,8 +2051,11 @@
             </div>
             <button class="rotation-hit-zone left" type="button" data-rotation-zone="left" aria-label="사진 왼쪽에서 드래그하여 미세 회전"></button>
             <button class="rotation-hit-zone right" type="button" data-rotation-zone="right" aria-label="사진 오른쪽에서 드래그하여 미세 회전"></button>
+            <button class="rotation-hit-zone top" type="button" data-rotation-zone="top" aria-label="사진 위쪽에서 드래그하여 미세 회전"></button>
+            <button class="rotation-hit-zone bottom" type="button" data-rotation-zone="bottom" aria-label="사진 아래쪽에서 드래그하여 미세 회전"></button>
             <span class="straighten-guide" id="straightenGuide" aria-hidden="true"></span>
             <span class="before-label" id="beforeLabel">편집 전</span>
+            <span class="rotation-cursor" id="rotationCursor" aria-hidden="true">↻</span>
           </div>
           <div class="rotation-angle-hud" id="rotationAngleHud" aria-live="polite">
             <span class="rotation-angle-value" id="rotationAngleHudValue">0.0°</span>
@@ -1960,8 +2082,6 @@
       </section>
 
       <aside class="side-panel right-panel">
-        <div class="panel-heading">빠른 보정 <span>한 번에 적용</span></div>
-
         <div class="quick-adjust-actions" aria-label="빠른 보정">
           <button id="autoButton" type="button">자동</button>
           <button id="monoButton" type="button">흑백</button>
@@ -2031,7 +2151,7 @@
   </main>
 
   <div class="help-card">
-    <strong>사용 안내</strong> · 보정 화면에서는 휠과 드래그로 사진을 확대·이동할 수 있습니다. 자르기 화면에서는 사진 양옆을 드래그해 기울기를 조정하며, Shift를 누르면 45° 단위로 맞춰집니다. 자동·가이드 맞춤도 사용할 수 있습니다. 하단 사진을 Shift+클릭하면 여러 장을 선택하며, 우클릭 메뉴에서 한 번에 추출할 수 있습니다.
+    <strong>사용 안내</strong> · 보정 화면에서는 휠과 드래그로 사진을 확대·이동할 수 있습니다. 자르기 화면에서는 사진의 네 가장자리를 드래그해 기울기를 조정하며, Shift를 누르면 45° 단위로 맞춰집니다. 자동·가이드 맞춤도 사용할 수 있습니다. 하단 사진을 Shift+클릭하면 여러 장을 선택하며, 우클릭 메뉴에서 한 번에 추출할 수 있습니다.
   </div>
 </div>
 
@@ -2092,6 +2212,7 @@
   const canvasFrame = document.getElementById("canvasFrame");
   const cropOverlay = document.getElementById("cropOverlay");
   const rotationZones = Array.from(document.querySelectorAll("[data-rotation-zone]"));
+  const rotationCursor = document.getElementById("rotationCursor");
   const rotationAngleHud = document.getElementById("rotationAngleHud");
   const rotationAngleHudValue = document.getElementById("rotationAngleHudValue");
   const straightenGuide = document.getElementById("straightenGuide");
@@ -2107,6 +2228,8 @@
   const fileInput = document.getElementById("fileInput");
   const editorShell = document.querySelector(".editor-shell");
   const uploadCard = document.getElementById("uploadCard");
+  const uploadPreview = document.getElementById("uploadPreview");
+  const uploadPreviewContext = uploadPreview.getContext("2d");
   const emptyUploadButton = document.getElementById("emptyUploadButton");
   const dropOverlay = document.getElementById("dropOverlay");
   const beforeLabel = document.getElementById("beforeLabel");
@@ -2425,6 +2548,8 @@
   function updateEditorAvailability() {
     const hasPhoto = Boolean(getActivePhoto());
     editorShell.classList.toggle("empty", !hasPhoto);
+    uploadCard.classList.toggle("has-photo", hasPhoto);
+    document.getElementById("uploadButton").title = hasPhoto ? "사진 더 추가" : "사진 불러오기";
     [
       exportButton,
       compareButton,
@@ -2452,6 +2577,8 @@
       dimensions.textContent = "— × — px";
       previewCanvas.width = 1;
       previewCanvas.height = 1;
+      uploadPreview.width = 1;
+      uploadPreview.height = 1;
       beforeLabel.classList.remove("visible");
       compareButton.classList.remove("active");
       cropOverlay.classList.remove("visible");
@@ -2600,80 +2727,121 @@
     return width / height;
   }
 
-  function createCropRectForRatio(image, ratio) {
-    if (!image?.naturalWidth || ratio === "original") return { x: 0, y: 0, width: 1, height: 1 };
-    const sourceRatio = image.naturalWidth / image.naturalHeight;
-    const targetRatio = getRatioValue(image, ratio);
-    if (sourceRatio > targetRatio) {
-      const width = targetRatio / sourceRatio;
-      return { x: (1 - width) / 2, y: 0, width, height: 1 };
-    }
-    const height = sourceRatio / targetRatio;
-    return { x: 0, y: (1 - height) / 2, width: 1, height };
+  function getTransformedBounds(image, state = currentSnapshot()) {
+    const imageWidth = image?.naturalWidth || image?.width || 1;
+    const imageHeight = image?.naturalHeight || image?.height || 1;
+    const radians = (Number(state.rotation || 0) + Number(state.straighten || 0)) * Math.PI / 180;
+    const cosine = Math.abs(Math.cos(radians));
+    const sine = Math.abs(Math.sin(radians));
+    return {
+      width: cosine * imageWidth + sine * imageHeight,
+      height: sine * imageWidth + cosine * imageHeight,
+      imageWidth,
+      imageHeight,
+      radians
+    };
   }
 
-  function getCropRect(image, normalizedRect = cropRect) {
-    const imageWidth = image.naturalWidth || image.width;
-    const imageHeight = image.naturalHeight || image.height;
+  function getTargetCropRatio(image, ratio = cropRatio, state = currentSnapshot()) {
+    if (ratio !== "original") return getRatioValue(image, ratio);
+    const normalizedRotation = ((Number(state.rotation || 0) % 360) + 360) % 360;
+    return normalizedRotation === 90 || normalizedRotation === 270
+      ? image.naturalHeight / image.naturalWidth
+      : image.naturalWidth / image.naturalHeight;
+  }
+
+  function isCropRectInsideImage(rect, image = sourceImage, state = currentSnapshot()) {
+    if (!image?.naturalWidth) return false;
+    const normalized = normalizeCropRect(rect);
+    const bounds = getTransformedBounds(image, state);
+    const cosine = Math.cos(bounds.radians);
+    const sine = Math.sin(bounds.radians);
+    const points = [
+      [normalized.x, normalized.y],
+      [normalized.x + normalized.width, normalized.y],
+      [normalized.x, normalized.y + normalized.height],
+      [normalized.x + normalized.width, normalized.y + normalized.height]
+    ];
+    return points.every(([x, y]) => {
+      const displayX = x * bounds.width - bounds.width / 2;
+      const displayY = y * bounds.height - bounds.height / 2;
+      const sourceX = cosine * displayX + sine * displayY;
+      const sourceY = -sine * displayX + cosine * displayY;
+      return Math.abs(sourceX) <= bounds.imageWidth / 2 + 0.75
+        && Math.abs(sourceY) <= bounds.imageHeight / 2 + 0.75;
+    });
+  }
+
+  function createCropRectForRatio(image, ratio, state = currentSnapshot()) {
+    if (!image?.naturalWidth) return { x: 0, y: 0, width: 1, height: 1 };
+    const bounds = getTransformedBounds(image, state);
+    const targetRatio = getTargetCropRatio(image, ratio, state);
+    let low = 0;
+    let high = Math.min(bounds.width, bounds.height * targetRatio);
+
+    for (let iteration = 0; iteration < 32; iteration += 1) {
+      const width = (low + high) / 2;
+      const height = width / targetRatio;
+      const candidate = {
+        x: (bounds.width - width) / 2 / bounds.width,
+        y: (bounds.height - height) / 2 / bounds.height,
+        width: width / bounds.width,
+        height: height / bounds.height
+      };
+      if (isCropRectInsideImage(candidate, image, state)) low = width;
+      else high = width;
+    }
+
+    const movementMargin = Math.abs(Number(state.straighten) || 0) > 0.05 ? 0.92 : 1;
+    const width = low * movementMargin;
+    const height = width / targetRatio;
+    return normalizeCropRect({
+      x: (bounds.width - width) / 2 / bounds.width,
+      y: (bounds.height - height) / 2 / bounds.height,
+      width: width / bounds.width,
+      height: height / bounds.height
+    });
+  }
+
+  function getCropRect(image, normalizedRect = cropRect, state = currentSnapshot()) {
+    const bounds = getTransformedBounds(image, state);
     const rect = normalizeCropRect(normalizedRect);
     return {
-      x: rect.x * imageWidth,
-      y: rect.y * imageHeight,
-      width: rect.width * imageWidth,
-      height: rect.height * imageHeight
+      x: rect.x * bounds.width,
+      y: rect.y * bounds.height,
+      width: rect.width * bounds.width,
+      height: rect.height * bounds.height
     };
   }
 
-  function sourceToDisplayPoint(point, state = currentSnapshot()) {
-    const sourceX = state.flipX === -1 ? 1 - point.x : point.x;
-    const sourceY = state.flipY === -1 ? 1 - point.y : point.y;
-    const normalizedRotation = ((state.rotation % 360) + 360) % 360;
-    if (normalizedRotation === 90) return { x: 1 - sourceY, y: sourceX };
-    if (normalizedRotation === 180) return { x: 1 - sourceX, y: 1 - sourceY };
-    if (normalizedRotation === 270) return { x: sourceY, y: 1 - sourceX };
-    return { x: sourceX, y: sourceY };
-  }
-
-  function displayToSourcePoint(point, state = currentSnapshot()) {
-    const normalizedRotation = ((state.rotation % 360) + 360) % 360;
-    let sourceX = point.x;
-    let sourceY = point.y;
-    if (normalizedRotation === 90) {
-      sourceX = point.y;
-      sourceY = 1 - point.x;
-    } else if (normalizedRotation === 180) {
-      sourceX = 1 - point.x;
-      sourceY = 1 - point.y;
-    } else if (normalizedRotation === 270) {
-      sourceX = 1 - point.y;
-      sourceY = point.x;
+  function constrainCropTransition(startRect, targetRect, image = sourceImage, state = currentSnapshot()) {
+    const start = normalizeCropRect(startRect);
+    const target = normalizeCropRect(targetRect);
+    if (isCropRectInsideImage(target, image, state)) return target;
+    let low = 0;
+    let high = 1;
+    let result = start;
+    for (let iteration = 0; iteration < 24; iteration += 1) {
+      const amount = (low + high) / 2;
+      const candidate = normalizeCropRect({
+        x: start.x + (target.x - start.x) * amount,
+        y: start.y + (target.y - start.y) * amount,
+        width: start.width + (target.width - start.width) * amount,
+        height: start.height + (target.height - start.height) * amount
+      });
+      if (isCropRectInsideImage(candidate, image, state)) {
+        result = candidate;
+        low = amount;
+      } else {
+        high = amount;
+      }
     }
-    return {
-      x: state.flipX === -1 ? 1 - sourceX : sourceX,
-      y: state.flipY === -1 ? 1 - sourceY : sourceY
-    };
+    return result;
   }
 
-  function transformRect(rect, transformPoint) {
-    const points = [
-      transformPoint({ x: rect.x, y: rect.y }),
-      transformPoint({ x: rect.x + rect.width, y: rect.y }),
-      transformPoint({ x: rect.x, y: rect.y + rect.height }),
-      transformPoint({ x: rect.x + rect.width, y: rect.y + rect.height })
-    ];
-    const left = Math.min(...points.map((point) => point.x));
-    const right = Math.max(...points.map((point) => point.x));
-    const top = Math.min(...points.map((point) => point.y));
-    const bottom = Math.max(...points.map((point) => point.y));
-    return normalizeCropRect({ x: left, y: top, width: right - left, height: bottom - top });
-  }
-
-  function sourceRectToDisplayRect(rect, state = currentSnapshot()) {
-    return transformRect(normalizeCropRect(rect), (point) => sourceToDisplayPoint(point, state));
-  }
-
-  function displayRectToSourceRect(rect, state = currentSnapshot()) {
-    return transformRect(normalizeCropRect(rect), (point) => displayToSourcePoint(point, state));
+  function reframeCropForRotation() {
+    if (!sourceImage?.naturalWidth) return;
+    cropRect = createCropRectForRatio(sourceImage, cropRatio, currentSnapshot());
   }
 
   function buildFilter(values) {
@@ -2687,48 +2855,30 @@
 
   function renderToCanvas(canvas, context, maxWidth, maxHeight, before = false, image = sourceImage, state = currentSnapshot(), applyCrop = true) {
     if (!image?.naturalWidth) return { width: 0, height: 0 };
+    const bounds = getTransformedBounds(image, state);
     const crop = applyCrop
-      ? getCropRect(image, state.cropRect)
-      : { x: 0, y: 0, width: image.naturalWidth, height: image.naturalHeight };
-    const rotated = Math.abs(state.rotation % 180) === 90;
-    const baseWidth = rotated ? crop.height : crop.width;
-    const baseHeight = rotated ? crop.width : crop.height;
-    const scale = Math.min(1, maxWidth / baseWidth, maxHeight / baseHeight);
-    const outputWidth = Math.max(1, Math.round(baseWidth * scale));
-    const outputHeight = Math.max(1, Math.round(baseHeight * scale));
+      ? getCropRect(image, state.cropRect, state)
+      : { x: 0, y: 0, width: bounds.width, height: bounds.height };
+    const scale = Math.min(1, maxWidth / crop.width, maxHeight / crop.height);
+    const outputWidth = Math.max(1, Math.round(crop.width * scale));
+    const outputHeight = Math.max(1, Math.round(crop.height * scale));
 
     canvas.width = outputWidth;
     canvas.height = outputHeight;
     context.clearRect(0, 0, outputWidth, outputHeight);
-    const totalRotation = state.rotation + state.straighten;
-    const rotationRadians = totalRotation * Math.PI / 180;
-    const cosine = Math.abs(Math.cos(rotationRadians));
-    const sine = Math.abs(Math.sin(rotationRadians));
-    const unscaledDrawWidth = crop.width * scale;
-    const unscaledDrawHeight = crop.height * scale;
-    const coverScale = Math.max(
-      (cosine * outputWidth + sine * outputHeight) / Math.max(unscaledDrawWidth, 1),
-      (sine * outputWidth + cosine * outputHeight) / Math.max(unscaledDrawHeight, 1),
-      1
-    );
     context.save();
-    context.translate(outputWidth / 2, outputHeight / 2);
-    context.rotate(rotationRadians);
+    context.scale(scale, scale);
+    context.translate(-crop.x, -crop.y);
+    context.translate(bounds.width / 2, bounds.height / 2);
+    context.rotate(bounds.radians);
     context.scale(state.flipX, state.flipY);
     context.filter = before ? "none" : buildFilter(state.adjustments);
-
-    const drawWidth = unscaledDrawWidth * coverScale;
-    const drawHeight = unscaledDrawHeight * coverScale;
     context.drawImage(
       image,
-      crop.x,
-      crop.y,
-      crop.width,
-      crop.height,
-      -drawWidth / 2,
-      -drawHeight / 2,
-      drawWidth,
-      drawHeight
+      -bounds.imageWidth / 2,
+      -bounds.imageHeight / 2,
+      bounds.imageWidth,
+      bounds.imageHeight
     );
     context.restore();
     context.filter = "none";
@@ -2736,7 +2886,7 @@
     if (!before) {
       applyColorOverlays(context, outputWidth, outputHeight, state.adjustments);
     }
-    return { width: Math.round(baseWidth), height: Math.round(baseHeight) };
+    return { width: Math.round(crop.width), height: Math.round(crop.height) };
   }
 
   function applyColorOverlays(context, width, height, values = adjustments) {
@@ -2772,10 +2922,9 @@
 
   function updateOutputDimensions() {
     if (!sourceImage?.naturalWidth) return;
-    const crop = getCropRect(sourceImage, cropRect);
-    const rotated = Math.abs(rotation % 180) === 90;
-    const width = Math.round(rotated ? crop.height : crop.width);
-    const height = Math.round(rotated ? crop.width : crop.height);
+    const crop = getCropRect(sourceImage, cropRect, currentSnapshot());
+    const width = Math.round(crop.width);
+    const height = Math.round(crop.height);
     dimensions.textContent = `${width.toLocaleString()} × ${height.toLocaleString()} px`;
   }
 
@@ -2786,7 +2935,7 @@
 
     const canvasBounds = previewCanvas.getBoundingClientRect();
     const frameBounds = canvasFrame.getBoundingClientRect();
-    const displayRect = sourceRectToDisplayRect(cropRect);
+    const displayRect = normalizeCropRect(cropRect);
     cropOverlay.style.left = `${canvasBounds.left - frameBounds.left + displayRect.x * canvasBounds.width}px`;
     cropOverlay.style.top = `${canvasBounds.top - frameBounds.top + displayRect.y * canvasBounds.height}px`;
     cropOverlay.style.width = `${displayRect.width * canvasBounds.width}px`;
@@ -2801,8 +2950,7 @@
       se: { x: startRect.x, y: startRect.y, signX: 1, signY: 1 }
     };
     const anchor = anchors[handle] || anchors.se;
-    const rotated = Math.abs(rotation % 180) === 90;
-    const pixelRatio = rotated ? 1 / getRatioValue(sourceImage, cropRatio) : getRatioValue(sourceImage, cropRatio);
+    const pixelRatio = getTargetCropRatio(sourceImage, cropRatio, currentSnapshot());
     const normalizedRatio = pixelRatio * canvasBounds.height / canvasBounds.width;
     const minimumWidth = Math.min(0.2, 42 / Math.max(canvasBounds.width, 1));
     const maximumWidth = anchor.signX > 0 ? 1 - anchor.x : anchor.x;
@@ -2841,7 +2989,7 @@
       startY: event.clientY,
       canvasBounds,
       state: currentSnapshot(),
-      displayRect: sourceRectToDisplayRect(cropRect)
+      displayRect: normalizeCropRect(cropRect)
     };
     cropOverlay.setPointerCapture(event.pointerId);
   }
@@ -2869,7 +3017,7 @@
       nextDisplayRect = resizeDisplayCrop(displayRect, pointer, action, canvasBounds);
     }
 
-    cropRect = displayRectToSourceRect(nextDisplayRect, state);
+    cropRect = constrainCropTransition(displayRect, nextDisplayRect, sourceImage, state);
     currentPreset = "custom";
     persistActivePhoto();
     updateCropOverlay();
@@ -2888,12 +3036,29 @@
     return ((Number(value) + 180) % 360 + 360) % 360 - 180;
   }
 
-  function setStraightenValue(value) {
+  function setStraightenValue(value, options = {}) {
     straighten = Math.round(clamp(Number(value) || 0, -45, 45) * 10) / 10;
+    if (options.reframe !== false) reframeCropForRotation();
     currentPreset = "custom";
     syncStraightenControls();
     persistActivePhoto();
     scheduleRender();
+  }
+
+  function positionRotationCursor(event) {
+    const frameBounds = canvasFrame.getBoundingClientRect();
+    rotationCursor.style.left = `${clamp(event.clientX - frameBounds.left, 15, frameBounds.width - 15)}px`;
+    rotationCursor.style.top = `${clamp(event.clientY - frameBounds.top, 15, frameBounds.height - 15)}px`;
+  }
+
+  function showRotationCursor(event) {
+    if (currentMode !== "crop" || !getActivePhoto()) return;
+    positionRotationCursor(event);
+    rotationCursor.classList.add("visible");
+  }
+
+  function hideRotationCursor() {
+    if (!rotationInteraction) rotationCursor.classList.remove("visible");
   }
 
   function beginRotationInteraction(event) {
@@ -2915,12 +3080,14 @@
     };
     canvasStage.classList.add("rotation-dragging");
     rotationAngleHud.classList.add("visible");
+    showRotationCursor(event);
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
   function moveRotationInteraction(event) {
     if (!rotationInteraction || event.pointerId !== rotationInteraction.pointerId) return;
     event.preventDefault();
+    positionRotationCursor(event);
     const pointerAngle = Math.atan2(
       event.clientY - rotationInteraction.centerY,
       event.clientX - rotationInteraction.centerX
@@ -2959,6 +3126,7 @@
     rotationInteraction = null;
     canvasStage.classList.remove("rotation-dragging");
     rotationAngleHud.classList.remove("visible");
+    rotationCursor.classList.remove("visible");
     if (target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
     if (changed) {
       syncControls();
@@ -3186,6 +3354,7 @@
       if (!sourceImage?.complete || !sourceImage.naturalWidth || !getActivePhoto()) return;
       const cropMode = currentMode === "crop";
       renderToCanvas(previewCanvas, previewContext, 1500, 1100, showBefore, sourceImage, currentSnapshot(), !cropMode);
+      renderToCanvas(uploadPreview, uploadPreviewContext, 360, 232, false, sourceImage, currentSnapshot(), true);
       updateOutputDimensions();
       beforeLabel.classList.toggle("visible", showBefore);
       compareButton.classList.toggle("active", showBefore);
@@ -3307,10 +3476,9 @@
   function createExportBlob(photo) {
     if (!photo?.image?.naturalWidth) return Promise.reject(new Error("invalid-photo"));
     const state = cloneSnapshot(photo.state);
-    const crop = getCropRect(photo.image, state.cropRect);
-    const rotated = Math.abs(state.rotation % 180) === 90;
-    const outputWidth = Math.round(rotated ? crop.height : crop.width);
-    const outputHeight = Math.round(rotated ? crop.width : crop.height);
+    const crop = getCropRect(photo.image, state.cropRect, state);
+    const outputWidth = Math.round(crop.width);
+    const outputHeight = Math.round(crop.height);
     const exportCanvas = document.createElement("canvas");
     const exportContext = exportCanvas.getContext("2d");
     renderToCanvas(exportCanvas, exportContext, outputWidth, outputHeight, false, photo.image, state);
@@ -3715,8 +3883,13 @@
   straightenAngleInput.addEventListener("change", pushHistory);
 
   rotationZones.forEach((zone) => {
+    zone.addEventListener("pointerenter", showRotationCursor);
+    zone.addEventListener("pointerleave", hideRotationCursor);
     zone.addEventListener("pointerdown", beginRotationInteraction);
-    zone.addEventListener("pointermove", moveRotationInteraction);
+    zone.addEventListener("pointermove", (event) => {
+      showRotationCursor(event);
+      moveRotationInteraction(event);
+    });
     zone.addEventListener("pointerup", endRotationInteraction);
     zone.addEventListener("pointercancel", endRotationInteraction);
   });
@@ -3729,12 +3902,14 @@
 
   document.getElementById("rotateLeft").addEventListener("click", () => {
     rotation = (rotation - 90 + 360) % 360;
+    reframeCropForRotation();
     scheduleRender();
     pushHistory();
   });
 
   document.getElementById("rotateRight").addEventListener("click", () => {
     rotation = (rotation + 90) % 360;
+    reframeCropForRotation();
     scheduleRender();
     pushHistory();
   });
