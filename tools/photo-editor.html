@@ -421,8 +421,8 @@
   .preset-button {
     width: 100%;
     display: grid;
-    grid-template-columns: 58px 1fr auto;
-    gap: 9px;
+    grid-template-columns: 16px 58px 1fr auto;
+    gap: 7px;
     align-items: center;
     padding: 5px;
     border: 1px solid transparent;
@@ -444,6 +444,27 @@
   .preset-button.active {
     border-color: #7f432c;
     background: #3b281f;
+  }
+
+  .preset-button.dragging {
+    opacity: 0.45;
+  }
+
+  .preset-shortcut {
+    display: inline-grid;
+    width: 16px;
+    height: 16px;
+    place-items: center;
+    border: 1px solid #514b43;
+    border-radius: 4px;
+    color: #a69e93;
+    font-size: 8px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .preset-shortcut:empty {
+    visibility: hidden;
   }
 
   .preset-thumb {
@@ -1167,6 +1188,10 @@
     color: #625d56;
   }
 
+  .context-menu button.danger:not(:disabled) {
+    color: #ef9d87;
+  }
+
   .context-menu-separator {
     height: 1px;
     margin: 4px 5px;
@@ -1753,6 +1778,12 @@
     color: var(--ink);
   }
 
+  .preset-shortcut {
+    border-color: var(--line);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--ink-faint);
+  }
+
   .preset-copy span {
     color: var(--ink-faint);
   }
@@ -1954,6 +1985,10 @@
     color: var(--ink-faint);
   }
 
+  .context-menu button.danger:not(:disabled) {
+    color: #b9472f;
+  }
+
   .context-menu-separator {
     background: var(--line);
   }
@@ -2012,16 +2047,16 @@
   <main class="editor-shell" aria-label="사진 편집 작업 영역">
     <header class="editor-topbar">
       <nav class="mode-tabs" aria-label="편집 모드">
-        <button class="mode-tab active" data-mode="edit">보정</button>
-        <button class="mode-tab" data-mode="crop">자르기</button>
+        <button class="mode-tab active" data-mode="edit" title="자르기 화면으로 전환 (Tab)" aria-keyshortcuts="Tab">보정</button>
+        <button class="mode-tab" data-mode="crop" title="보정 화면으로 전환 (Tab)" aria-keyshortcuts="Tab">자르기</button>
         <span class="history-actions" aria-label="편집 기록">
-          <button class="small-button" id="undoButton" type="button" title="실행 취소" aria-label="실행 취소">↶</button>
-          <button class="small-button" id="redoButton" type="button" title="다시 실행" aria-label="다시 실행">↷</button>
+          <button class="small-button" id="undoButton" type="button" title="실행 취소 (Ctrl+Z)" aria-label="실행 취소" aria-keyshortcuts="Control+Z">↶</button>
+          <button class="small-button" id="redoButton" type="button" title="다시 실행 (Ctrl+Y / Ctrl+Shift+Z)" aria-label="다시 실행" aria-keyshortcuts="Control+Y Control+Shift+Z">↷</button>
         </span>
       </nav>
       <div class="top-actions">
         <button class="small-button fullscreen-button" id="fullscreenButton" type="button" title="전체화면 모드" aria-label="전체화면 모드" aria-pressed="false">⛶</button>
-        <button class="export-button" id="exportButton" type="button">저장하기</button>
+        <button class="export-button" id="exportButton" type="button" title="선택한 사진 저장 (Ctrl+S)" aria-keyshortcuts="Control+S">저장하기</button>
       </div>
     </header>
 
@@ -2123,7 +2158,7 @@
           <button class="zoom-button" id="zoomButton" type="button">100% · 화면 맞춤</button>
         </div>
 
-        <div class="filmstrip" id="filmstrip" aria-label="업로드한 사진 목록">
+        <div class="filmstrip" id="filmstrip" aria-label="업로드한 사진 목록" aria-keyshortcuts="Control+A Delete ArrowLeft ArrowRight">
           <div class="filmstrip-empty">업로드한 사진이 여기에 표시됩니다.</div>
         </div>
       </section>
@@ -2208,6 +2243,8 @@
   <div class="context-menu-separator"></div>
   <button type="button" role="menuitem" data-action="copy-settings">설정값 복사</button>
   <button type="button" role="menuitem" data-action="paste-settings" disabled>설정값 붙여넣기</button>
+  <div class="context-menu-separator"></div>
+  <button class="danger" type="button" role="menuitem" data-action="delete">해당 사진 삭제</button>
 </div>
 
 <div class="dialog-backdrop" id="presetDialogBackdrop" hidden>
@@ -2332,9 +2369,78 @@
   let rotationInteraction = null;
   let guideInteraction = null;
   let guideMode = false;
+  let draggedPresetButton = null;
+  let presetDragJustFinished = false;
+
+  const presetOrderStorageKey = "photo-editor-preset-order";
 
   function getPresetButtons() {
     return Array.from(presetList.querySelectorAll("[data-preset]"));
+  }
+
+  function refreshPresetOrder() {
+    getPresetButtons().forEach((button, index) => {
+      let shortcut = button.querySelector(".preset-shortcut");
+      if (!shortcut) {
+        shortcut = document.createElement("span");
+        shortcut.className = "preset-shortcut";
+        shortcut.setAttribute("aria-hidden", "true");
+        button.prepend(shortcut);
+      }
+      const number = index < 9 ? String(index + 1) : "";
+      shortcut.textContent = number;
+      button.dataset.shortcut = number;
+      button.draggable = true;
+      if (number) button.setAttribute("aria-keyshortcuts", number);
+      else button.removeAttribute("aria-keyshortcuts");
+      const presetName = button.querySelector(".preset-copy strong")?.textContent || "프리셋";
+      button.title = number
+        ? `${presetName} · 단축키 ${number} · 드래그하여 순서 변경`
+        : `${presetName} · 드래그하여 순서 변경`;
+    });
+  }
+
+  function savePresetOrder() {
+    try {
+      localStorage.setItem(presetOrderStorageKey, JSON.stringify(getPresetButtons().map((button) => button.dataset.preset)));
+    } catch {
+      // 저장 공간을 사용할 수 없어도 현재 세션의 순서는 유지합니다.
+    }
+  }
+
+  function restorePresetOrder() {
+    let storedOrder = [];
+    try {
+      const stored = JSON.parse(localStorage.getItem(presetOrderStorageKey) || "[]");
+      if (Array.isArray(stored)) storedOrder = stored;
+    } catch {
+      storedOrder = [];
+    }
+
+    const buttons = getPresetButtons();
+    const buttonById = new Map(buttons.map((button) => [button.dataset.preset, button]));
+    storedOrder.forEach((presetId) => {
+      const button = buttonById.get(presetId);
+      if (!button) return;
+      presetList.append(button);
+      buttonById.delete(presetId);
+    });
+    buttons.forEach((button) => {
+      if (buttonById.has(button.dataset.preset)) presetList.append(button);
+    });
+    refreshPresetOrder();
+  }
+
+  function finishPresetDrag() {
+    if (!draggedPresetButton) return;
+    draggedPresetButton.classList.remove("dragging");
+    draggedPresetButton = null;
+    refreshPresetOrder();
+    savePresetOrder();
+    presetDragJustFinished = true;
+    window.setTimeout(() => {
+      presetDragJustFinished = false;
+    }, 0);
   }
 
   function cloneSnapshot(snapshot) {
@@ -2498,6 +2604,7 @@
       button.append(thumb, copy, check);
       presetList.append(button);
     });
+    restorePresetOrder();
     updatePresetPreviews();
   }
 
@@ -2604,6 +2711,65 @@
     selectedPhotoIds = new Set([photoId]);
     selectionAnchorId = photoId;
     selectPhoto(photoId, { preserveSelection: true });
+  }
+
+  function selectAllPhotos() {
+    if (!photos.length) return;
+    selectedPhotoIds = new Set(photos.map((photo) => photo.id));
+    selectionAnchorId = activePhotoId || photos[0].id;
+    selectPhoto(activePhotoId || photos[0].id, { preserveSelection: true, updateAnchor: false });
+    showToast(`${photos.length}장의 사진을 모두 선택했습니다.`);
+  }
+
+  function selectAdjacentPhoto(direction) {
+    const activeIndex = photos.findIndex((photo) => photo.id === activePhotoId);
+    if (activeIndex < 0) return;
+    const nextIndex = clamp(activeIndex + direction, 0, photos.length - 1);
+    if (nextIndex === activeIndex) return;
+    selectPhoto(photos[nextIndex].id);
+  }
+
+  function deletePhotos(photoList = getSelectedTargetPhotos()) {
+    const photoIds = new Set(photoList.map((photo) => photo?.id).filter(Boolean));
+    if (!photoIds.size) return;
+    persistActivePhoto();
+
+    const previousActiveIndex = Math.max(0, photos.findIndex((photo) => photo.id === activePhotoId));
+    const removedPhotos = photos.filter((photo) => photoIds.has(photo.id));
+    removedPhotos.forEach((photo) => URL.revokeObjectURL(photo.url));
+    photos = photos.filter((photo) => !photoIds.has(photo.id));
+    closePhotoContextMenu();
+
+    if (!photos.length) {
+      activePhotoId = null;
+      selectedPhotoIds = new Set();
+      selectionAnchorId = null;
+      sourceImage = null;
+      adjustments = { ...neutral };
+      cropRatio = "original";
+      cropRect = { x: 0, y: 0, width: 1, height: 1 };
+      rotation = 0;
+      straighten = 0;
+      flipX = 1;
+      flipY = 1;
+      currentPreset = "original";
+      history = [];
+      historyIndex = -1;
+      showBefore = false;
+      setMode("edit");
+      renderFilmstrip();
+      updatePresetPreviews();
+      syncControls();
+      updateEditorAvailability();
+    } else {
+      const nextPhoto = photos[Math.min(previousActiveIndex, photos.length - 1)];
+      activePhotoId = null;
+      selectedPhotoIds = new Set([nextPhoto.id]);
+      selectionAnchorId = nextPhoto.id;
+      selectPhoto(nextPhoto.id, { preserveSelection: true });
+    }
+
+    showToast(`${removedPhotos.length}장의 사진을 목록에서 삭제했습니다.`);
   }
 
   function updateEditorAvailability() {
@@ -3858,7 +4024,9 @@
     const pasteButton = photoContextMenu.querySelector('[data-action="paste-settings"]');
     const targetCount = selectedPhotoIds.has(photoId) ? selectedPhotoIds.size : 1;
     const exportMenuButton = photoContextMenu.querySelector('[data-action="export"]');
+    const deleteMenuButton = photoContextMenu.querySelector('[data-action="delete"]');
     exportMenuButton.textContent = targetCount > 1 ? `선택한 사진들 추출 (${targetCount}장)` : "해당 사진만 추출";
+    deleteMenuButton.textContent = targetCount > 1 ? `선택한 사진 삭제 (${targetCount}장)` : "해당 사진 삭제";
     pasteButton.disabled = !copiedSettings;
     pasteButton.textContent = targetCount > 1 ? `설정값 붙여넣기 (${targetCount}장)` : "설정값 붙여넣기";
     photoContextMenu.hidden = false;
@@ -3909,9 +4077,42 @@
 
   presetList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-preset]");
-    if (!button || button.disabled) return;
+    if (!button || button.disabled || presetDragJustFinished) return;
     applyPreset(button.dataset.preset);
   });
+
+  presetList.addEventListener("dragstart", (event) => {
+    const button = event.target.closest("[data-preset]");
+    if (!button || button.disabled) {
+      event.preventDefault();
+      return;
+    }
+    draggedPresetButton = button;
+    button.classList.add("dragging");
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", button.dataset.preset);
+    }
+  });
+
+  presetList.addEventListener("dragover", (event) => {
+    if (!draggedPresetButton) return;
+    event.preventDefault();
+    const target = event.target.closest("[data-preset]");
+    if (!target || target === draggedPresetButton) return;
+    const targetRect = target.getBoundingClientRect();
+    const insertBeforeTarget = event.clientY < targetRect.top + targetRect.height / 2;
+    presetList.insertBefore(draggedPresetButton, insertBeforeTarget ? target : target.nextSibling);
+    refreshPresetOrder();
+  });
+
+  presetList.addEventListener("drop", (event) => {
+    if (!draggedPresetButton) return;
+    event.preventDefault();
+    finishPresetDrag();
+  });
+
+  presetList.addEventListener("dragend", finishPresetDrag);
 
   filmstrip.addEventListener("click", (event) => {
     const addButton = event.target.closest('[data-action="add-photos"]');
@@ -4047,10 +4248,64 @@
       endGuideMode();
       if (editorShell.classList.contains("is-fullscreen")) setEditorFullscreen(false);
     }
+
+    const target = event.target;
+    const isRangeInput = target instanceof HTMLInputElement && target.type === "range";
+    const isTextEntry = target instanceof HTMLElement && !isRangeInput && (
+      target.matches("input, textarea, select") || target.isContentEditable
+    );
+    if (isTextEntry || !presetDialogBackdrop.hidden) return;
+
+    const modifier = event.ctrlKey || event.metaKey;
+    const key = event.key.toLowerCase();
+
     if (event.key === "\\" && getActivePhoto()) setBefore(!showBefore);
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+    if (modifier && key === "z") {
       event.preventDefault();
       event.shiftKey ? redoButton.click() : undoButton.click();
+      return;
+    }
+    if (modifier && key === "y") {
+      event.preventDefault();
+      redoButton.click();
+      return;
+    }
+    if (modifier && key === "a" && photos.length) {
+      event.preventDefault();
+      selectAllPhotos();
+      return;
+    }
+    if (modifier && key === "s" && getActivePhoto()) {
+      event.preventDefault();
+      exportPhotos(getSelectedTargetPhotos());
+      return;
+    }
+    if (!modifier && !event.altKey && event.key === "Tab" && getActivePhoto()) {
+      event.preventDefault();
+      setMode(currentMode === "edit" ? "crop" : "edit");
+      return;
+    }
+    if (!modifier && !event.altKey && event.key === "Delete" && getActivePhoto() && !event.repeat) {
+      event.preventDefault();
+      deletePhotos(getSelectedTargetPhotos());
+      return;
+    }
+    if (!modifier && !event.altKey && /^[1-9]$/.test(event.key) && getActivePhoto()) {
+      const presetButton = getPresetButtons()[Number(event.key) - 1];
+      if (presetButton && !presetButton.disabled) {
+        event.preventDefault();
+        applyPreset(presetButton.dataset.preset);
+      }
+      return;
+    }
+    if (!modifier && !event.altKey && !isRangeInput && event.key === "ArrowLeft" && getActivePhoto()) {
+      event.preventDefault();
+      selectAdjacentPhoto(-1);
+      return;
+    }
+    if (!modifier && !event.altKey && !isRangeInput && event.key === "ArrowRight" && getActivePhoto()) {
+      event.preventDefault();
+      selectAdjacentPhoto(1);
     }
   });
 
@@ -4068,6 +4323,7 @@
     if (menuItem.dataset.action === "save-preset") openPresetDialog(photo);
     if (menuItem.dataset.action === "copy-settings") copyPhotoSettings(photo);
     if (menuItem.dataset.action === "paste-settings") pastePhotoSettings(photo);
+    if (menuItem.dataset.action === "delete") deletePhotos(getSelectedTargetPhotos(photo));
     closePhotoContextMenu();
   });
 
