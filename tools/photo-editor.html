@@ -2122,20 +2122,27 @@
 
   .help-shortcut-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 9px;
+    grid-template-columns: 1fr;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.58);
   }
 
   .help-shortcut-item {
-    min-height: 64px;
+    min-height: 49px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 11px 12px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--card);
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+  }
+
+  .help-shortcut-item:last-child {
+    border-bottom: 0;
   }
 
   .help-shortcut-item span {
@@ -2148,7 +2155,16 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 3px;
+  }
+
+  .help-shortcut-keys em {
+    margin: 0 5px;
+    color: var(--ink-faint);
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 700;
   }
 
   .help-shortcut-keys kbd {
@@ -2217,7 +2233,9 @@
     height: 100%;
     position: absolute;
     inset: 0;
-    object-fit: cover;
+    padding: 48px 24px;
+    background: linear-gradient(145deg, #fffdf9, #eee5d9);
+    object-fit: contain;
   }
 
   .help-visual-shade {
@@ -2257,11 +2275,7 @@
     height: 42px;
     border: 2px solid transparent;
     border-radius: 5px;
-    background: url("/images/ads_pc.png") center / cover;
-  }
-
-  .help-filmstrip-mock span:nth-child(2) {
-    background-image: url("/images/ads_mo.png");
+    background: #fffaf4 url("/images/logo.png") center / contain no-repeat;
   }
 
   .help-filmstrip-mock span.selected {
@@ -2376,7 +2390,7 @@
     inset: 0;
     z-index: 2;
     border-right: 2px solid white;
-    background: url("/images/ads_pc.png") center / cover;
+    background: #f5ede3 url("/images/logo.png") center / contain no-repeat;
     clip-path: inset(0 50% 0 0);
     filter: grayscale(1);
   }
@@ -2717,8 +2731,7 @@
           <p>사진 목록과 편집 화면에서 바로 사용할 수 있는 단축키입니다. 프리셋 숫자는 왼쪽 목록의 현재 순서를 기준으로 합니다.</p>
           <div class="help-shortcut-grid">
             <div class="help-shortcut-item"><span>실행취소</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>Z</kbd></div></div>
-            <div class="help-shortcut-item"><span>복구</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>Y</kbd></div></div>
-            <div class="help-shortcut-item"><span>복구</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Z</kbd></div></div>
+            <div class="help-shortcut-item"><span>복구</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>Y</kbd><em>또는</em><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Z</kbd></div></div>
             <div class="help-shortcut-item"><span>사진 전체 선택</span><div class="help-shortcut-keys"><kbd>Ctrl</kbd><kbd>A</kbd></div></div>
             <div class="help-shortcut-item"><span>선택 사진 삭제</span><div class="help-shortcut-keys"><kbd>Delete</kbd></div></div>
             <div class="help-shortcut-item"><span>보정·자르기 전환</span><div class="help-shortcut-keys"><kbd>Tab</kbd></div></div>
@@ -2733,7 +2746,7 @@
 
       <article class="help-page" data-help-page="1" hidden>
         <figure class="help-visual">
-          <img src="/images/ads_pc.png" alt="사진 목록과 다중 선택 사용 예시" loading="lazy" />
+          <img src="/images/logo.png" alt="체험단 매니저 로고를 활용한 사진 목록과 다중 선택 예시" loading="lazy" />
           <span class="help-visual-label">사진 불러오기와 선택</span>
           <span class="help-visual-shade"></span>
           <div class="help-filmstrip-mock" aria-hidden="true">
@@ -2756,7 +2769,7 @@
 
       <article class="help-page" data-help-page="2" hidden>
         <figure class="help-visual">
-          <img src="/images/ads_pc.png" alt="빛과 색상 보정 패널 사용 예시" loading="lazy" />
+          <img src="/images/logo.png" alt="체험단 매니저 로고를 활용한 빛과 색상 보정 예시" loading="lazy" />
           <span class="help-visual-label">빛 · 색상 · 효과</span>
           <div class="help-adjustment-mock" aria-hidden="true">
             <b>빛과 색상 보정</b>
@@ -2783,7 +2796,7 @@
 
       <article class="help-page" data-help-page="3" hidden>
         <figure class="help-visual">
-          <img src="/images/ads_pc.png" alt="프리셋 목록과 번호 단축키 사용 예시" loading="lazy" />
+          <img src="/images/logo.png" alt="체험단 매니저 로고를 활용한 프리셋 적용 예시" loading="lazy" />
           <span class="help-visual-label">프리셋과 설정값</span>
           <span class="help-visual-shade"></span>
           <div class="help-preset-mock" aria-hidden="true">
@@ -2810,7 +2823,7 @@
 
       <article class="help-page" data-help-page="4" hidden>
         <figure class="help-visual">
-          <img src="/images/ads_mo.png" alt="자르기 격자와 자유 회전 사용 예시" loading="lazy" />
+          <img src="/images/logo.png" alt="체험단 매니저 로고를 활용한 자르기와 회전 예시" loading="lazy" />
           <span class="help-visual-label">자르기 · 회전 · 맞춤</span>
           <div class="help-crop-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         </figure>
@@ -2830,7 +2843,7 @@
 
       <article class="help-page" data-help-page="5" hidden>
         <figure class="help-visual">
-          <img src="/images/ads_pc.png" alt="원본 비교와 저장 기능 사용 예시" loading="lazy" />
+          <img src="/images/logo.png" alt="체험단 매니저 로고를 활용한 원본 비교와 저장 예시" loading="lazy" />
           <div class="help-view-mock" aria-hidden="true"></div>
           <span class="help-visual-label">보기 · 비교 · 저장</span>
           <div class="help-view-controls" aria-hidden="true">
