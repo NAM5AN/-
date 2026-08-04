@@ -216,6 +216,54 @@
 .mp-badge-name { font-size: 13px; font-weight: 700; color: var(--ink, #3d3229); }
 .mp-badge-desc { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 2px; }
 .mp-badge-count { font-size: 12px; color: var(--ink-faint, #9b8f82); margin: -4px 0 12px; }
+
+/* 활동 지도 */
+.mp-map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.mp-map-stat { font-size: 12px; color: var(--ink-faint, #9b8f82); }
+.mp-map-box {
+  position: relative;
+  height: 300px; border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--line, #e8e0d4);
+  background: var(--paper, #faf6ef);
+}
+.mp-map-msg {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; font-size: 13px; line-height: 1.7;
+  color: var(--ink-faint, #9b8f82);
+  background: var(--paper, #faf6ef); padding: 20px;
+}
+.mp-map-msg.hidden { display: none; }
+.mp-map-canvas { width: 100%; height: 100%; }
+.mp-map-pin {
+  width: 26px; height: 26px; border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: var(--terra, #b0603f);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.mp-map-pin span {
+  transform: rotate(45deg);
+  color: #fff; font-size: 11px; font-weight: 700; line-height: 1;
+}
+.mp-map-info {
+  background: #fff; border: 1px solid var(--line, #e8e0d4);
+  border-radius: 10px; padding: 9px 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.15);
+  font-size: 12px; color: var(--ink, #3d3229);
+  white-space: nowrap; max-width: 230px;
+}
+.mp-map-info b { display: block; font-size: 13px; margin-bottom: 2px; }
+.mp-map-info small { color: var(--ink-faint, #9b8f82); }
+.mp-map-zoom {
+  position: absolute; right: 10px; bottom: 10px; z-index: 3;
+  border: 1px solid var(--line, #e8e0d4); background: #fff;
+  border-radius: 8px; padding: 6px 11px; font-size: 12px;
+  color: var(--ink-soft, #6f6457); cursor: pointer; font-family: inherit;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
 </style>
 </head>
 <body>
@@ -299,6 +347,19 @@
   <section>
     <h2 class="mp-section-title">내 포트폴리오</h2>
     <div class="mp-pf-note">기간과 상관없이 <b>지금까지의 전체 활동</b>을 보여줘요.</div>
+
+    <!-- 활동 지도 -->
+    <div style="margin-bottom:22px;">
+      <div class="mp-map-head">
+        <div class="mp-sub-title" style="margin:0;">🗺️ 활동 지도</div>
+        <div class="mp-map-stat" id="mpMapStat"></div>
+      </div>
+      <div class="mp-map-box" id="mpMapBox">
+        <div class="mp-map-canvas" id="mpMapCanvas"></div>
+        <div class="mp-map-msg" id="mpMapMsg">지도를 불러오는 중이에요…</div>
+        <button class="mp-map-zoom" id="mpMapFit" style="display:none;">전체 보기</button>
+      </div>
+    </div>
 
     <!-- 카테고리 분포 + 하이라이트 -->
     <div class="mp-two">
@@ -606,7 +667,135 @@
     }).join('');
   }
 
-  function renderPortfolio() { renderCategory(); renderHighlights(); renderBadges(); }
+  // ===== 포트폴리오: 활동 지도 =====
+  const KAKAO_KEY = '21466d7ae884ca307c2ec034bd6887e1';
+  let kakaoLoadPromise = null;
+  let mpMap = null, mpBounds = null, mpOpenOverlay = null;
+
+  function loadKakaoSDK() {
+    if (window.kakao && window.kakao.maps && window.kakao.maps.LatLng) {
+      return Promise.resolve(window.kakao);
+    }
+    if (kakaoLoadPromise) return kakaoLoadPromise;
+    kakaoLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + encodeURIComponent(KAKAO_KEY) + '&autoload=false';
+      script.onload = () => {
+        if (!window.kakao || !window.kakao.maps) { reject(new Error('SDK_LOAD_FAIL')); return; }
+        window.kakao.maps.load(() => resolve(window.kakao));
+      };
+      script.onerror = () => reject(new Error('SDK_LOAD_FAIL'));
+      document.head.appendChild(script);
+    });
+    return kakaoLoadPromise;
+  }
+
+  function mapPoints() {
+    return rows.filter(r =>
+      typeof r.lat === 'number' && typeof r.lng === 'number' &&
+      isFinite(r.lat) && isFinite(r.lng) && (r.lat !== 0 || r.lng !== 0)
+    );
+  }
+
+  async function renderMap() {
+    if (mpMap) return; // 마커 중복 방지 — 최초 1회만 그림
+    const msg = document.getElementById('mpMapMsg');
+    const statEl = document.getElementById('mpMapStat');
+    const fitBtn = document.getElementById('mpMapFit');
+    const pts = mapPoints();
+
+    // 통계 문구 (지도 로드와 무관하게 먼저)
+    const regions = new Set(rows.map(r => (r.region || '').trim()).filter(Boolean));
+    statEl.textContent = pts.length > 0
+      ? (pts.length + '곳 · ' + (regions.size || 1) + '개 지역')
+      : '';
+
+    if (pts.length === 0) {
+      msg.classList.remove('hidden');
+      msg.innerHTML = '위치 정보가 있는 완료 체험단이 아직 없어요.<br>등록 시 주소를 입력하면 지도에 표시돼요.';
+      return;
+    }
+
+    let kakao;
+    try {
+      kakao = await loadKakaoSDK();
+    } catch (e) {
+      console.error('[mypage] kakao sdk fail:', e);
+      msg.classList.remove('hidden');
+      msg.innerHTML = '지도를 불러오지 못했어요.<br>잠시 후 새로고침해 주세요.';
+      return;
+    }
+
+    msg.classList.add('hidden');
+    fitBtn.style.display = 'block';
+
+    const container = document.getElementById('mpMapCanvas');
+    if (!mpMap) {
+      mpMap = new kakao.maps.Map(container, {
+        center: new kakao.maps.LatLng(pts[0].lat, pts[0].lng),
+        level: 7
+      });
+      // 지도 클릭 시 열린 말풍선 닫기
+      kakao.maps.event.addListener(mpMap, 'click', () => {
+        if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
+      });
+    }
+
+    mpBounds = new kakao.maps.LatLngBounds();
+
+    pts.forEach(p => {
+      const pos = new kakao.maps.LatLng(p.lat, p.lng);
+      mpBounds.extend(pos);
+
+      const pin = document.createElement('div');
+      pin.className = 'mp-map-pin';
+      pin.innerHTML = '<span>📍</span>';
+
+      const marker = new kakao.maps.CustomOverlay({
+        position: pos, content: pin, yAnchor: 1, clickable: true
+      });
+      marker.setMap(mpMap);
+
+      // 말풍선
+      const info = document.createElement('div');
+      info.className = 'mp-map-info';
+      info.innerHTML = '<b>' + esc(p.store || '(이름 없음)') + '</b>'
+        + '<small>' + fmtDateShort(p.at) + ' 완료'
+        + (p.value != null ? ' · ' + p.value.toLocaleString('ko-KR') + '원' : '')
+        + '</small>';
+
+      const overlay = new kakao.maps.CustomOverlay({
+        position: pos, content: info, yAnchor: 2.1, clickable: true
+      });
+
+      pin.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (mpOpenOverlay) mpOpenOverlay.setMap(null);
+        if (mpOpenOverlay === overlay) { mpOpenOverlay = null; return; }
+        overlay.setMap(mpMap);
+        mpOpenOverlay = overlay;
+      });
+      info.addEventListener('click', () => { overlay.setMap(null); mpOpenOverlay = null; });
+    });
+
+    if (pts.length === 1) {
+      mpMap.setCenter(new kakao.maps.LatLng(pts[0].lat, pts[0].lng));
+      mpMap.setLevel(4);
+    } else {
+      mpMap.setBounds(mpBounds);
+    }
+    mpMap.relayout();
+  }
+
+  document.getElementById('mpMapFit').addEventListener('click', () => {
+    if (!mpMap || !mpBounds) return;
+    if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
+    const pts = mapPoints();
+    if (pts.length === 1) { mpMap.setLevel(4); mpMap.setCenter(new window.kakao.maps.LatLng(pts[0].lat, pts[0].lng)); }
+    else mpMap.setBounds(mpBounds);
+  });
+
+  function renderPortfolio() { renderMap(); renderCategory(); renderHighlights(); renderBadges(); }
   function renderAll() { renderStats(); renderList(); renderPortfolio(); }
 
   // ===== 금액 저장 =====
@@ -755,7 +944,7 @@
 
     const { data, error } = await sb
       .from('entries')
-      .select('id, store_name, content, category, region, provided_value, completed_at')
+      .select('id, store_name, content, category, region, lat, lng, provided_value, completed_at')
       .eq('user_id', user.id)
       .eq('completed', true);
 
@@ -775,6 +964,8 @@
         content: r.content || '',
         category: r.category || '',
         region: r.region || '',
+        lat: (typeof r.lat === 'number') ? r.lat : null,
+        lng: (typeof r.lng === 'number') ? r.lng : null,
         value: (typeof r.provided_value === 'number') ? r.provided_value : null,
         at: new Date(r.completed_at)
       }));
