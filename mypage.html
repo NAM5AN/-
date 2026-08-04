@@ -217,6 +217,100 @@
 .mp-badge-desc { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 2px; }
 .mp-badge-count { font-size: 12px; color: var(--ink-faint, #9b8f82); margin: -4px 0 12px; }
 
+/* 공유 버튼 */
+.mp-share-btn {
+  margin-top: 14px;
+  border: 1px solid var(--terra, #b0603f); background: none;
+  color: var(--terra, #b0603f); border-radius: 999px;
+  padding: 7px 18px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.mp-share-btn:hover { background: var(--terra-soft, #f2e0d6); }
+
+/* 공유 모달 */
+.mp-modal {
+  display: none;
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.45);
+  align-items: center; justify-content: center;
+  padding: 16px;
+}
+.mp-modal.open { display: flex; }
+.mp-modal-box {
+  background: var(--card, #fff); border-radius: 18px;
+  width: 100%; max-width: 400px;
+  max-height: 92vh; overflow-y: auto;
+  padding: 18px 18px 16px;
+}
+.mp-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.mp-modal-title { font-family: var(--font-serif, serif); font-size: 17px; color: var(--ink, #3d3229); }
+.mp-modal-close {
+  border: none; background: none; cursor: pointer;
+  font-size: 20px; color: var(--ink-faint, #9b8f82); padding: 2px 4px; line-height: 1;
+}
+
+/* 카드 미리보기 */
+.mp-cardview { display: flex; justify-content: center; margin-bottom: 16px; }
+.mp-sharecard {
+  width: 320px; box-sizing: border-box;
+  border-radius: 16px; padding: 24px 22px 20px;
+  background: #F5EFE6; color: #3d3229;
+  font-family: var(--font-body, system-ui, sans-serif);
+}
+.mp-sharecard.theme-terra { background: #b0603f; color: #fff9f4; }
+.mp-sharecard.theme-dark  { background: #2e2823; color: #f2ece3; }
+.mp-sc-brand { font-size: 11px; letter-spacing: .04em; opacity: .75; }
+.mp-sc-who { font-size: 15px; font-weight: 700; margin-top: 3px; }
+.mp-sc-amount {
+  font-family: var(--font-serif, serif);
+  font-size: 34px; font-weight: 700; line-height: 1.2;
+  margin: 16px 0 2px; font-variant-numeric: tabular-nums;
+  color: #b0603f;
+}
+.mp-sharecard.theme-terra .mp-sc-amount,
+.mp-sharecard.theme-dark .mp-sc-amount { color: inherit; }
+.mp-sc-caption { font-size: 13px; opacity: .85; }
+.mp-sc-stats { display: flex; gap: 18px; margin-top: 18px; }
+.mp-sc-stat-label { font-size: 10px; opacity: .7; }
+.mp-sc-stat-value { font-size: 16px; font-weight: 700; margin-top: 2px; }
+.mp-sc-foot {
+  margin-top: 18px; padding-top: 12px;
+  border-top: 1px solid currentColor; opacity: .55;
+  font-size: 10px; display: flex; justify-content: space-between;
+}
+
+/* 모달 옵션 */
+.mp-opt-label { font-size: 11px; color: var(--ink-faint, #9b8f82); margin: 0 0 6px; }
+.mp-theme-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.mp-theme-btn {
+  flex: 1; border: 1px solid var(--line, #e8e0d4); background: none;
+  border-radius: 10px; padding: 7px 0; font-size: 12px;
+  color: var(--ink-soft, #6f6457); cursor: pointer; font-family: inherit;
+}
+.mp-theme-btn.on { border-color: var(--terra, #b0603f); color: var(--terra, #b0603f); font-weight: 700; }
+.mp-toggle-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.mp-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--line, #e8e0d4); border-radius: 999px;
+  padding: 6px 12px; font-size: 12px; color: var(--ink-soft, #6f6457);
+  cursor: pointer; user-select: none;
+}
+.mp-toggle.on { border-color: var(--terra, #b0603f); color: var(--terra, #b0603f); font-weight: 700; }
+.mp-toggle input { display: none; }
+.mp-modal-actions { display: flex; gap: 8px; }
+.mp-btn-primary {
+  flex: 1; border: none; border-radius: 11px; cursor: pointer;
+  background: var(--terra, #b0603f); color: #fff;
+  padding: 11px 0; font-size: 14px; font-weight: 700; font-family: inherit;
+}
+.mp-btn-primary:disabled { opacity: .6; cursor: default; }
+.mp-btn-ghost {
+  border: 1px solid var(--line, #e8e0d4); background: none;
+  border-radius: 11px; cursor: pointer; color: var(--ink-soft, #6f6457);
+  padding: 11px 16px; font-size: 14px; font-family: inherit;
+}
+.mp-share-hint { font-size: 11px; color: var(--ink-faint, #9b8f82); text-align: center; margin-top: 10px; }
+
 /* 활동 지도 */
 .mp-map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .mp-map-stat { font-size: 12px; color: var(--ink-faint, #9b8f82); }
@@ -309,6 +403,7 @@
       <div class="mp-copy-line2">아꼈어요! 🎉</div>
       <div class="mp-count" id="mpCount">완료 0건</div>
       <div class="mp-missing" id="mpMissing"></div>
+      <button class="mp-share-btn" id="mpShareBtn">🖼️ 카드로 공유하기</button>
     </div>
 
     <div class="mp-error" id="mpError">통계를 불러오지 못했어요. 잠시 후 새로고침해 주세요.</div>
@@ -380,6 +475,51 @@
       <div class="mp-badge-grid" id="mpBadges"></div>
     </div>
   </section>
+</div>
+
+<!-- 공유 카드 모달 -->
+<div class="mp-modal" id="mpShareModal">
+  <div class="mp-modal-box" id="mpShareBox">
+    <div class="mp-modal-head">
+      <div class="mp-modal-title">활동 카드 만들기</div>
+      <button class="mp-modal-close" id="mpShareClose" aria-label="닫기">✕</button>
+    </div>
+
+    <div class="mp-cardview">
+      <div class="mp-sharecard" id="mpShareCard">
+        <div class="mp-sc-brand">체험단 매니저 · 활동 리포트</div>
+        <div class="mp-sc-who" id="scWho">활동 리포트</div>
+        <div class="mp-sc-amount" id="scAmount">0원</div>
+        <div class="mp-sc-caption" id="scCaption">아꼈어요</div>
+        <div class="mp-sc-stats" id="scStats"></div>
+        <div class="mp-sc-foot">
+          <span>cheheomdan-manager.com</span>
+          <span id="scDate"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mp-opt-label">카드 색상</div>
+    <div class="mp-theme-row" id="mpThemeRow">
+      <button class="mp-theme-btn on" data-theme="cream">크림</button>
+      <button class="mp-theme-btn" data-theme="terra">테라코타</button>
+      <button class="mp-theme-btn" data-theme="dark">다크</button>
+    </div>
+
+    <div class="mp-opt-label">카드에 넣을 정보</div>
+    <div class="mp-toggle-row" id="mpToggleRow">
+      <label class="mp-toggle on"><input type="checkbox" data-opt="nickname" checked>닉네임</label>
+      <label class="mp-toggle on"><input type="checkbox" data-opt="count" checked>완료 건수</label>
+      <label class="mp-toggle on"><input type="checkbox" data-opt="category" checked>주력 분야</label>
+      <label class="mp-toggle on"><input type="checkbox" data-opt="region" checked>활동 지역</label>
+    </div>
+
+    <div class="mp-modal-actions">
+      <button class="mp-btn-primary" id="mpShareSave">이미지로 저장</button>
+      <button class="mp-btn-ghost" id="mpShareCancel">닫기</button>
+    </div>
+    <div class="mp-share-hint" id="mpShareHint">현재 선택한 기간(<span id="scHintPeriod">올해</span>) 기준으로 만들어져요.</div>
+  </div>
 </div>
 
 <script>
@@ -793,6 +933,164 @@
     const pts = mapPoints();
     if (pts.length === 1) { mpMap.setLevel(4); mpMap.setCenter(new window.kakao.maps.LatLng(pts[0].lat, pts[0].lng)); }
     else mpMap.setBounds(mpBounds);
+  });
+
+  // ===== 공유 카드 모달 =====
+  let shareTheme = 'cream';
+  const shareOpts = { nickname: true, count: true, category: true, region: true };
+  let h2cPromise = null;
+
+  function loadHtml2Canvas() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    if (h2cPromise) return h2cPromise;
+    h2cPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      s.onload = () => window.html2canvas ? resolve(window.html2canvas) : reject(new Error('H2C_FAIL'));
+      s.onerror = () => reject(new Error('H2C_FAIL'));
+      document.head.appendChild(s);
+    });
+    return h2cPromise;
+  }
+
+  function topCategoryInRange() {
+    const counts = {};
+    rows.forEach(r => {
+      if (!inRange(r)) return;
+      const c = normCategory(r.category);
+      if (c) counts[c] = (counts[c] || 0) + 1;
+    });
+    return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || null;
+  }
+  function regionCountInRange() {
+    const set = new Set();
+    rows.forEach(r => { if (inRange(r)) { const g = (r.region || '').trim(); if (g) set.add(g); } });
+    return set.size;
+  }
+
+  function renderShareCard() {
+    const s = computeStats();
+    const card = document.getElementById('mpShareCard');
+    card.className = 'mp-sharecard' + (shareTheme === 'cream' ? '' : ' theme-' + shareTheme);
+
+    const nick = document.getElementById('mpName').textContent || '사용자';
+    document.getElementById('scWho').textContent = shareOpts.nickname
+      ? (nick + ' 님의 ' + range.label)
+      : (range.label + ' 활동 리포트');
+
+    document.getElementById('scAmount').textContent = s.sum.toLocaleString('ko-KR') + '원';
+    document.getElementById('scCaption').textContent = '체험단 매니저와 함께 아꼈어요';
+
+    const stats = [];
+    if (shareOpts.count) stats.push({ label: '완료', value: s.cnt + '건' });
+    if (shareOpts.category) {
+      const c = topCategoryInRange();
+      if (c) stats.push({ label: '주력 분야', value: c });
+    }
+    if (shareOpts.region) {
+      const n = regionCountInRange();
+      if (n > 0) stats.push({ label: '활동 지역', value: n + '곳' });
+    }
+    document.getElementById('scStats').innerHTML = stats.map(st =>
+      '<div><div class="mp-sc-stat-label">' + esc(st.label) + '</div>'
+      + '<div class="mp-sc-stat-value">' + esc(st.value) + '</div></div>'
+    ).join('');
+
+    const now = new Date();
+    document.getElementById('scDate').textContent =
+      now.getFullYear() + '.' + (now.getMonth() + 1) + '.' + now.getDate();
+    document.getElementById('scHintPeriod').textContent = range.label;
+  }
+
+  function openShare() {
+    renderShareCard();
+    document.getElementById('mpShareModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    loadHtml2Canvas().catch(() => {}); // 미리 받아두기
+  }
+  function closeShare() {
+    document.getElementById('mpShareModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('mpShareBtn').addEventListener('click', openShare);
+  document.getElementById('mpShareClose').addEventListener('click', closeShare);
+  document.getElementById('mpShareCancel').addEventListener('click', closeShare);
+  document.getElementById('mpShareModal').addEventListener('click', (e) => {
+    if (e.target.id === 'mpShareModal') closeShare();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('mpShareModal').classList.contains('open')) closeShare();
+  });
+
+  document.getElementById('mpThemeRow').addEventListener('click', (e) => {
+    const b = e.target.closest('.mp-theme-btn');
+    if (!b) return;
+    shareTheme = b.dataset.theme;
+    document.querySelectorAll('.mp-theme-btn').forEach(x => x.classList.toggle('on', x === b));
+    renderShareCard();
+  });
+
+  document.getElementById('mpToggleRow').addEventListener('change', (e) => {
+    const inp = e.target.closest('input[data-opt]');
+    if (!inp) return;
+    shareOpts[inp.dataset.opt] = inp.checked;
+    inp.closest('.mp-toggle').classList.toggle('on', inp.checked);
+    renderShareCard();
+  });
+
+  document.getElementById('mpShareSave').addEventListener('click', async () => {
+    const btn = document.getElementById('mpShareSave');
+    const hint = document.getElementById('mpShareHint');
+    btn.disabled = true;
+    btn.textContent = '만드는 중…';
+
+    try {
+      const html2canvas = await loadHtml2Canvas();
+      const card = document.getElementById('mpShareCard');
+      const bg = shareTheme === 'terra' ? '#b0603f' : (shareTheme === 'dark' ? '#2e2823' : '#F5EFE6');
+
+      const canvas = await html2canvas(card, {
+        backgroundColor: bg,
+        scale: 3,
+        useCORS: true,
+        logging: false
+      });
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const fname = '체험단매니저_활동카드_' + range.label.replace(/[^0-9가-힣a-zA-Z]/g, '') + '.png';
+
+      // 모바일 공유 시트 우선, 실패 시 다운로드
+      let shared = false;
+      if (navigator.canShare && navigator.share) {
+        try {
+          const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+          const file = new File([blob], fname, { type: 'image/png' });
+          if (blob && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            shared = true;
+          }
+        } catch (err) {
+          if (err && err.name === 'AbortError') shared = true; // 사용자가 취소함
+        }
+      }
+
+      if (!shared) {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        hint.textContent = '저장했어요! 다운로드 폴더를 확인해 주세요.';
+      }
+    } catch (err) {
+      console.error('[mypage] share card error:', err);
+      hint.textContent = '이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '이미지로 저장';
+    }
   });
 
   function renderPortfolio() { renderMap(); renderCategory(); renderHighlights(); renderBadges(); }
