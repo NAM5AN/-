@@ -6,10 +6,6 @@
 <meta name="theme-color" content="#F5EFE6">
 <meta name="robots" content="noindex">
 <title>마이페이지 - 체험단 매니저</title>
-<link rel="icon" type="image/png" sizes="512x512" href="/images/favicon.png?v=20260803-2">
-<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png?v=20260803-2">
-<link rel="shortcut icon" href="/favicon.ico?v=20260803-2">
-<link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png?v=20260803-2">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="styles/base.css">
@@ -27,10 +23,7 @@
   font-size: 22px; line-height: 1; padding: 6px 10px 6px 0;
   color: var(--ink, #3d3229);
 }
-.mp-title {
-  font-family: var(--font-serif, serif);
-  font-size: 22px; margin: 0; color: var(--ink, #3d3229);
-}
+.mp-title { font-family: var(--font-serif, serif); font-size: 22px; margin: 0; color: var(--ink, #3d3229); }
 
 .mp-profile { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 .mp-avatar {
@@ -64,7 +57,6 @@
 .mp-period-btn::after { content: ' ▾'; font-size: 11px; }
 .mp-period-btn:hover { background: var(--terra-soft, #f2e0d6); }
 
-/* 기간 선택 팝오버 */
 .mp-pop {
   display: none;
   position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
@@ -73,8 +65,7 @@
   border: 1px solid var(--line, #e8e0d4);
   border-radius: 14px;
   box-shadow: 0 8px 28px rgba(0,0,0,.12);
-  padding: 8px;
-  text-align: left;
+  padding: 8px; text-align: left;
 }
 .mp-pop.open { display: block; }
 .mp-pop-item {
@@ -117,7 +108,6 @@
   text-decoration: underline; text-underline-offset: 3px;
 }
 
-/* 집계 기준 안내 */
 .mp-basis { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line, #e8e0d4); text-align: center; }
 .mp-basis-btn {
   border: none; background: none; cursor: pointer;
@@ -137,7 +127,6 @@
 
 .mp-divider { border: none; border-top: 1px solid var(--line, #e8e0d4); margin: 26px 0; }
 .mp-section-title { font-family: var(--font-serif, serif); font-size: 17px; color: var(--ink, #3d3229); margin: 0 0 12px; }
-.mp-soon { text-align: center; font-size: 13px; color: var(--ink-faint, #9b8f82); padding: 28px 16px; line-height: 1.7; }
 
 /* ===== 완료 목록 ===== */
 .mp-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0 0 12px; }
@@ -155,10 +144,7 @@
 .mp-item.is-missing { background: linear-gradient(90deg, rgba(217,166,142,.10), transparent 60%); border-radius: 8px; padding-left: 8px; margin-left: -8px; }
 .mp-item-main { flex: 1; min-width: 0; }
 .mp-item-store { font-weight: 600; font-size: 14px; color: var(--ink, #3d3229); }
-.mp-item-content {
-  font-size: 12px; color: var(--ink-faint, #9b8f82); margin-top: 3px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+.mp-item-content { font-size: 12px; color: var(--ink-faint, #9b8f82); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mp-item-date { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 4px; }
 .mp-item-side { flex-shrink: 0; text-align: right; padding-top: 1px; }
 .mp-item-value { font-weight: 700; font-size: 14px; color: var(--terra, #b0603f); font-variant-numeric: tabular-nums; }
@@ -173,8 +159,6 @@
   color: var(--terra, #b0603f); border-radius: 8px;
   padding: 5px 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit;
 }
-
-/* 인라인 편집 */
 .mp-edit-box { display: flex; gap: 5px; align-items: center; }
 .mp-edit-box input {
   width: 92px; border: 1px solid var(--terra-soft, #d9a68e); border-radius: 8px;
@@ -191,8 +175,47 @@
   border: none; background: none; color: var(--ink-faint, #9b8f82);
   font-size: 12px; cursor: pointer; font-family: inherit; padding: 6px 2px;
 }
-
 .mp-list-empty { text-align: center; font-size: 13px; color: var(--ink-faint, #9b8f82); padding: 26px 12px; line-height: 1.7; }
+
+/* ===== 포트폴리오 공통 ===== */
+.mp-pf-note { font-size: 11px; color: var(--ink-faint, #9b8f82); margin: -6px 0 14px; }
+.mp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .mp-two { grid-template-columns: 1fr; } }
+.mp-sub-title { font-size: 13px; font-weight: 700; color: var(--ink, #3d3229); margin: 0 0 12px; }
+.mp-empty-mini { font-size: 12px; color: var(--ink-faint, #9b8f82); text-align: center; padding: 18px 6px; }
+
+/* 카테고리 분포 */
+.mp-cat-row { margin-bottom: 11px; }
+.mp-cat-row:last-child { margin-bottom: 0; }
+.mp-cat-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; margin-bottom: 4px; }
+.mp-cat-name { color: var(--ink, #3d3229); }
+.mp-cat-pct { color: var(--ink-faint, #9b8f82); font-variant-numeric: tabular-nums; }
+.mp-cat-track { height: 7px; background: var(--paper, #faf6ef); border-radius: 4px; overflow: hidden; }
+.mp-cat-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+
+/* 하이라이트 */
+.mp-hl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mp-hl-box { background: var(--paper, #faf6ef); border-radius: 10px; padding: 10px 11px; }
+.mp-hl-label { font-size: 11px; color: var(--ink-faint, #9b8f82); }
+.mp-hl-value { font-size: 17px; font-weight: 700; color: var(--ink, #3d3229); margin-top: 2px; word-break: keep-all; }
+
+/* 마일스톤 뱃지 */
+.mp-badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.mp-badge {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--line, #e8e0d4); border-radius: 12px; padding: 11px 12px;
+}
+.mp-badge.locked { opacity: .5; }
+.mp-badge-icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+  background: var(--terra-soft, #f2e0d6);
+}
+.mp-badge.locked .mp-badge-icon { background: var(--paper, #faf6ef); }
+.mp-badge-name { font-size: 13px; font-weight: 700; color: var(--ink, #3d3229); }
+.mp-badge-desc { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 2px; }
+.mp-badge-count { font-size: 12px; color: var(--ink-faint, #9b8f82); margin: -4px 0 12px; }
 </style>
 </head>
 <body>
@@ -218,7 +241,6 @@
         체험단 매니저와 함께
         <span class="mp-period-wrap">
           <button class="mp-period-btn" id="mpPeriodBtn" aria-haspopup="true" aria-expanded="false">올해</button>
-
           <div class="mp-pop" id="mpPop">
             <button class="mp-pop-item" data-preset="today">오늘</button>
             <button class="mp-pop-item" data-preset="week">이번주</button>
@@ -227,13 +249,9 @@
             <button class="mp-pop-item" data-preset="all">지금까지 전체</button>
             <hr class="mp-pop-sep">
             <div class="mp-pop-label">특정 날짜</div>
-            <div class="mp-pop-row">
-              <input type="date" id="mpDay">
-            </div>
+            <div class="mp-pop-row"><input type="date" id="mpDay"></div>
             <div class="mp-pop-label">기간 선택</div>
-            <div class="mp-pop-row">
-              <input type="date" id="mpFrom"><span>~</span><input type="date" id="mpTo">
-            </div>
+            <div class="mp-pop-row"><input type="date" id="mpFrom"><span>~</span><input type="date" id="mpTo"></div>
             <button class="mp-pop-apply" id="mpApply">적용</button>
           </div>
         </span>
@@ -277,12 +295,28 @@
 
   <hr class="mp-divider">
 
-  <!-- 포트폴리오 (다음 단계에서 채워짐) -->
+  <!-- 포트폴리오 -->
   <section>
     <h2 class="mp-section-title">내 포트폴리오</h2>
-    <div class="mp-card mp-soon">
-      준비 중이에요 🌱<br>
-      완료 갤러리 · 잔디 캘린더 · 마일스톤 뱃지가 여기에 들어와요.
+    <div class="mp-pf-note">기간과 상관없이 <b>지금까지의 전체 활동</b>을 보여줘요.</div>
+
+    <!-- 카테고리 분포 + 하이라이트 -->
+    <div class="mp-two">
+      <div class="mp-card" style="padding:16px 16px 18px;">
+        <div class="mp-sub-title">📊 카테고리 분포</div>
+        <div id="mpCat"></div>
+      </div>
+      <div class="mp-card" style="padding:16px 16px 18px;">
+        <div class="mp-sub-title">🏆 기록 하이라이트</div>
+        <div class="mp-hl-grid" id="mpHl"></div>
+      </div>
+    </div>
+
+    <!-- 마일스톤 뱃지 -->
+    <div style="margin-top:22px;">
+      <div class="mp-sub-title" style="font-size:14px;">🎖️ 마일스톤 뱃지</div>
+      <div class="mp-badge-count" id="mpBadgeCount"></div>
+      <div class="mp-badge-grid" id="mpBadges"></div>
     </div>
   </section>
 </div>
@@ -293,23 +327,17 @@
   const SUPABASE_URL = 'https://wvwoqqfizgbhvdzlqscc.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_iLtSrF52sRfzalwcR4Nt-w_dJiU2q16';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: false // OAuth 콜백 처리는 index에서만
-    }
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
   });
 
   document.getElementById('btnBack').addEventListener('click', () => { location.href = '/'; });
 
-  // ===== 사용자 표시 (index.html과 동일 규칙) =====
   function getUserDisplayName(user) {
     if (!user) return '사용자';
     const meta = user.user_metadata || {};
     return meta.name || meta.full_name || meta.preferred_username || user.email?.split('@')[0] || '사용자';
   }
   function emailToInitial(email) { return email ? email.charAt(0).toUpperCase() : '?'; }
-
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -318,14 +346,9 @@
 
   // ===== 기간 계산 =====
   function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
-  function startOfWeek() {
-    const d = startOfToday();
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // 월요일 시작
-    return d;
-  }
+  function startOfWeek() { const d = startOfToday(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; }
   function startOfMonth() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); }
   function startOfYear() { const n = new Date(); return new Date(n.getFullYear(), 0, 1); }
-
   function parseDateInput(v) {
     if (!v) return null;
     const [y, m, d] = v.split('-').map(Number);
@@ -334,6 +357,14 @@
   function endOfDay(d) { const e = new Date(d); e.setHours(23, 59, 59, 999); return e; }
   function fmtDate(d) { return (d.getMonth() + 1) + '월 ' + d.getDate() + '일'; }
   function fmtDateShort(d) { return (d.getMonth() + 1) + '.' + d.getDate(); }
+  function fmtMoneyShort(n) {
+    if (n == null) return '-';
+    if (n >= 10000) {
+      const man = n / 10000;
+      return (Math.round(man * 10) / 10).toString().replace(/\.0$/, '') + '만원';
+    }
+    return n.toLocaleString('ko-KR') + '원';
+  }
 
   const PRESETS = {
     today: { label: '오늘',     from: startOfToday },
@@ -345,9 +376,9 @@
 
   // ===== 상태 =====
   let userId = null;
-  let rows = [];  // { id, store, content, value, at }
+  let rows = [];  // { id, store, content, category, region, value, at }
   let range = { from: startOfYear(), to: null, label: '올해', preset: 'year' };
-  let listFilter = 'all';   // 'all' | 'missing'
+  let listFilter = 'all';
   let editingId = null;
 
   function inRange(r) {
@@ -355,7 +386,6 @@
     if (range.to && r.at > range.to) return false;
     return true;
   }
-
   function computeStats() {
     let sum = 0, cnt = 0, missing = 0;
     rows.forEach(r => {
@@ -396,7 +426,6 @@
       mEl.style.display = 'none';
       mEl.classList.remove('clickable');
     }
-
     document.querySelectorAll('.mp-pop-item').forEach(b => {
       b.classList.toggle('on', b.dataset.preset === range.preset);
     });
@@ -408,7 +437,6 @@
     const empty = document.getElementById('mpListEmpty');
     document.getElementById('mpListPeriod').textContent = '· ' + range.label;
 
-    // 미입력 개수 → 필터 버튼 라벨
     const missingCount = rows.filter(r => inRange(r) && r.value == null).length;
     const fBtn = document.querySelector('.mp-filter-btn[data-filter="missing"]');
     fBtn.textContent = missingCount > 0 ? ('금액 미입력 (' + missingCount + ')') : '금액 미입력';
@@ -416,7 +444,7 @@
 
     let list = rows.filter(inRange);
     if (listFilter === 'missing') list = list.filter(r => r.value == null);
-    list.sort((a, b) => b.at - a.at); // 최근 완료 먼저
+    list.sort((a, b) => b.at - a.at);
 
     if (list.length === 0) {
       ul.innerHTML = '';
@@ -431,7 +459,6 @@
     ul.innerHTML = list.map(r => {
       const isMissing = r.value == null;
       const editing = editingId === r.id;
-
       let side;
       if (editing) {
         side = '<div class="mp-edit-box">'
@@ -446,7 +473,6 @@
         side = '<div class="mp-item-value">' + r.value.toLocaleString('ko-KR') + '원</div>'
           + '<button class="mp-item-edit" data-edit="' + r.id + '">수정</button>';
       }
-
       return '<li class="mp-item' + (isMissing ? ' is-missing' : '') + '">'
         + '<div class="mp-item-main">'
         + '<div class="mp-item-store">' + esc(r.store || '(이름 없음)') + '</div>'
@@ -463,14 +489,131 @@
     }
   }
 
-  function renderAll() { renderStats(); renderList(); }
+  // ===== 포트폴리오: 카테고리 분포 =====
+  // 카카오 카테고리는 "음식점 > 한식 > 곰탕" 형태 → 첫 조각으로 묶음
+  function normCategory(c) {
+    if (!c) return '';
+    return String(c).split('>')[0].trim();
+  }
+  const CAT_COLORS = ['#D85A30', '#7F77DD', '#1D9E75', '#378ADD', '#BA7517', '#D4537E', '#888780'];
+
+  function renderCategory() {
+    const box = document.getElementById('mpCat');
+    const counts = {};
+    let total = 0;
+    rows.forEach(r => {
+      const c = normCategory(r.category) || '기타';
+      counts[c] = (counts[c] || 0) + 1;
+      total++;
+    });
+    if (total === 0) {
+      box.innerHTML = '<div class="mp-empty-mini">완료한 체험단이 쌓이면<br>분야별 비중이 보여요.</div>';
+      return;
+    }
+    const sorted = Object.keys(counts).map(k => ({ name: k, n: counts[k] })).sort((a, b) => b.n - a.n);
+    const top = sorted.slice(0, 5);
+    const restN = sorted.slice(5).reduce((s, x) => s + x.n, 0);
+    if (restN > 0) top.push({ name: '기타', n: restN });
+
+    box.innerHTML = top.map((c, i) => {
+      const pct = Math.round(c.n / total * 100);
+      return '<div class="mp-cat-row">'
+        + '<div class="mp-cat-head"><span class="mp-cat-name">' + esc(c.name) + '</span>'
+        + '<span class="mp-cat-pct">' + pct + '% · ' + c.n + '건</span></div>'
+        + '<div class="mp-cat-track"><div class="mp-cat-fill" style="width:' + pct + '%; background:' + CAT_COLORS[i % CAT_COLORS.length] + ';"></div></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // ===== 포트폴리오: 기록 하이라이트 =====
+  function renderHighlights() {
+    const box = document.getElementById('mpHl');
+    if (rows.length === 0) {
+      box.innerHTML = '<div class="mp-empty-mini" style="grid-column:1/-1;">첫 체험단을 완료하면<br>기록이 쌓여요.</div>';
+      return;
+    }
+
+    // 최고가
+    const vals = rows.filter(r => r.value != null).map(r => r.value);
+    const maxVal = vals.length ? Math.max.apply(null, vals) : null;
+
+    // 활동 일수 (첫 완료일부터 오늘까지)
+    const firstAt = new Date(Math.min.apply(null, rows.map(r => r.at.getTime())));
+    const days = Math.max(1, Math.floor((startOfToday() - new Date(firstAt.getFullYear(), firstAt.getMonth(), firstAt.getDate())) / 86400000) + 1);
+
+    // 단골 업체 (같은 가게 2회 이상)
+    const storeCnt = {};
+    rows.forEach(r => { const s = (r.store || '').trim(); if (s) storeCnt[s] = (storeCnt[s] || 0) + 1; });
+    const repeatStores = Object.keys(storeCnt).filter(k => storeCnt[k] >= 2).length;
+
+    // 최다 지역
+    const regionCnt = {};
+    rows.forEach(r => { const g = (r.region || '').trim(); if (g) regionCnt[g] = (regionCnt[g] || 0) + 1; });
+    const topRegion = Object.keys(regionCnt).sort((a, b) => regionCnt[b] - regionCnt[a])[0] || '-';
+
+    const items = [
+      { label: '최고가 체험단', value: maxVal != null ? fmtMoneyShort(maxVal) : '-' },
+      { label: '활동 일수', value: days.toLocaleString('ko-KR') + '일째' },
+      { label: '단골 업체', value: repeatStores + '곳' },
+      { label: '최다 활동 지역', value: topRegion }
+    ];
+    box.innerHTML = items.map(it =>
+      '<div class="mp-hl-box"><div class="mp-hl-label">' + it.label + '</div>'
+      + '<div class="mp-hl-value">' + esc(it.value) + '</div></div>'
+    ).join('');
+  }
+
+  // ===== 포트폴리오: 마일스톤 뱃지 =====
+  function renderBadges() {
+    const box = document.getElementById('mpBadges');
+    const cntEl = document.getElementById('mpBadgeCount');
+
+    const total = rows.length;
+    const sum = rows.reduce((s, r) => s + (r.value || 0), 0);
+    const cats = new Set(rows.map(r => normCategory(r.category)).filter(Boolean)).size;
+    const regions = new Set(rows.map(r => (r.region || '').trim()).filter(Boolean)).size;
+    const storeCnt = {};
+    rows.forEach(r => { const s = (r.store || '').trim(); if (s) storeCnt[s] = (storeCnt[s] || 0) + 1; });
+    const maxRepeat = Object.keys(storeCnt).reduce((m, k) => Math.max(m, storeCnt[k]), 0);
+
+    const DEFS = [
+      { icon: '🌱', name: '첫 걸음',      need: 1,       cur: total,     unit: '건',   desc: '첫 체험단 완료' },
+      { icon: '🔥', name: '열 걸음',      need: 10,      cur: total,     unit: '건',   desc: '10건 완료' },
+      { icon: '⭐', name: '반백 리뷰어',  need: 50,      cur: total,     unit: '건',   desc: '50건 완료' },
+      { icon: '👑', name: '백전노장',      need: 100,     cur: total,     unit: '건',   desc: '100건 완료' },
+      { icon: '💰', name: '첫 10만원',    need: 100000,  cur: sum,       unit: '원',   desc: '누적 10만원 절약' },
+      { icon: '💎', name: '100만원 클럽', need: 1000000, cur: sum,       unit: '원',   desc: '누적 100만원 절약' },
+      { icon: '🏆', name: '500만원 클럽', need: 5000000, cur: sum,       unit: '원',   desc: '누적 500만원 절약' },
+      { icon: '🎯', name: '만능 리뷰어',  need: 3,       cur: cats,      unit: '종',   desc: '카테고리 3종 이상' },
+      { icon: '🗺️', name: '지역 탐험가',  need: 5,       cur: regions,   unit: '곳',   desc: '지역 5곳 이상' },
+      { icon: '🤝', name: '단골 손님',    need: 2,       cur: maxRepeat, unit: '회',   desc: '같은 업체 2회 이상' }
+    ];
+
+    const done = DEFS.filter(d => d.cur >= d.need).length;
+    cntEl.textContent = done + ' / ' + DEFS.length + '개 달성';
+
+    box.innerHTML = DEFS.map(d => {
+      const ok = d.cur >= d.need;
+      const prog = d.unit === '원'
+        ? fmtMoneyShort(Math.min(d.cur, d.need)) + ' / ' + fmtMoneyShort(d.need)
+        : Math.min(d.cur, d.need) + ' / ' + d.need + d.unit;
+      return '<div class="mp-badge' + (ok ? '' : ' locked') + '">'
+        + '<div class="mp-badge-icon">' + (ok ? d.icon : '🔒') + '</div>'
+        + '<div style="min-width:0;">'
+        + '<div class="mp-badge-name">' + esc(d.name) + '</div>'
+        + '<div class="mp-badge-desc">' + (ok ? d.desc : prog) + '</div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  function renderPortfolio() { renderCategory(); renderHighlights(); renderBadges(); }
+  function renderAll() { renderStats(); renderList(); renderPortfolio(); }
 
   // ===== 금액 저장 =====
   function parseAmount(s) {
     const n = parseInt(String(s).replace(/[^0-9]/g, ''), 10);
     return isNaN(n) ? null : n;
   }
-
   async function saveValue(id, raw) {
     const val = parseAmount(raw);
     if (val == null || val <= 0) { alert('금액을 숫자로 입력해 주세요.'); return; }
@@ -482,7 +625,7 @@
       .from('entries')
       .update({ provided_value: val, value_manual: true })
       .eq('id', id)
-      .eq('user_id', userId); // RLS + 방어적 이중 필터
+      .eq('user_id', userId);
 
     if (error) {
       console.error('[mypage] save error:', error);
@@ -490,21 +633,18 @@
       if (btn) { btn.disabled = false; btn.textContent = '저장'; }
       return;
     }
-
     const r = rows.find(x => x.id === id);
     if (r) r.value = val;
     editingId = null;
     renderAll();
   }
 
-  // ===== 목록 이벤트 (위임) =====
+  // ===== 목록 이벤트 =====
   document.getElementById('mpList').addEventListener('click', (e) => {
     const editBtn = e.target.closest('[data-edit]');
     if (editBtn) { editingId = editBtn.dataset.edit; renderList(); return; }
-
     const cancelBtn = e.target.closest('[data-cancel]');
     if (cancelBtn) { editingId = null; renderList(); return; }
-
     const saveBtn = e.target.closest('[data-save]');
     if (saveBtn) {
       const id = saveBtn.dataset.save;
@@ -512,7 +652,6 @@
       saveValue(id, inp ? inp.value : '');
     }
   });
-  // Enter로 저장
   document.getElementById('mpList').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && editingId && e.target.id === 'ed-' + editingId) {
       e.preventDefault();
@@ -522,7 +661,6 @@
     }
   });
 
-  // 필터 버튼
   document.getElementById('mpListFilter').addEventListener('click', (e) => {
     const b = e.target.closest('.mp-filter-btn');
     if (!b || b.dataset.filter === listFilter) return;
@@ -531,7 +669,6 @@
     renderList();
   });
 
-  // "금액 미입력 N건" 클릭 → 미입력 필터 + 목록으로 스크롤
   document.getElementById('mpMissing').addEventListener('click', () => {
     if (!document.getElementById('mpMissing').classList.contains('clickable')) return;
     listFilter = 'missing';
@@ -556,9 +693,9 @@
   function applyRange(r) {
     range = r;
     editingId = null;
-    // 프리셋 바꾸면 목록 필터는 전체로 리셋(직관적)
     listFilter = 'all';
-    renderAll();
+    renderStats();
+    renderList();
   }
 
   pop.querySelectorAll('.mp-pop-item').forEach(btn => {
@@ -576,7 +713,6 @@
     const day = parseDateInput(document.getElementById('mpDay').value);
     const f = parseDateInput(document.getElementById('mpFrom').value);
     const t = parseDateInput(document.getElementById('mpTo').value);
-
     let r = null;
     if (day) {
       r = { from: day, to: endOfDay(day), label: fmtDate(day), preset: null };
@@ -599,7 +735,6 @@
     });
   });
 
-  // 집계 기준 설명 토글
   document.getElementById('mpBasisBtn').addEventListener('click', () => {
     const body = document.getElementById('mpBasisBody');
     const open = body.classList.toggle('open');
@@ -618,10 +753,9 @@
     document.getElementById('mpEmail').textContent = user.email || '';
     document.getElementById('mpAvatar').textContent = emailToInitial(user.email || name);
 
-    // ★ 내 데이터만 (user_id 필터 필수) + 목록에 필요한 컬럼 포함
     const { data, error } = await sb
       .from('entries')
-      .select('id, store_name, content, provided_value, completed_at')
+      .select('id, store_name, content, category, region, provided_value, completed_at')
       .eq('user_id', user.id)
       .eq('completed', true);
 
@@ -639,6 +773,8 @@
         id: r.id,
         store: r.store_name || '',
         content: r.content || '',
+        category: r.category || '',
+        region: r.region || '',
         value: (typeof r.provided_value === 'number') ? r.provided_value : null,
         at: new Date(r.completed_at)
       }));
