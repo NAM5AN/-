@@ -235,6 +235,64 @@
 .mp-badge-desc { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 2px; }
 .mp-badge-count { font-size: 12px; color: var(--ink-faint, #9b8f82); margin: -4px 0 12px; }
 
+/* 업적 — 헤더/탭 */
+.mp-ac-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.mp-ac-tabs { display: flex; gap: 5px; flex-shrink: 0; }
+.mp-ac-tab {
+  border: 1px solid var(--line, #e8e0d4); background: none;
+  border-radius: 999px; padding: 5px 12px; font-size: 12px;
+  color: var(--ink-soft, #6f6457); cursor: pointer; font-family: inherit;
+}
+.mp-ac-tab.on { background: var(--terra, #b0603f); border-color: var(--terra, #b0603f); color: #fff; font-weight: 700; }
+
+/* A. 계열별 한 줄 */
+.mp-ac-chains {
+  background: var(--card, #fff); border: 1px solid var(--line, #e8e0d4);
+  border-radius: 14px; padding: 2px 14px;
+}
+.mp-ac-row { border-bottom: 1px solid var(--line, #e8e0d4); }
+.mp-ac-row:last-child { border-bottom: none; }
+.mp-ac-row-main { display: flex; align-items: center; gap: 11px; padding: 11px 0; cursor: pointer; }
+.mp-ac-icon { font-size: 20px; flex-shrink: 0; width: 24px; text-align: center; }
+.mp-ac-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.mp-ac-title { font-size: 13px; font-weight: 600; color: var(--ink, #3d3229); }
+.mp-ac-count { font-size: 11px; color: var(--ink-faint, #9b8f82); font-variant-numeric: tabular-nums; }
+.mp-ac-track { height: 5px; background: var(--paper, #faf6ef); border-radius: 3px; margin-top: 5px; overflow: hidden; }
+.mp-ac-fill { height: 100%; background: var(--terra, #b0603f); border-radius: 3px; transition: width .4s ease; }
+.mp-ac-sub { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 4px; }
+.mp-ac-caret { font-size: 11px; color: var(--ink-faint, #9b8f82); flex-shrink: 0; }
+.mp-ac-tiers { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 0 12px 35px; }
+.mp-ac-chip { font-size: 11px; padding: 4px 9px; border-radius: 8px; white-space: nowrap; }
+.mp-ac-chip.done { background: var(--terra-soft, #f2e0d6); color: var(--terra, #b0603f); font-weight: 600; }
+.mp-ac-chip.next { background: var(--paper, #faf6ef); color: var(--ink-soft, #6f6457); }
+.mp-ac-chip.hidden { background: var(--paper, #faf6ef); color: var(--ink-faint, #9b8f82); opacity: .7; }
+
+/* B. 진열장 */
+.mp-ac-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px;
+  background: var(--card, #fff); border: 1px solid var(--line, #e8e0d4);
+  border-radius: 14px; padding: 14px;
+}
+.mp-ac-cell {
+  aspect-ratio: 1; border: none; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; cursor: pointer; padding: 0;
+  transition: transform .12s;
+}
+.mp-ac-cell:hover { transform: scale(1.12); }
+.mp-ac-cell.done { background: var(--terra-soft, #f2e0d6); }
+.mp-ac-cell.next { background: var(--paper, #faf6ef); opacity: .8; }
+.mp-ac-cell.hide { background: var(--paper, #faf6ef); opacity: .45; }
+.mp-ac-cell.sel { box-shadow: 0 0 0 2px var(--terra, #b0603f); }
+.mp-ac-detail {
+  margin-top: 10px; padding: 11px 13px;
+  background: var(--paper, #faf6ef); border-radius: 10px;
+  font-size: 12px; color: var(--ink-soft, #6f6457); line-height: 1.6;
+}
+.mp-ac-detail b { color: var(--ink, #3d3229); }
+.mp-ac-ok { color: var(--terra, #b0603f); font-weight: 700; }
+.mp-ac-prog { color: var(--ink-faint, #9b8f82); }
+
 /* 공유 버튼 */
 .mp-share-btn {
   margin-top: 14px;
@@ -608,9 +666,17 @@
 
     <!-- 업적 -->
     <div style="margin-top:22px;">
-      <div class="mp-sub-title" style="font-size:14px;">🎖️ 업적</div>
-      <div class="mp-badge-count" id="mpBadgeCount"></div>
-      <div class="mp-badge-grid" id="mpBadges"></div>
+      <div class="mp-ac-top">
+        <div>
+          <div class="mp-sub-title" style="font-size:14px; margin:0;">🎖️ 업적</div>
+          <div class="mp-badge-count" id="mpBadgeCount" style="margin:4px 0 0;"></div>
+        </div>
+        <div class="mp-ac-tabs" id="mpAcTabs">
+          <button class="mp-ac-tab on" data-view="chain">계열별</button>
+          <button class="mp-ac-tab" data-view="case">진열장</button>
+        </div>
+      </div>
+      <div id="mpBadges" style="margin-top:12px;"></div>
     </div>
   </section>
 </div>
@@ -1042,11 +1108,12 @@
   });
 
   // ===== 포트폴리오: 업적 =====
-  function renderBadges() {
-    const box = document.getElementById('mpBadges');
-    const cntEl = document.getElementById('mpBadgeCount');
+  // ===== 포트폴리오: 업적 =====
+  let achieveView = 'chain';   // 'chain' = 계열별 / 'case' = 진열장
+  let openChain = -1;          // 펼쳐진 계열 index
+  let achieveData = null;      // { chains, done, total }
 
-    // ── 집계 지표 ──
+  function buildAchievements() {
     const total = rows.length;
     const sum = rows.reduce((s, r) => s + (r.value || 0), 0);
     const cats = new Set(rows.map(r => normCategory(r.category)).filter(Boolean)).size;
@@ -1057,14 +1124,12 @@
     rows.forEach(r => { const x = (r.store || '').trim(); if (x) storeCnt[x] = (storeCnt[x] || 0) + 1; });
     const maxRepeat = Object.keys(storeCnt).reduce((m, k) => Math.max(m, storeCnt[k]), 0);
 
-    // 활동 일수 (첫 완료 ~ 오늘)
     let days = 0;
     if (total > 0) {
       const first = new Date(Math.min.apply(null, rows.map(r => r.at.getTime())));
       days = Math.max(1, Math.floor((startOfToday() - new Date(first.getFullYear(), first.getMonth(), first.getDate())) / 86400000) + 1);
     }
 
-    // 하루 최다 / 한 달 최다 / 활동한 개월 수
     const dayCnt = {}, monCnt = {};
     rows.forEach(r => {
       const d = r.at.getFullYear() + '-' + r.at.getMonth() + '-' + r.at.getDate();
@@ -1075,130 +1140,207 @@
     const maxDay = Object.keys(dayCnt).reduce((m, k) => Math.max(m, dayCnt[k]), 0);
     const maxMonth = Object.keys(monCnt).reduce((m, k) => Math.max(m, monCnt[k]), 0);
     const activeMonths = Object.keys(monCnt).length;
-
-    // 금액이 채워진 비율 (기록 습관)
     const filled = rows.filter(r => r.value != null).length;
 
-    // ── 업적 계열 (같은 줄기 안에서 순서대로 해금) ──
     const CHAINS = [
-      { unit: '건', cur: total, tiers: [
+      { title: '완료 건수', unit: '건', cur: total, tiers: [
         { icon: '🌱', name: '첫 걸음',     need: 1,   desc: '첫 체험단 완료' },
         { icon: '🔥', name: '열 걸음',     need: 10,  desc: '10건 완료' },
         { icon: '⭐', name: '반백 리뷰어', need: 50,  desc: '50건 완료' },
         { icon: '👑', name: '백전노장',    need: 100, desc: '100건 완료' },
         { icon: '🏛️', name: '전설의 기록', need: 300, desc: '300건 완료' }
       ]},
-      { unit: '원', cur: sum, tiers: [
-        { icon: '💰', name: '첫 10만원',    need: 100000,   desc: '누적 10만원 절약' },
-        { icon: '💵', name: '50만원 돌파',  need: 500000,   desc: '누적 50만원 절약' },
-        { icon: '💎', name: '100만원 클럽', need: 1000000,  desc: '누적 100만원 절약' },
-        { icon: '🏆', name: '500만원 클럽', need: 5000000,  desc: '누적 500만원 절약' },
+      { title: '누적 절약', unit: '원', cur: sum, tiers: [
+        { icon: '💰', name: '첫 10만원',      need: 100000,   desc: '누적 10만원 절약' },
+        { icon: '💵', name: '50만원 돌파',    need: 500000,   desc: '누적 50만원 절약' },
+        { icon: '💎', name: '100만원 클럽',   need: 1000000,  desc: '누적 100만원 절약' },
+        { icon: '🏆', name: '500만원 클럽',   need: 5000000,  desc: '누적 500만원 절약' },
         { icon: '🦄', name: '천만원의 사나이', need: 10000000, desc: '누적 1000만원 절약' }
       ]},
-      { unit: '종', cur: cats, tiers: [
+      { title: '카테고리', unit: '종', cur: cats, tiers: [
         { icon: '🎯', name: '만능 리뷰어', need: 3,  desc: '카테고리 3종 이상' },
         { icon: '🎪', name: '팔방미인',    need: 6,  desc: '카테고리 6종 이상' },
         { icon: '🌈', name: '전방위 탐험', need: 10, desc: '카테고리 10종 이상' }
       ]},
-      { unit: '곳', cur: regions, tiers: [
+      { title: '활동 지역', unit: '곳', cur: regions, tiers: [
         { icon: '📌', name: '동네 터줏대감', need: 3,  desc: '지역 3곳 이상' },
         { icon: '🗺️', name: '지역 탐험가',   need: 5,  desc: '지역 5곳 이상' },
         { icon: '🧭', name: '전국구',        need: 10, desc: '지역 10곳 이상' },
         { icon: '🌏', name: '방방곡곡',      need: 20, desc: '지역 20곳 이상' }
       ]},
-      { unit: '회', cur: maxRepeat, tiers: [
-        { icon: '🤝', name: '단골 손님',   need: 2, desc: '같은 업체 2회 이상' },
-        { icon: '💞', name: '찐단골',      need: 3, desc: '같은 업체 3회 이상' },
-        { icon: '🏠', name: '제2의 집',    need: 5, desc: '같은 업체 5회 이상' }
+      { title: '단골', unit: '회', cur: maxRepeat, tiers: [
+        { icon: '🤝', name: '단골 손님', need: 2, desc: '같은 업체 2회 이상' },
+        { icon: '💞', name: '찐단골',    need: 3, desc: '같은 업체 3회 이상' },
+        { icon: '🏠', name: '제2의 집',  need: 5, desc: '같은 업체 5회 이상' }
       ]},
-      { unit: '원', cur: maxVal, tiers: [
+      { title: '단일 최고가', unit: '원', cur: maxVal, tiers: [
         { icon: '🎁', name: '알찬 하루',   need: 50000,  desc: '단일 5만원 이상 체험' },
         { icon: '🎖️', name: '큰 손 체험',  need: 100000, desc: '단일 10만원 이상 체험' },
         { icon: '💫', name: '럭셔리 체험', need: 300000, desc: '단일 30만원 이상 체험' }
       ]},
-      { unit: '일', cur: days, tiers: [
+      { title: '활동 일수', unit: '일', cur: days, tiers: [
         { icon: '📅', name: '한 달 개근',  need: 30,  desc: '활동 30일째' },
         { icon: '🗓️', name: '백일의 기록', need: 100, desc: '활동 100일째' },
         { icon: '🎂', name: '1주년',       need: 365, desc: '활동 1년 달성' },
         { icon: '🌳', name: '고참 리뷰어', need: 730, desc: '활동 2년 달성' }
       ]},
-      { unit: '개월', cur: activeMonths, tiers: [
-        { icon: '🌙', name: '꾸준한 달',   need: 3,  desc: '3개월 활동' },
-        { icon: '🍀', name: '반년 지기',   need: 6,  desc: '6개월 활동' },
-        { icon: '📆', name: '열두 달',     need: 12, desc: '12개월 활동' }
+      { title: '활동 개월', unit: '개월', cur: activeMonths, tiers: [
+        { icon: '🌙', name: '꾸준한 달', need: 3,  desc: '3개월 활동' },
+        { icon: '🍀', name: '반년 지기', need: 6,  desc: '6개월 활동' },
+        { icon: '📆', name: '열두 달',   need: 12, desc: '12개월 활동' }
       ]},
-      { unit: '건', cur: maxMonth, tiers: [
+      { title: '월간 기록', unit: '건', cur: maxMonth, tiers: [
         { icon: '⚡', name: '불꽃의 달',   need: 5,  desc: '한 달 5건 완료' },
         { icon: '🚀', name: '폭주 기관차', need: 10, desc: '한 달 10건 완료' },
         { icon: '☄️', name: '월간 챔피언', need: 20, desc: '한 달 20건 완료' }
       ]},
-      { unit: '건', cur: maxDay, tiers: [
+      { title: '하루 기록', unit: '건', cur: maxDay, tiers: [
         { icon: '☀️', name: '바쁜 하루',   need: 2, desc: '하루 2건 완료' },
         { icon: '🌪️', name: '초인적 하루', need: 3, desc: '하루 3건 완료' },
         { icon: '🎢', name: '광란의 하루', need: 5, desc: '하루 5건 완료' }
       ]},
-      { unit: '건', cur: filled, tiers: [
+      { title: '기록 습관', unit: '건', cur: filled, tiers: [
         { icon: '📝', name: '기록의 시작', need: 10, desc: '금액 기록 10건' },
         { icon: '📊', name: '꼼꼼한 기록', need: 50, desc: '금액 기록 50건' }
       ]}
     ];
 
-    // ── 표시 규칙 ──
-    // 달성 → 그대로 / 다음 목표(직전 단계 달성) → 자물쇠+진행률 / 그 이후 → 물음표
-    const cards = [];
-    let doneCount = 0, totalCount = 0, hiddenCount = 0;
-
-    CHAINS.forEach(chain => {
+    // 각 단계 상태 계산: done / next / hidden
+    let done = 0, total2 = 0;
+    CHAINS.forEach(ch => {
       let nextShown = false;
-      chain.tiers.forEach(t => {
-        totalCount++;
-        if (chain.cur >= t.need) {
-          doneCount++;
-          cards.push({ state: 'done', icon: t.icon, name: t.name, desc: t.desc, order: 0 });
+      ch.doneCount = 0;
+      ch.tiers.forEach(t => {
+        total2++;
+        if (ch.cur >= t.need) {
+          t.state = 'done'; done++; ch.doneCount++;
         } else if (!nextShown) {
-          nextShown = true;
-          const prog = chain.unit === '원'
-            ? fmtMoneyShort(chain.cur) + ' / ' + fmtMoneyShort(t.need)
-            : chain.cur + ' / ' + t.need + chain.unit;
-          cards.push({ state: 'next', name: t.name, desc: prog, order: 1 });
+          nextShown = true; t.state = 'next';
+          t.progress = ch.unit === '원'
+            ? fmtMoneyShort(ch.cur) + ' / ' + fmtMoneyShort(t.need)
+            : ch.cur + ' / ' + t.need + ch.unit;
         } else {
-          hiddenCount++;
-          cards.push({ state: 'hidden' });
+          t.state = 'hidden';
+        }
+      });
+      // 계열 대표 아이콘 = 마지막 달성 단계 (없으면 자물쇠)
+      const lastDone = ch.tiers.filter(t => t.state === 'done').slice(-1)[0];
+      ch.icon = lastDone ? lastDone.icon : '🔒';
+      ch.next = ch.tiers.filter(t => t.state === 'next')[0] || null;
+    });
+
+    return { chains: CHAINS, done: done, total: total2 };
+  }
+
+  // ── A. 계열별 한 줄 ──
+  function renderChainView() {
+    const d = achieveData;
+    return '<div class="mp-ac-chains">' + d.chains.map((ch, i) => {
+      const pct = Math.round(ch.doneCount / ch.tiers.length * 100);
+      const open = openChain === i;
+
+      let sub;
+      if (ch.next) sub = '다음: ' + esc(ch.next.name) + ' · ' + esc(ch.next.progress);
+      else sub = '전 단계 달성! 🎉';
+
+      let expand = '';
+      if (open) {
+        expand = '<div class="mp-ac-tiers">' + ch.tiers.map(t => {
+          if (t.state === 'done') return '<span class="mp-ac-chip done">' + t.icon + ' ' + esc(t.name) + '</span>';
+          if (t.state === 'next') return '<span class="mp-ac-chip next">🔒 ' + esc(t.name) + ' ' + esc(t.progress) + '</span>';
+          return '<span class="mp-ac-chip hidden">❓ ???</span>';
+        }).join('') + '</div>';
+      }
+
+      return '<div class="mp-ac-row' + (open ? ' open' : '') + '" data-chain="' + i + '">'
+        + '<div class="mp-ac-row-main">'
+        + '<span class="mp-ac-icon">' + ch.icon + '</span>'
+        + '<div style="flex:1; min-width:0;">'
+        + '<div class="mp-ac-head"><span class="mp-ac-title">' + esc(ch.title) + '</span>'
+        + '<span class="mp-ac-count">' + ch.doneCount + '/' + ch.tiers.length + '</span></div>'
+        + '<div class="mp-ac-track"><div class="mp-ac-fill" style="width:' + pct + '%"></div></div>'
+        + '<div class="mp-ac-sub">' + sub + '</div>'
+        + '</div>'
+        + '<span class="mp-ac-caret">' + (open ? '▴' : '▾') + '</span>'
+        + '</div>' + expand + '</div>';
+    }).join('') + '</div>';
+  }
+
+  // ── B. 진열장 (아이콘 그리드) ──
+  function renderCaseView() {
+    const d = achieveData;
+    let idx = -1;
+    const cells = [];
+    d.chains.forEach(ch => {
+      ch.tiers.forEach(t => {
+        idx++;
+        if (t.state === 'done') {
+          cells.push('<button class="mp-ac-cell done" data-tier="' + idx + '">' + t.icon + '</button>');
+        } else if (t.state === 'next') {
+          cells.push('<button class="mp-ac-cell next" data-tier="' + idx + '">🔒</button>');
+        } else {
+          cells.push('<button class="mp-ac-cell hide" data-tier="' + idx + '">❓</button>');
         }
       });
     });
-
-    cntEl.textContent = doneCount + ' / ' + totalCount + '개 달성'
-      + (hiddenCount > 0 ? ' · 미발견 ' + hiddenCount + '개' : '');
-
-    let html = cards.map(c => {
-      if (c.state === 'done') {
-        return '<div class="mp-badge">'
-          + '<div class="mp-badge-icon">' + c.icon + '</div>'
-          + '<div style="min-width:0;">'
-          + '<div class="mp-badge-name">' + esc(c.name) + '</div>'
-          + '<div class="mp-badge-desc">' + esc(c.desc) + '</div>'
-          + '</div></div>';
-      }
-      if (c.state === 'next') {
-        return '<div class="mp-badge locked">'
-          + '<div class="mp-badge-icon">🔒</div>'
-          + '<div style="min-width:0;">'
-          + '<div class="mp-badge-name">' + esc(c.name) + '</div>'
-          + '<div class="mp-badge-desc">' + esc(c.desc) + '</div>'
-          + '</div></div>';
-      }
-      // 미발견 — 이름·조건 모두 숨김
-      return '<div class="mp-badge hidden-badge">'
-        + '<div class="mp-badge-icon">❓</div>'
-        + '<div style="min-width:0;">'
-        + '<div class="mp-badge-name">???</div>'
-        + '<div class="mp-badge-desc">미발견 업적</div>'
-        + '</div></div>';
-    }).join('');
-
-    box.innerHTML = html;
+    return '<div class="mp-ac-grid">' + cells.join('') + '</div>'
+      + '<div class="mp-ac-detail" id="mpAcDetail">아이콘을 누르면 자세히 볼 수 있어요.</div>';
   }
+
+  function flatTiers() {
+    const out = [];
+    achieveData.chains.forEach(ch => ch.tiers.forEach(t => out.push({ t: t, ch: ch })));
+    return out;
+  }
+
+  function renderBadges() {
+    achieveData = buildAchievements();
+    document.getElementById('mpBadgeCount').textContent =
+      achieveData.done + ' / ' + achieveData.total + '개 달성';
+    document.querySelectorAll('.mp-ac-tab').forEach(b =>
+      b.classList.toggle('on', b.dataset.view === achieveView));
+    document.getElementById('mpBadges').innerHTML =
+      achieveView === 'chain' ? renderChainView() : renderCaseView();
+  }
+
+  // 탭 전환
+  document.getElementById('mpAcTabs').addEventListener('click', (e) => {
+    const b = e.target.closest('.mp-ac-tab');
+    if (!b || b.dataset.view === achieveView) return;
+    achieveView = b.dataset.view;
+    openChain = -1;
+    renderBadges();
+  });
+
+  // 계열 펼치기 / 진열장 상세
+  document.getElementById('mpBadges').addEventListener('click', (e) => {
+    const row = e.target.closest('[data-chain]');
+    if (row) {
+      const i = Number(row.dataset.chain);
+      openChain = (openChain === i) ? -1 : i;
+      renderBadges();
+      return;
+    }
+    const cell = e.target.closest('[data-tier]');
+    if (cell) {
+      const item = flatTiers()[Number(cell.dataset.tier)];
+      if (!item) return;
+      const t = item.t;
+      const box = document.getElementById('mpAcDetail');
+      if (t.state === 'done') {
+        box.innerHTML = '<b>' + t.icon + ' ' + esc(t.name) + '</b> · ' + esc(t.desc)
+          + ' <span class="mp-ac-ok">달성</span>';
+      } else if (t.state === 'next') {
+        box.innerHTML = '<b>🔒 ' + esc(t.name) + '</b> · ' + esc(t.desc)
+          + ' <span class="mp-ac-prog">' + esc(t.progress) + '</span>';
+      } else {
+        box.innerHTML = '<b>❓ ???</b> · 아직 발견하지 못한 업적이에요 ('
+          + esc(item.ch.title) + ' 계열)';
+      }
+      document.querySelectorAll('.mp-ac-cell').forEach(c => c.classList.remove('sel'));
+      cell.classList.add('sel');
+    }
+  });
 
   // ===== 카테고리 아이콘 (메인 페이지와 동일 규칙) =====
   const CATEGORY_ICONS = [
