@@ -1196,6 +1196,659 @@
     box.innerHTML = html;
   }
 
+  // ===== 카테고리 아이콘 (메인 페이지와 동일 규칙) =====
+  const CATEGORY_ICONS = [
+    { pattern: /카페|커피|coffee|cafe|에스프레소|로스터/i, icon: '☕' },
+    { pattern: /디저트|케이크|베이커리|빵|제과|마카롱|쿠키|와플|크로플|도넛|크레페|아이스크림|젤라또|빙수/i, icon: '🥐' },
+    { pattern: /초밥|스시|사시미|회|일식|이자카야|라멘|돈까스|우동|소바|덮밥|규동|텐동/i, icon: '🍣' },
+    { pattern: /중식|중화|짜장|짬뽕|마라|훠궈|딤섬|양꼬치/i, icon: '🥡' },
+    { pattern: /파스타|피자|스테이크|양식|이탈리안|프렌치|스페인|타파스/i, icon: '🍝' },
+    { pattern: /햄버거|버거|패스트푸드/i, icon: '🍔' },
+    { pattern: /치킨|닭갈비|찜닭|닭발/i, icon: '🍗' },
+    { pattern: /삼겹살|돼지|소고기|한우|갈비|고깃집|숯불|구이|곱창|막창|족발|보쌈/i, icon: '🥩' },
+    { pattern: /분식|떡볶이|김밥|순대|어묵|튀김|핫도그/i, icon: '🍢' },
+    { pattern: /한식|국밥|백반|냉면|찌개|국수|칼국수|만두|쌈밥|비빔밥|설렁탕|곰탕|순두부|해장국|보리밥|쌈|쌈장/i, icon: '🍚' },
+    { pattern: /해산물|조개|회집|장어|문어|새우|랍스터|게|꽃게|대게/i, icon: '🦐' },
+    { pattern: /샐러드|건강|채식|비건|포케/i, icon: '🥗' },
+    { pattern: /술집|호프|와인|이자카야|포차|바|펍|위스키|칵테일|맥주/i, icon: '🍺' },
+    { pattern: /떡|떡집|한과|전통/i, icon: '🍡' },
+    { pattern: /과일|청과|주스|스무디|쥬스/i, icon: '🍓' },
+    { pattern: /음식점|식당|레스토랑|키친|다이닝|푸드/i, icon: '🍽️' },
+    { pattern: /피부과|피부|에스테틱|스킨/i, icon: '✨' },
+    { pattern: /성형|미용|시술/i, icon: '💎' },
+    { pattern: /치과|덴탈/i, icon: '🦷' },
+    { pattern: /안과|안경|렌즈/i, icon: '👓' },
+    { pattern: /한의원|한방/i, icon: '🌿' },
+    { pattern: /병원|의원|클리닉|메디컬|내과|외과|소아과|이비인후과|정형외과|산부인과/i, icon: '🏥' },
+    { pattern: /약국/i, icon: '💊' },
+    { pattern: /미용실|헤어|살롱|cut|커트|펌|염색/i, icon: '💇' },
+    { pattern: /네일|페디/i, icon: '💅' },
+    { pattern: /마사지|스파|왁싱|타이|아로마|두피/i, icon: '💆' },
+    { pattern: /속눈썹|래쉬/i, icon: '👁️' },
+    { pattern: /화장품|코스메틱|cosmetic/i, icon: '💄' },
+    { pattern: /헬스|피트니스|짐|gym|크로스핏/i, icon: '💪' },
+    { pattern: /요가|필라테스|발레/i, icon: '🧘' },
+    { pattern: /수영|풀|swim/i, icon: '🏊' },
+    { pattern: /클라이밍|볼더링/i, icon: '🧗' },
+    { pattern: /골프|스크린골프/i, icon: '⛳' },
+    { pattern: /테니스|스쿼시|배드민턴/i, icon: '🎾' },
+    { pattern: /펜션|호텔|모텔|숙박|풀빌라|리조트|게스트하우스|민박/i, icon: '🏨' },
+    { pattern: /캠핑|글램핑|차박/i, icon: '🏕️' },
+    { pattern: /서점|책|북카페|독립서점/i, icon: '📚' },
+    { pattern: /꽃|플라워|플로리스트|화원/i, icon: '💐' },
+    { pattern: /사진|스튜디오|포토|증명사진/i, icon: '📷' },
+    { pattern: /공방|클래스|원데이|체험|만들기|diy/i, icon: '🎨' },
+    { pattern: /펫|동물|강아지|고양이|반려|애견|미용\s*샵/i, icon: '🐾' },
+    { pattern: /노래방|코노|karaoke/i, icon: '🎤' },
+    { pattern: /pc방|게임|보드게임|방탈출/i, icon: '🎮' },
+    { pattern: /영화|시네마|cgv|메가박스|롯데시네마/i, icon: '🎬' },
+    { pattern: /마트|편의점|시장|쇼핑|아울렛|백화점/i, icon: '🛍️' },
+    { pattern: /세탁|크리닝|빨래/i, icon: '👕' },
+    { pattern: /자동차|정비|세차|타이어/i, icon: '🚗' },
+    { pattern: /가구|인테리어|소품/i, icon: '🛋️' },
+    { pattern: /학원|교습|과외|수학|영어/i, icon: '📖' }
+  ];
+
+  function getCategoryIcon(entry) {
+    if (!entry) return '📍';
+    const text = [entry.category, entry.store, entry.content].filter(Boolean).join(' ');
+    if (!text) return '📍';
+    for (const ci of CATEGORY_ICONS) {
+      if (ci.pattern.test(text)) return ci.icon;
+    }
+    return '📍';
+  }
+
+  // ===== 포트폴리오: 활동 지도 =====
+  const KAKAO_KEY = '21466d7ae884ca307c2ec034bd6887e1';
+  let kakaoLoadPromise = null;
+  let mpMap = null, mpBounds = null, mpOpenOverlay = null;
+
+  function loadKakaoSDK() {
+    if (window.kakao && window.kakao.maps && window.kakao.maps.LatLng) {
+      return Promise.resolve(window.kakao);
+    }
+    if (kakaoLoadPromise) return kakaoLoadPromise;
+    kakaoLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + encodeURIComponent(KAKAO_KEY) + '&autoload=false';
+      script.onload = () => {
+        if (!window.kakao || !window.kakao.maps) { reject(new Error('SDK_LOAD_FAIL')); return; }
+        window.kakao.maps.load(() => resolve(window.kakao));
+      };
+      script.onerror = () => reject(new Error('SDK_LOAD_FAIL'));
+      document.head.appendChild(script);
+    });
+    return kakaoLoadPromise;
+  }
+
+  function mapPoints() {
+    return rows.filter(r =>
+      typeof r.lat === 'number' && typeof r.lng === 'number' &&
+      isFinite(r.lat) && isFinite(r.lng) && (r.lat !== 0 || r.lng !== 0)
+    );
+  }
+
+  // 줌 레벨별 묶음 크기 (도 단위) — 레벨이 클수록(축소) 넓게 묶음
+  function clusterCellSize(level) {
+    if (level <= 3) return 0;                       // 확대 상태: 묶지 않음
+    return 0.00025 * Math.pow(2, level);            // 예: L5≈0.008(≈900m), L8≈0.064(≈7km), L11≈0.5(≈55km)
+  }
+
+  // 거리 기반 병합 — 격자 경계에서 인접 지점이 갈라지는 문제를 피함
+  function buildClusters(pts, level) {
+    const cell = clusterCellSize(level);
+    if (cell === 0) return pts.map(p => ({ items: [p], lat: p.lat, lng: p.lng }));
+
+    const used = new Array(pts.length).fill(false);
+    const clusters = [];
+    // 위도순으로 훑으며 반경 안의 미사용 지점을 흡수
+    const idx = pts.map((p, i) => i).sort((a, b) => pts[a].lat - pts[b].lat);
+
+    idx.forEach(i => {
+      if (used[i]) return;
+      used[i] = true;
+      const items = [pts[i]];
+      let lat = pts[i].lat, lng = pts[i].lng;
+
+      idx.forEach(j => {
+        if (used[j]) return;
+        // 경도는 위도에 따라 실제 거리가 줄어드므로 보정
+        const dLat = pts[j].lat - lat;
+        const dLng = (pts[j].lng - lng) * Math.cos(lat * Math.PI / 180);
+        if (Math.sqrt(dLat * dLat + dLng * dLng) <= cell) {
+          used[j] = true;
+          items.push(pts[j]);
+          lat = items.reduce((s, x) => s + x.lat, 0) / items.length;
+          lng = items.reduce((s, x) => s + x.lng, 0) / items.length;
+        }
+      });
+      clusters.push({ items, lat, lng });
+    });
+    return clusters;
+  }
+
+  // 현재 표시 중인 오버레이 정리
+  let mpOverlays = [];
+  function clearMapOverlays() {
+    mpOverlays.forEach(o => o.setMap(null));
+    mpOverlays = [];
+    if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
+  }
+
+  function buildInfoContent(items) {
+    const box = document.createElement('div');
+    box.className = 'mp-map-info' + (items.length > 1 ? ' multi' : '');
+
+    if (items.length === 1) {
+      const p = items[0];
+      box.innerHTML = '<b>' + esc(p.store || '(이름 없음)') + '</b>'
+        + '<small>' + fmtDateShort(p.at) + ' 완료'
+        + (p.value != null ? ' · ' + p.value.toLocaleString('ko-KR') + '원' : '')
+        + '</small>';
+    } else {
+      const sorted = items.slice().sort((a, b) => b.at - a.at);
+      box.innerHTML = '<div class="mp-info-head">이 지역 ' + items.length + '곳</div>'
+        + '<div class="mp-info-list">'
+        + sorted.map(p =>
+            '<div class="mp-info-row">'
+            + '<span class="mp-info-ico">' + getCategoryIcon(p) + '</span>'
+            + '<span class="mp-info-name">' + esc(p.store || '(이름 없음)') + '</span>'
+            + '<span class="mp-info-meta">' + fmtDateShort(p.at)
+            + (p.value != null ? ' · ' + p.value.toLocaleString('ko-KR') + '원' : '') + '</span>'
+            + '</div>'
+          ).join('')
+        + '</div>';
+    }
+    return box;
+  }
+
+  function drawMarkers() {
+    if (!mpMap || !window.kakao) return;
+    const kakao = window.kakao;
+    clearMapOverlays();
+
+    const pts = mapPoints();
+    const clusters = buildClusters(pts, mpMap.getLevel());
+
+    clusters.forEach(c => {
+      const pos = new kakao.maps.LatLng(c.lat, c.lng);
+      const single = c.items.length === 1;
+
+      const el = document.createElement('div');
+      if (single) {
+        el.className = 'mp-map-pin';
+        el.innerHTML = '<span>' + getCategoryIcon(c.items[0]) + '</span>';
+      } else {
+        el.className = 'mp-map-cluster';
+        // 개수에 따라 크기 단계
+        if (c.items.length >= 10) el.classList.add('lg');
+        else if (c.items.length >= 5) el.classList.add('md');
+        el.textContent = c.items.length;
+      }
+
+      const marker = new kakao.maps.CustomOverlay({
+        position: pos, content: el, yAnchor: single ? 1 : 0.5, clickable: true, zIndex: single ? 2 : 3
+      });
+      marker.setMap(mpMap);
+      mpOverlays.push(marker);
+
+      const info = buildInfoContent(c.items);
+      const overlay = new kakao.maps.CustomOverlay({
+        position: pos, content: info, yAnchor: single ? 2.1 : 1.25, clickable: true, zIndex: 10
+      });
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (mpOpenOverlay) mpOpenOverlay.setMap(null);
+        if (mpOpenOverlay === overlay) { mpOpenOverlay = null; return; }
+        overlay.setMap(mpMap);
+        mpOpenOverlay = overlay;
+      });
+      info.addEventListener('click', (e) => {
+        if (e.target.closest('.mp-info-list')) return; // 목록 스크롤 중 닫힘 방지
+        overlay.setMap(null); mpOpenOverlay = null;
+      });
+    });
+  }
+
+  async function renderMap() {
+    if (mpMap) return; // 최초 1회만 초기화 (이후는 drawMarkers가 갱신)
+    const msg = document.getElementById('mpMapMsg');
+    const statEl = document.getElementById('mpMapStat');
+    const fitBtn = document.getElementById('mpMapFit');
+    const pts = mapPoints();
+
+    const regions = new Set(rows.map(r => (r.region || '').trim()).filter(Boolean));
+    statEl.textContent = pts.length > 0
+      ? (pts.length + '곳 · ' + (regions.size || 1) + '개 지역')
+      : '';
+
+    if (pts.length === 0) {
+      msg.classList.remove('hidden');
+      msg.innerHTML = '위치 정보가 있는 완료 체험단이 아직 없어요.<br>등록 시 주소를 입력하면 지도에 표시돼요.';
+      return;
+    }
+
+    let kakao;
+    try {
+      kakao = await loadKakaoSDK();
+    } catch (e) {
+      console.error('[mypage] kakao sdk fail:', e);
+      msg.classList.remove('hidden');
+      msg.innerHTML = '지도를 불러오지 못했어요.<br>잠시 후 새로고침해 주세요.';
+      return;
+    }
+
+    msg.classList.add('hidden');
+    fitBtn.style.display = 'block';
+
+    mpMap = new kakao.maps.Map(document.getElementById('mpMapCanvas'), {
+      center: new kakao.maps.LatLng(pts[0].lat, pts[0].lng),
+      level: 7
+    });
+
+    kakao.maps.event.addListener(mpMap, 'click', () => {
+      if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
+    });
+    // 줌이 바뀌면 묶음 단위 재계산
+    kakao.maps.event.addListener(mpMap, 'zoom_changed', drawMarkers);
+
+    mpBounds = new kakao.maps.LatLngBounds();
+    pts.forEach(p => mpBounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
+
+    if (pts.length === 1) {
+      mpMap.setCenter(new kakao.maps.LatLng(pts[0].lat, pts[0].lng));
+      mpMap.setLevel(4);
+    } else {
+      mpMap.setBounds(mpBounds);
+    }
+    mpMap.relayout();
+    drawMarkers();
+  }
+
+  document.getElementById('mpMapFit').addEventListener('click', () => {
+    if (!mpMap || !mpBounds) return;
+    if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
+    const pts = mapPoints();
+    if (pts.length === 1) { mpMap.setLevel(4); mpMap.setCenter(new window.kakao.maps.LatLng(pts[0].lat, pts[0].lng)); }
+    else mpMap.setBounds(mpBounds);
+    drawMarkers();
+  });
+
+  // ===== 공유 카드 모달 =====
+  const shareOpts = { nickname: true, count: true, category: true, region: true };
+  let h2cPromise = null;
+
+  // 별점 메이커와 공유하는 저장 키 (같은 도메인 → localStorage 공유)
+  const RM_PRESETS_KEY = 'rating-maker-custom-presets-v1';
+  const MP_CARD_KEY = 'mypage-card-custom-v1';
+
+  // 별점 메이커와 동일한 색 팔레트
+  const BG_PRESETS = ['#FFFFFF', '#FAF6EE', '#FFF4F4', '#F0F7F4', '#1E2A3A', '#2A2522'];
+  const ACCENT_PRESETS = ['#E8B007', '#C2542B', '#E5484D', '#E07A9B', '#3B7FC4', '#4A9D6E', '#2A2522'];
+
+  // 기본 제공 프리셋 (별점 메이커 동기화와 무관하게 항상 제공)
+  const BASIC_PRESETS = [
+    { id: 'b_cream', name: '크림',     bgColor: '#FAF6EE', accentColor: '#C2542B', font: 'var(--font-body)',  align: 'left' },
+    { id: 'b_terra', name: '테라코타', bgColor: '#B0603F', accentColor: '#FFE9DC', font: 'var(--font-serif)', align: 'left' },
+    { id: 'b_dark',  name: '다크',     bgColor: '#2A2522', accentColor: '#E8B007', font: 'var(--font-body)',  align: 'left' },
+    { id: 'b_mint',  name: '민트',     bgColor: '#F0F7F4', accentColor: '#4A9D6E', font: 'var(--font-body)',  align: 'left' },
+    { id: 'b_navy',  name: '네이비',   bgColor: '#1E2A3A', accentColor: '#8FC1F0', font: 'var(--font-serif)', align: 'left' },
+    { id: 'b_paper', name: '화이트',   bgColor: '#FFFFFF', accentColor: '#2A2522', font: 'var(--font-serif)', align: 'center' }
+  ];
+
+  const DEFAULT_CARD = {
+    bgColor: '#FAF6EE',
+    accentColor: '#C2542B',
+    font: 'var(--font-body)',
+    align: 'left',
+    headline: ''
+  };
+  let cardStyle = Object.assign({}, DEFAULT_CARD);
+
+  function loadCardStyle() {
+    try {
+      const raw = localStorage.getItem(MP_CARD_KEY);
+      if (raw) cardStyle = Object.assign({}, DEFAULT_CARD, JSON.parse(raw) || {});
+    } catch (e) { cardStyle = Object.assign({}, DEFAULT_CARD); }
+  }
+  function saveCardStyle() {
+    try { localStorage.setItem(MP_CARD_KEY, JSON.stringify(cardStyle)); } catch (e) {}
+  }
+
+  // 별점 메이커 프리셋 읽기 (읽기 전용 — 여기서 수정/삭제하지 않음)
+  function loadRatingMakerPresets() {
+    try {
+      const raw = localStorage.getItem(RM_PRESETS_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.filter(x => x && x.name) : [];
+    } catch (e) { return []; }
+  }
+
+  // 별점 메이커와 동일한 명암 계산
+  function hexToRgb(hex) {
+    let h = String(hex || '').replace('#', '').trim();
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h, 16);
+    if (isNaN(n)) return { r: 255, g: 255, b: 255 };
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function readableInk(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.6 ? '#2A2522' : '#FFFFFF';
+  }
+
+
+  function loadHtml2Canvas() {
+    if (window.html2canvas) return Promise.resolve(window.html2canvas);
+    if (h2cPromise) return h2cPromise;
+    h2cPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      s.onload = () => window.html2canvas ? resolve(window.html2canvas) : reject(new Error('H2C_FAIL'));
+      s.onerror = () => reject(new Error('H2C_FAIL'));
+      document.head.appendChild(s);
+    });
+    return h2cPromise;
+  }
+
+  function topCategoryInRange() {
+    const counts = {};
+    rows.forEach(r => {
+      if (!inRange(r)) return;
+      const c = normCategory(r.category);
+      if (c) counts[c] = (counts[c] || 0) + 1;
+    });
+    return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || null;
+  }
+  function regionCountInRange() {
+    const set = new Set();
+    rows.forEach(r => { if (inRange(r)) { const g = (r.region || '').trim(); if (g) set.add(g); } });
+    return set.size;
+  }
+
+  function renderShareCard() {
+    const s = computeStats();
+    const card = document.getElementById('mpShareCard');
+
+    // 스타일 적용
+    const ink = readableInk(cardStyle.bgColor);
+    card.style.background = cardStyle.bgColor;
+    card.style.color = ink;
+    card.style.fontFamily = cardStyle.font;
+    card.style.textAlign = cardStyle.align;
+    card.setAttribute('data-align', cardStyle.align);
+    document.getElementById('scAmount').style.color = cardStyle.accentColor;
+
+    const nick = document.getElementById('mpName').textContent || '사용자';
+    const headline = (cardStyle.headline || '').trim();
+    document.getElementById('scWho').textContent = headline
+      ? headline
+      : (shareOpts.nickname ? (nick + ' 님의 ' + range.label) : (range.label + ' 활동 리포트'));
+
+    document.getElementById('scAmount').textContent = s.sum.toLocaleString('ko-KR') + '원';
+    document.getElementById('scCaption').textContent = '체험단 매니저와 함께 아꼈어요';
+
+    const stats = [];
+    if (shareOpts.count) stats.push({ label: '완료', value: s.cnt + '건' });
+    if (shareOpts.category) {
+      const c = topCategoryInRange();
+      if (c) stats.push({ label: '주력 분야', value: c });
+    }
+    if (shareOpts.region) {
+      const n = regionCountInRange();
+      if (n > 0) stats.push({ label: '활동 지역', value: n + '곳' });
+    }
+    document.getElementById('scStats').innerHTML = stats.map(st =>
+      '<div><div class="mp-sc-stat-label">' + esc(st.label) + '</div>'
+      + '<div class="mp-sc-stat-value">' + esc(st.value) + '</div></div>'
+    ).join('');
+
+    const now = new Date();
+    document.getElementById('scDate').textContent =
+      now.getFullYear() + '.' + (now.getMonth() + 1) + '.' + now.getDate();
+    document.getElementById('scHintPeriod').textContent = range.label;
+  }
+
+  function canShareImage() {
+    try {
+      if (!navigator.canShare || !navigator.share) return false;
+      const probe = new File([new Blob(['x'], { type: 'image/png' })], 'probe.png', { type: 'image/png' });
+      return navigator.canShare({ files: [probe] });
+    } catch (e) { return false; }
+  }
+
+  function openShare() {
+    document.getElementById('mpShareStatus').textContent = '';
+    document.getElementById('mpShareSend').style.display = canShareImage() ? 'block' : 'none';
+    renderBasicPresetChips();
+    renderPresetChips();
+    syncCustomUI();
+    renderShareCard();
+    document.getElementById('mpShareModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    loadHtml2Canvas().catch(() => {}); // 미리 받아두기
+  }
+  function closeShare() {
+    document.getElementById('mpShareModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('mpShareBtn').addEventListener('click', openShare);
+  document.getElementById('mpShareClose').addEventListener('click', closeShare);
+  document.getElementById('mpShareCancel').addEventListener('click', closeShare);
+  document.getElementById('mpShareModal').addEventListener('click', (e) => {
+    if (e.target.id === 'mpShareModal') closeShare();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('mpShareModal').classList.contains('open')) closeShare();
+  });
+
+  // ===== 꾸미기 컨트롤 =====
+  function renderSwatches(containerId, colors, key) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = colors.map(c =>
+      '<button type="button" class="mp-swatch" data-color="' + c + '" style="background:' + c + '" title="' + c + '"></button>'
+    ).join('')
+      + '<input type="color" class="mp-color-input" data-key="' + key + '" value="' + cardStyle[key] + '">';
+    markSwatch(containerId, cardStyle[key]);
+  }
+  function markSwatch(containerId, color) {
+    const t = String(color || '').toLowerCase();
+    document.querySelectorAll('#' + containerId + ' .mp-swatch').forEach(b => {
+      b.classList.toggle('active', String(b.dataset.color || '').toLowerCase() === t);
+    });
+  }
+
+  function bindSwatchRow(containerId, key) {
+    document.getElementById(containerId).addEventListener('click', (e) => {
+      const sw = e.target.closest('.mp-swatch');
+      if (!sw) return;
+      cardStyle[key] = sw.dataset.color;
+      const inp = document.querySelector('#' + containerId + ' .mp-color-input');
+      if (inp) inp.value = sw.dataset.color;
+      markSwatch(containerId, sw.dataset.color);
+      saveCardStyle(); renderShareCard();
+    });
+    document.getElementById(containerId).addEventListener('input', (e) => {
+      const inp = e.target.closest('.mp-color-input');
+      if (!inp) return;
+      cardStyle[key] = inp.value;
+      markSwatch(containerId, inp.value);
+      saveCardStyle(); renderShareCard();
+    });
+  }
+
+  // 프리셋 적용 (기본/별점메이커 공통)
+  function applyPresetStyle(o) {
+    cardStyle.bgColor = o.bgColor || DEFAULT_CARD.bgColor;
+    cardStyle.accentColor = o.accentColor || DEFAULT_CARD.accentColor;
+    cardStyle.font = o.font || DEFAULT_CARD.font;
+    cardStyle.align = o.align || DEFAULT_CARD.align;
+    saveCardStyle();
+    syncCustomUI();
+    renderShareCard();
+  }
+
+  // 기본 프리셋 칩
+  function renderBasicPresetChips() {
+    document.getElementById('mpBasicPresetRow').innerHTML = BASIC_PRESETS.map(p =>
+      '<button class="mp-preset-chip" data-basic-id="' + p.id + '">'
+      + '<span class="mp-preset-dot" style="background:' + p.bgColor + '"></span>'
+      + esc(p.name) + '</button>'
+    ).join('');
+  }
+
+  document.getElementById('mpBasicPresetRow').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-basic-id]');
+    if (!chip) return;
+    const p = BASIC_PRESETS.find(x => x.id === chip.dataset.basicId);
+    if (p) applyPresetStyle(p);
+  });
+
+  // 프리셋 칩 렌더 (별점 메이커에서 저장한 것)
+  function renderPresetChips() {
+    const row = document.getElementById('mpPresetRow');
+    const empty = document.getElementById('mpPresetEmpty');
+    const presets = loadRatingMakerPresets();
+
+    if (!presets.length) {
+      row.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    row.innerHTML = presets.map(p =>
+      '<button class="mp-preset-chip" data-preset-id="' + esc(p.id) + '">'
+      + '<span class="mp-preset-dot" style="background:' + esc(p.cardColor || '#fff') + '"></span>'
+      + esc(p.name) + '</button>'
+    ).join('');
+  }
+
+  document.getElementById('mpPresetRow').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-preset-id]');
+    if (!chip) return;
+    const p = loadRatingMakerPresets().find(x => x.id === chip.dataset.presetId);
+    if (!p) return;
+    // 별점 메이커 프리셋 → 활동 카드 스타일로 매핑
+    applyPresetStyle({
+      bgColor: p.cardColor, accentColor: p.starColor, font: p.font, align: p.align
+    });
+  });
+
+  // 폰트 / 정렬 / 문구
+  document.getElementById('mpFontSelect').addEventListener('change', (e) => {
+    cardStyle.font = e.target.value;
+    saveCardStyle(); renderShareCard();
+  });
+  document.getElementById('mpAlignRow').addEventListener('click', (e) => {
+    const b = e.target.closest('.mp-align-btn');
+    if (!b) return;
+    cardStyle.align = b.dataset.align;
+    document.querySelectorAll('.mp-align-btn').forEach(x => x.classList.toggle('on', x === b));
+    saveCardStyle(); renderShareCard();
+  });
+  document.getElementById('mpHeadline').addEventListener('input', (e) => {
+    cardStyle.headline = e.target.value;
+    saveCardStyle(); renderShareCard();
+  });
+
+  document.getElementById('mpFoldBtn').addEventListener('click', () => {
+    const body = document.getElementById('mpFoldBody');
+    const open = body.classList.toggle('open');
+    document.getElementById('mpFoldBtn').textContent = '🎨 직접 꾸미기';
+  });
+
+  // 스와치 행 이벤트는 컨테이너에 1회만 위임 바인딩
+  bindSwatchRow('mpBgSwatches', 'bgColor');
+  bindSwatchRow('mpAccentSwatches', 'accentColor');
+
+  // 컨트롤 UI를 현재 cardStyle에 동기화
+  function syncCustomUI() {
+    renderSwatches('mpBgSwatches', BG_PRESETS, 'bgColor');
+    renderSwatches('mpAccentSwatches', ACCENT_PRESETS, 'accentColor');
+    document.getElementById('mpFontSelect').value = cardStyle.font;
+    document.querySelectorAll('.mp-align-btn').forEach(b => b.classList.toggle('on', b.dataset.align === cardStyle.align));
+    document.getElementById('mpHeadline').value = cardStyle.headline || '';
+  }
+
+  document.getElementById('mpToggleRow').addEventListener('change', (e) => {
+    const inp = e.target.closest('input[data-opt]');
+    if (!inp) return;
+    shareOpts[inp.dataset.opt] = inp.checked;
+    inp.closest('.mp-toggle').classList.toggle('on', inp.checked);
+    renderShareCard();
+  });
+
+  // 카드 → 캔버스 (저장/공유 공통)
+  async function renderCardCanvas() {
+    const html2canvas = await loadHtml2Canvas();
+    const card = document.getElementById('mpShareCard');
+    return html2canvas(card, {
+      backgroundColor: cardStyle.bgColor,
+      scale: 3,
+      useCORS: true,
+      logging: false
+    });
+  }
+  function cardFileName() {
+    return '체험단매니저_활동카드_' + range.label.replace(/[^0-9가-힣a-zA-Z]/g, '') + '.png';
+  }
+
+  // 저장 — 다운로드만, 공유 시트 절대 열지 않음
+  document.getElementById('mpShareSave').addEventListener('click', async () => {
+    const btn = document.getElementById('mpShareSave');
+    const hint = document.getElementById('mpShareStatus');
+    btn.disabled = true;
+    btn.textContent = '만드는 중…';
+    try {
+      const canvas = await renderCardCanvas();
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = cardFileName();
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      hint.textContent = '저장했어요! 다운로드(사진) 폴더를 확인해 주세요.';
+    } catch (err) {
+      console.error('[mypage] card save error:', err);
+      hint.textContent = '이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '💾 저장';
+    }
+  });
+
+  // 공유 — 공유 시트를 지원하는 환경에서만 노출
+  document.getElementById('mpShareSend').addEventListener('click', async () => {
+    const btn = document.getElementById('mpShareSend');
+    const hint = document.getElementById('mpShareStatus');
+    btn.disabled = true;
+    btn.textContent = '준비 중…';
+    try {
+      const canvas = await renderCardCanvas();
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      if (!blob) throw new Error('BLOB_FAIL');
+      const file = new File([blob], cardFileName(), { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: '체험단 매니저 활동 카드' });
+      } else {
+        hint.textContent = '이 브라우저는 이미지 공유를 지원하지 않아요. 저장 후 직접 올려주세요.';
+      }
+    } catch (err) {
+      if (!err || err.name !== 'AbortError') {
+        console.error('[mypage] card share error:', err);
+        hint.textContent = '공유하지 못했어요. 저장 후 직접 올려주세요.';
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📤 공유';
+    }
+  });
+
   function renderPortfolio() { renderMap(); renderCategory(); renderHighlights(); renderBadges(); }
   function renderAll() { renderStats(); renderList(); renderPortfolio(); }
 
