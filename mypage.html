@@ -1079,10 +1079,9 @@
     const firstAt = new Date(Math.min.apply(null, rows.map(r => r.at.getTime())));
     const days = Math.max(1, Math.floor((startOfToday() - new Date(firstAt.getFullYear(), firstAt.getMonth(), firstAt.getDate())) / 86400000) + 1);
 
-    // 단골 업체 (같은 가게 2회 이상)
-    const storeCnt = {};
-    rows.forEach(r => { const s = (r.store || '').trim(); if (s) storeCnt[s] = (storeCnt[s] || 0) + 1; });
-    const repeatStores = Object.keys(storeCnt).filter(k => storeCnt[k] >= 2).length;
+    // 이번 달 완료
+    const monthFrom = startOfMonth();
+    const thisMonth = rows.filter(r => r.at >= monthFrom).length;
 
     // 최다 지역
     const regionCnt = {};
@@ -1092,7 +1091,7 @@
     const items = [
       { label: '최고가 체험단', value: maxVal != null ? fmtMoneyShort(maxVal) : '-', act: maxVal != null ? 'top' : null, more: '눌러서 보기' },
       { label: '활동 일수', value: days.toLocaleString('ko-KR') + '일째' },
-      { label: '단골 업체', value: repeatStores + '곳', act: repeatStores > 0 ? 'repeat' : null, more: '눌러서 보기' },
+      { label: '이번 달 완료', value: thisMonth + '건', act: thisMonth > 0 ? 'month' : null, more: '눌러서 보기' },
       { label: '최다 활동 지역', value: topRegion, act: topRegion !== '-' ? 'region' : null, more: '눌러서 보기' }
     ];
     box.innerHTML = items.map(it =>
@@ -1113,12 +1112,12 @@
       const withVal = rows.filter(r => r.value != null);
       openDetail('금액 상위 체험단', withVal.length + '건 · 금액순', withVal, { byValue: true });
 
-    } else if (kind === 'repeat') {
-      const cnt = {};
-      rows.forEach(r => { const x = (r.store || '').trim(); if (x) cnt[x] = (cnt[x] || 0) + 1; });
-      const repeats = Object.keys(cnt).filter(k => cnt[k] >= 2);
-      const items = rows.filter(r => repeats.indexOf((r.store || '').trim()) !== -1);
-      openDetail('단골 업체', repeats.length + '곳 · 총 ' + items.length + '건', items);
+    } else if (kind === 'month') {
+      const from = startOfMonth();
+      const items = rows.filter(r => r.at >= from);
+      const sumV = items.reduce((s2, r) => s2 + (r.value || 0), 0);
+      const label = (from.getMonth() + 1) + '월 완료';
+      openDetail(label, items.length + '건 · ' + sumV.toLocaleString('ko-KR') + '원', items);
 
     } else if (kind === 'region') {
       const cnt = {};
@@ -1140,10 +1139,6 @@
     const cats = new Set(rows.map(r => normCategory(r.category)).filter(Boolean)).size;
     const regions = new Set(rows.map(r => (r.region || '').trim()).filter(Boolean)).size;
     const maxVal = rows.reduce((m, r) => Math.max(m, r.value || 0), 0);
-
-    const storeCnt = {};
-    rows.forEach(r => { const x = (r.store || '').trim(); if (x) storeCnt[x] = (storeCnt[x] || 0) + 1; });
-    const maxRepeat = Object.keys(storeCnt).reduce((m, k) => Math.max(m, storeCnt[k]), 0);
 
     let days = 0;
     if (total > 0) {
@@ -1188,11 +1183,6 @@
         { icon: '🗺️', name: '지역 탐험가',   need: 5,  desc: '지역 5곳 이상' },
         { icon: '🧭', name: '전국구',        need: 10, desc: '지역 10곳 이상' },
         { icon: '🌏', name: '방방곡곡',      need: 20, desc: '지역 20곳 이상' }
-      ]},
-      { title: '단골', unit: '회', cur: maxRepeat, tiers: [
-        { icon: '🤝', name: '단골 손님', need: 2, desc: '같은 업체 2회 이상' },
-        { icon: '💞', name: '찐단골',    need: 3, desc: '같은 업체 3회 이상' },
-        { icon: '🏠', name: '제2의 집',  need: 5, desc: '같은 업체 5회 이상' }
       ]},
       { title: '단일 최고가', unit: '원', cur: maxVal, tiers: [
         { icon: '🎁', name: '알찬 하루',   need: 50000,  desc: '단일 5만원 이상 체험' },
@@ -2208,6 +2198,10 @@
   }
 
   function toDate(v) { return v ? new Date(v) : null; }
+  function fmtDateShort2(v) {
+    const d = new Date(v);
+    return d.getFullYear() + '.' + (d.getMonth() + 1) + '.' + d.getDate();
+  }
 
   async function exportExcel() {
     const btn = document.getElementById('mpXlsBtn');
@@ -2216,6 +2210,7 @@
 
     try {
       const ExcelJS = await loadExcelJS();
+      const userName = document.getElementById('mpName').textContent || '사용자';
 
       // 완료 + 진행 중 전체 조회 (기간 무관)
       const { data, error } = await sb
@@ -2240,16 +2235,12 @@
         { header: '완료일', key: 'at', width: 12 },
         { header: '연도', key: 'y', width: 7 },
         { header: '월', key: 'm', width: 5 },
-        { header: '업체명', key: 'store', width: 22 },
+        { header: '업체명', key: 'store', width: 24 },
         { header: '카테고리', key: 'cat', width: 14 },
-        { header: '지역', key: 'region', width: 12 },
+        { header: '지역', key: 'region', width: 16 },
         { header: '주소', key: 'addr', width: 30 },
-        { header: '제공내역', key: 'content', width: 40 },
-        { header: '제공 금액', key: 'value', width: 13 },
-        { header: '입력방식', key: 'how', width: 10 },
-        { header: '방문일', key: 'visit', width: 12 },
-        { header: '마감일', key: 'due', width: 12 },
-        { header: '메모', key: 'memo', width: 26 }
+        { header: '제공내역', key: 'content', width: 44 },
+        { header: '제공 금액', key: 'value', width: 13 }
       ]);
 
       done.forEach((r, i) => {
@@ -2261,21 +2252,12 @@
           region: r.region || '',
           addr: r.actual_address || '',
           content: r.content || '',
-          value: (typeof r.provided_value === 'number') ? r.provided_value : null,
-          visit: toDate(r.visit_date),
-          due: toDate(r.deadline),
-          memo: r.memo || ''
+          value: (typeof r.provided_value === 'number') ? r.provided_value : null
         });
         // 연도·월은 수식 (완료일을 고쳐도 자동 반영)
         row.getCell('y').value = { formula: 'IF(A' + n + '="","",YEAR(A' + n + '))' };
         row.getCell('m').value = { formula: 'IF(A' + n + '="","",MONTH(A' + n + '))' };
-        // 입력방식도 수식 — 금액을 채우면 "직접 입력"으로 바뀜
-        row.getCell('how').value = {
-          formula: 'IF(I' + n + '="","미입력","' + (r.value_manual ? '직접 입력' : '자동 인식') + '")'
-        };
         row.getCell('at').numFmt = 'yyyy-mm-dd';
-        row.getCell('visit').numFmt = 'yyyy-mm-dd';
-        row.getCell('due').numFmt = 'yyyy-mm-dd';
         row.getCell('value').numFmt = '#,##0';
 
         // 금액 미입력 행 강조 (여기에 숫자를 입력하면 모든 집계가 자동 반영됨)
@@ -2289,7 +2271,7 @@
           };
         }
       });
-      ws.autoFilter = { from: 'A1', to: 'M1' };
+      ws.autoFilter = { from: 'A1', to: 'I1' };
 
       // 수식이 참조할 범위 (행을 더 추가해도 잡히도록 여유분 포함)
       const END = done.length + 1000;
@@ -2330,78 +2312,158 @@
       ws2.autoFilter = { from: 'A1', to: 'J1' };
 
       // ── 요약 ──
-      const sum = wb.addWorksheet('요약');
-      sum.getColumn(1).width = 20; sum.getColumn(2).width = 18;
-      sum.getColumn(3).width = 16; sum.getColumn(4).width = 16; sum.getColumn(5).width = 14;
+      const sum = wb.addWorksheet('요약', { views: [{ showGridLines: false }] });
+      sum.getColumn(1).width = 4;
+      sum.getColumn(2).width = 22;
+      sum.getColumn(3).width = 20;
+      sum.getColumn(4).width = 4;
+      sum.getColumn(5).width = 20;
+      sum.getColumn(6).width = 20;
+      sum.getColumn(7).width = 4;
 
-      sum.mergeCells('A1:E1');
-      const title = sum.getCell('A1');
-      title.value = '체험단 매니저 · 활동 요약';
-      title.font = { bold: true, size: 15, color: { argb: XLS.ink } };
-      title.alignment = { vertical: 'middle' };
-      sum.getRow(1).height = 30;
+      // 제목 배너
+      sum.mergeCells('B2:F3');
+      const title = sum.getCell('B2');
+      title.value = '체험단 매니저 · 활동 리포트';
+      title.font = { bold: true, size: 18, color: { argb: 'FFFFFFFF' } };
+      title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.terra } };
+      title.alignment = { vertical: 'middle', horizontal: 'center' };
+      sum.getRow(2).height = 22;
+      sum.getRow(3).height = 18;
 
-      const info = [
-        ['내보낸 날짜', new Date()],
-        ['완료 건수', { formula: 'COUNT(' + RNG('A') + ')' }],
-        ['총 절약 금액', { formula: 'SUM(' + RNG('I') + ')' }],
-        ['금액 입력 건수', { formula: 'COUNT(' + RNG('I') + ')' }],
-        ['금액 미입력 건수', { formula: 'COUNT(' + RNG('A') + ')-COUNT(' + RNG('I') + ')' }],
-        ['건당 평균(입력분)', { formula: 'IFERROR(SUM(' + RNG('I') + ')/COUNT(' + RNG('I') + '),0)' }],
-        ['최고가 체험단', { formula: 'IFERROR(MAX(' + RNG('I') + '),0)' }],
-        ['진행 중 건수', { formula: 'COUNTA(미완료목록!A2:A2000)' }],
-        ['활동 지역 수', new Set(done.map(r => (r.region || '').trim()).filter(Boolean)).size],
-        ['카테고리 수', new Set(done.map(r => normCategory(r.category)).filter(Boolean)).size],
-        ['첫 완료일', done.length ? toDate(done[done.length - 1].completed_at) : ''],
-        ['마지막 완료일', done.length ? toDate(done[0].completed_at) : '']
+      sum.mergeCells('B4:F4');
+      const sub = sum.getCell('B4');
+      sub.value = (done.length ? (fmtDateShort2(done[done.length - 1].completed_at) + ' ~ ' + fmtDateShort2(done[0].completed_at)) : '기록 없음')
+        + '  ·  ' + userName + ' 님의 전체 활동';
+      sub.font = { size: 10, color: { argb: 'FF9B8F82' } };
+      sub.alignment = { horizontal: 'center' };
+      sub.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.paper } };
+
+      // 대표 지표 카드 3개
+      function bigCard(cellRange, label, value, fmt) {
+        sum.mergeCells(cellRange);
+        const top = cellRange.split(':')[0];
+        const c = sum.getCell(top);
+        c.value = value;
+        c.numFmt = fmt || '#,##0';
+        c.font = { bold: true, size: 20, color: { argb: XLS.terra } };
+        c.alignment = { vertical: 'middle', horizontal: 'center' };
+        c.border = {
+          top: { style: 'thin', color: { argb: XLS.line } },
+          left: { style: 'thin', color: { argb: XLS.line } },
+          bottom: { style: 'thin', color: { argb: XLS.line } },
+          right: { style: 'thin', color: { argb: XLS.line } }
+        };
+        return c;
+      }
+      function cardLabel(cellRange, text) {
+        sum.mergeCells(cellRange);
+        const c = sum.getCell(cellRange.split(':')[0]);
+        c.value = text;
+        c.font = { size: 10, color: { argb: 'FF6F6457' } };
+        c.alignment = { horizontal: 'center' };
+        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.soft } };
+        return c;
+      }
+
+      sum.getRow(6).height = 16;
+      sum.getRow(7).height = 30;
+      cardLabel('B6:C6', '💰 총 절약 금액');
+      bigCard('B7:C7', { formula: 'SUM(' + RNG('I') + ')' }, '#,##0"원"');
+      cardLabel('E6:F6', '✅ 완료 건수');
+      bigCard('E7:F7', { formula: 'COUNT(' + RNG('A') + ')' }, '#,##0"건"');
+
+      // 세부 지표 (라벨/값 두 칸씩)
+      const detail = [
+        ['건당 평균 (입력분)', { formula: 'IFERROR(SUM(' + RNG('I') + ')/COUNT(' + RNG('I') + '),0)' }, '#,##0"원"'],
+        ['최고가 체험단',       { formula: 'IFERROR(MAX(' + RNG('I') + '),0)' }, '#,##0"원"'],
+        ['금액 입력 건수',      { formula: 'COUNT(' + RNG('I') + ')' }, '#,##0"건"'],
+        ['금액 미입력 건수',    { formula: 'COUNT(' + RNG('A') + ')-COUNT(' + RNG('I') + ')' }, '#,##0"건"'],
+        ['진행 중 체험단',      { formula: 'COUNTA(미완료목록!A2:A2000)' }, '#,##0"건"'],
+        ['활동 지역',           new Set(done.map(r => (r.region || '').trim()).filter(Boolean)).size, '#,##0"곳"'],
+        ['카테고리',            new Set(done.map(r => normCategory(r.category)).filter(Boolean)).size, '#,##0"종"'],
+        ['활동 기간',           done.length ? Math.floor((new Date(done[0].completed_at) - new Date(done[done.length - 1].completed_at)) / 86400000) + 1 : 0, '#,##0"일"']
       ];
-      let rn = 3;
-      info.forEach(([label, val]) => {
-        const r1 = sum.getRow(rn);
-        r1.getCell(1).value = label;
-        r1.getCell(1).font = { bold: true, color: { argb: XLS.ink } };
-        r1.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.paper } };
-        r1.getCell(2).value = val;
-        if (label.indexOf('금액') >= 0 || label.indexOf('평균') >= 0 || label.indexOf('최고가') >= 0) {
-          r1.getCell(2).numFmt = '#,##0"원"';
+      let rn = 9;
+      detail.forEach((d, i) => {
+        const row = sum.getRow(rn);
+        row.height = 19;
+        const lab = row.getCell(2), val = row.getCell(3);
+        lab.value = d[0];
+        lab.font = { size: 11, color: { argb: 'FF6F6457' } };
+        val.value = d[1];
+        val.numFmt = d[2];
+        val.font = { bold: true, size: 11, color: { argb: XLS.ink } };
+        val.alignment = { horizontal: 'right' };
+        if (i % 2 === 0) {
+          lab.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.paper } };
+          val.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.paper } };
         }
-        if (label.indexOf('날짜') >= 0 || label.indexOf('완료일') >= 0) r1.getCell(2).numFmt = 'yyyy-mm-dd';
         rn++;
       });
 
       // 연도별 합계
       rn += 1;
+      const secTitle = sum.getCell('B' + rn);
+      secTitle.value = '📅 연도별 합계';
+      secTitle.font = { bold: true, size: 12, color: { argb: XLS.ink } };
+      rn++;
+
       const yHead = sum.getRow(rn);
+      yHead.height = 20;
       ['연도', '건수', '금액 합계', '건당 평균', '미입력'].forEach((h, i) => {
-        const c = yHead.getCell(i + 1);
+        const c = yHead.getCell(i + 2);
         c.value = h;
-        c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        c.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
         c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.terra } };
-        c.alignment = { horizontal: 'center' };
+        c.alignment = { horizontal: 'center', vertical: 'middle' };
       });
       rn++;
 
-      const years = Array.from(new Set(done.map(r => new Date(r.completed_at).getFullYear()))).sort((a, b) => b - a);
+      const years = Array.from(new Set(done.map(r => new Date(r.completed_at).getFullYear()))).sort((a2, b2) => b2 - a2);
+      const yStart = rn;
       years.forEach(y => {
-        const r1 = sum.getRow(rn);
-        r1.getCell(1).value = y;
-        r1.getCell(2).value = { formula: 'COUNTIF(' + RNG('B') + ',' + y + ')' };
-        r1.getCell(3).value = { formula: 'SUMIF(' + RNG('B') + ',' + y + ',' + RNG('I') + ')' };
-        r1.getCell(4).value = { formula: 'IFERROR(C' + rn + '/COUNTIFS(' + RNG('B') + ',' + y + ',' + RNG('I') + ',">0"),0)' };
-        r1.getCell(5).value = { formula: 'COUNTIFS(' + RNG('B') + ',' + y + ',' + RNG('I') + ',"")' };
-        r1.getCell(3).numFmt = '#,##0';
-        r1.getCell(4).numFmt = '#,##0';
+        const row = sum.getRow(rn);
+        row.getCell(2).value = y;
+        row.getCell(2).alignment = { horizontal: 'center' };
+        row.getCell(3).value = { formula: 'COUNTIF(' + RNG('B') + ',' + y + ')' };
+        row.getCell(4).value = { formula: 'SUMIF(' + RNG('B') + ',' + y + ',' + RNG('I') + ')' };
+        row.getCell(5).value = { formula: 'IFERROR(D' + rn + '/COUNTIFS(' + RNG('B') + ',' + y + ',' + RNG('I') + ',">0"),0)' };
+        row.getCell(6).value = { formula: 'COUNTIFS(' + RNG('B') + ',' + y + ',' + RNG('I') + ',"")' };
+        row.getCell(3).numFmt = '#,##0';
+        row.getCell(4).numFmt = '#,##0';
+        row.getCell(5).numFmt = '#,##0';
+        row.getCell(6).numFmt = '#,##0';
+        for (let ci = 2; ci <= 6; ci++) {
+          row.getCell(ci).border = { bottom: { style: 'hair', color: { argb: XLS.line } } };
+        }
         rn++;
       });
       if (years.length > 1) {
-        const r1 = sum.getRow(rn);
-        r1.getCell(1).value = '합계';
-        r1.getCell(1).font = { bold: true };
-        r1.getCell(2).value = { formula: 'SUM(B' + (rn - years.length) + ':B' + (rn - 1) + ')' };
-        r1.getCell(3).value = { formula: 'SUM(C' + (rn - years.length) + ':C' + (rn - 1) + ')' };
-        r1.getCell(3).numFmt = '#,##0';
-        r1.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.soft } }; });
+        const row = sum.getRow(rn);
+        row.getCell(2).value = '합계';
+        row.getCell(3).value = { formula: 'SUM(C' + yStart + ':C' + (rn - 1) + ')' };
+        row.getCell(4).value = { formula: 'SUM(D' + yStart + ':D' + (rn - 1) + ')' };
+        row.getCell(6).value = { formula: 'SUM(F' + yStart + ':F' + (rn - 1) + ')' };
+        row.getCell(3).numFmt = '#,##0';
+        row.getCell(4).numFmt = '#,##0';
+        for (let ci = 2; ci <= 6; ci++) {
+          const c = row.getCell(ci);
+          c.font = { bold: true, color: { argb: XLS.ink } };
+          c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.soft } };
+          c.alignment = ci === 2 ? { horizontal: 'center' } : undefined;
+        }
+        rn++;
       }
+
+      // 안내 문구
+      rn += 1;
+      sum.mergeCells('B' + rn + ':F' + rn);
+      const note = sum.getCell('B' + rn);
+      note.value = '※ 금액이 비어 있는 건은 합계에서 제외돼요. 완료목록 시트의 노란 칸에 금액을 입력하면 모든 집계가 자동으로 다시 계산됩니다.';
+      note.font = { size: 9, color: { argb: 'FF9B8F82' } };
+      note.alignment = { wrapText: true, vertical: 'middle' };
+      sum.getRow(rn).height = 24;
 
       // ── 월별집계 ──
       const wsM = wb.addWorksheet('월별집계', { views: [{ state: 'frozen', ySplit: 1 }] });
@@ -2452,47 +2514,94 @@
         row.getCell('avg').numFmt = '#,##0';
       });
 
-      // ── 지역집계 ──
-      const wsR = wb.addWorksheet('지역집계', { views: [{ state: 'frozen', ySplit: 1 }] });
+      // ── 지역집계 (시/도별 그룹 · 기본 접힘) ──
+      const wsR = wb.addWorksheet('지역집계', {
+        views: [{ state: 'frozen', ySplit: 1 }],
+        properties: { outlineLevelRow: 1 }
+      });
+      wsR.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
       xlsHeader(wsR, [
-        { header: '지역', key: 'region', width: 16 },
+        { header: '지역', key: 'region', width: 26 },
         { header: '건수', key: 'n', width: 10 },
         { header: '금액 합계', key: 'sum', width: 15 },
-        { header: '대표 업체', key: 'top', width: 24 }
+        { header: '대표 업체', key: 'top', width: 26 }
       ]);
-      const regionList = Array.from(new Set(done.map(r => (r.region || '').trim()).filter(Boolean)));
-      regionList.forEach((g, i) => {
-        const n = i + 2;
-        const inRegion = done.filter(r => (r.region || '').trim() === g);
-        const row = wsR.addRow({ region: g, top: (inRegion[0] && inRegion[0].store_name) || '' });
-        row.getCell('n').value = { formula: 'COUNTIF(' + RNG('F') + ',A' + n + ')' };
-        row.getCell('sum').value = { formula: 'SUMIF(' + RNG('F') + ',A' + n + ',' + RNG('I') + ')' };
-        row.getCell('sum').numFmt = '#,##0';
+
+      // 시/도 판별 — 앞 토큰이 광역 단위면 그룹, 시 이름만 있으면 매핑으로 보정
+      const SIDO = ['서울', '경기', '인천', '부산', '대구', '광주', '대전', '울산', '세종',
+                    '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
+      const CITY_SIDO = {
+        // 경기
+        부천: '경기', 시흥: '경기', 광명: '경기', 안양: '경기', 수원: '경기', 성남: '경기',
+        고양: '경기', 용인: '경기', 안산: '경기', 화성: '경기', 남양주: '경기', 의정부: '경기',
+        평택: '경기', 파주: '경기', 김포: '경기', 군포: '경기', 하남: '경기', 구리: '경기',
+        오산: '경기', 이천: '경기', 양주: '경기', 광주시: '경기', 과천: '경기', 의왕: '경기',
+        // 인천
+        부평: '인천', 계양: '인천', 연수: '인천', 미추홀: '인천', 남동: '인천', 서구: '인천',
+        // 서울 자치구 (앞에 '서울' 없이 오는 경우)
+        강남: '서울', 서초: '서울', 송파: '서울', 마포: '서울', 종로: '서울', 성동: '서울',
+        광진: '서울', 용산: '서울', 영등포: '서울', 관악: '서울', 노원: '서울', 강서: '서울',
+        은평: '서울', 동작: '서울', 성북: '서울', 중랑: '서울', 강동: '서울', 금천: '서울'
+      };
+      function splitRegion(g) {
+        const t = String(g || '').trim();
+        if (!t) return null;
+        const first = t.split(/\s+/)[0];
+        const head = first.replace(/(특별시|광역시|특별자치시|특별자치도|도|시|구)$/, '');
+        const hit = SIDO.filter(x => head.indexOf(x) === 0)[0];
+        if (hit) {
+          const rest = t.slice(t.indexOf(' ') + 1).trim();
+          return { sido: hit, detail: (rest && rest !== t) ? rest : hit + ' 전체' };
+        }
+        const mapped = CITY_SIDO[head] || CITY_SIDO[first];
+        if (mapped) return { sido: mapped, detail: t };
+        return { sido: '기타', detail: t };
+      }
+
+      const groups = {};
+      done.forEach(r => {
+        const g = (r.region || '').trim();
+        if (!g) return;
+        const sp = splitRegion(g);
+        if (!sp) return;
+        if (!groups[sp.sido]) groups[sp.sido] = {};
+        if (!groups[sp.sido][g]) groups[sp.sido][g] = { label: sp.detail, top: r.store_name || '' };
       });
 
-      // ── 업체집계 ──
-      const wsS = wb.addWorksheet('업체집계', { views: [{ state: 'frozen', ySplit: 1 }] });
-      xlsHeader(wsS, [
-        { header: '업체명', key: 'store', width: 24 },
-        { header: '방문 횟수', key: 'n', width: 11 },
-        { header: '총 금액', key: 'sum', width: 15 },
-        { header: '최근 완료일', key: 'last', width: 14 }
-      ]);
-      const storeMap = {};
-      done.forEach(r => {
-        const k = (r.store_name || '').trim();
-        if (!k) return;
-        if (!storeMap[k] || new Date(r.completed_at) > storeMap[k]) storeMap[k] = new Date(r.completed_at);
-      });
-      Object.keys(storeMap)
-        .sort((a, b) => storeMap[b] - storeMap[a])
-        .forEach((k, i) => {
-          const n = i + 2;
-          const row = wsS.addRow({ store: k, last: storeMap[k] });
-          row.getCell('n').value = { formula: 'COUNTIF(' + RNG('D') + ',A' + n + ')' };
-          row.getCell('sum').value = { formula: 'SUMIF(' + RNG('D') + ',A' + n + ',' + RNG('I') + ')' };
-          row.getCell('sum').numFmt = '#,##0';
-          row.getCell('last').numFmt = 'yyyy-mm-dd';
+      Object.keys(groups)
+        .sort((x, y) => (x === '기타' ? 1 : y === '기타' ? -1 : x.localeCompare(y)))
+        .forEach(sido => {
+          const children = Object.keys(groups[sido]);
+          const headRow = wsR.addRow({ region: sido });
+          const headNo = headRow.number;
+
+          // 자식 행 (기본 접힘)
+          const childNos = [];
+          children.forEach(fullRegion => {
+            const info = groups[sido][fullRegion];
+            const cr = wsR.addRow({ region: '    ' + info.label, top: info.top });
+            const n = cr.number;
+            cr.outlineLevel = 1;
+            cr.hidden = true;                    // 처음엔 접힌 상태
+            cr.getCell('n').value = { formula: 'COUNTIF(' + RNG('F') + ',"' + fullRegion.replace(/"/g, '""') + '")' };
+            cr.getCell('sum').value = { formula: 'SUMIF(' + RNG('F') + ',"' + fullRegion.replace(/"/g, '""') + '",' + RNG('I') + ')' };
+            cr.getCell('sum').numFmt = '#,##0';
+            cr.getCell('region').font = { color: { argb: 'FF6F6457' } };
+            childNos.push(n);
+          });
+
+          // 그룹 합계 = 자식 행 합
+          if (childNos.length) {
+            const first = childNos[0], last = childNos[childNos.length - 1];
+            headRow.getCell('n').value = { formula: 'SUM(B' + first + ':B' + last + ')' };
+            headRow.getCell('sum').value = { formula: 'SUM(C' + first + ':C' + last + ')' };
+          }
+          headRow.getCell('sum').numFmt = '#,##0';
+          headRow.getCell('top').value = children.length + '개 지역';
+          headRow.eachCell(c => {
+            c.font = { bold: true, color: { argb: XLS.ink } };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.soft } };
+          });
         });
 
       // 시트 순서: 요약을 맨 앞으로
