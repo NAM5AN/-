@@ -537,14 +537,17 @@
       </div>
     </div>
 
-    <div class="mp-opt-label">저장한 프리셋 (별점 메이커 공유)</div>
-    <div class="mp-preset-row" id="mpPresetRow"></div>
-    <div class="mp-preset-empty" id="mpPresetEmpty" style="display:none;">
-      저장된 프리셋이 없어요.<br>별점 메이커에서 디자인을 저장하면 여기에도 나타나요.
-    </div>
-
     <button class="mp-fold-btn" id="mpFoldBtn">🎨 직접 꾸미기 열기</button>
     <div class="mp-fold-body" id="mpFoldBody">
+      <div class="mp-opt-label">기본 프리셋</div>
+      <div class="mp-preset-row" id="mpBasicPresetRow"></div>
+
+      <div class="mp-opt-label">저장한 프리셋 (별점 메이커 공유)</div>
+      <div class="mp-preset-row" id="mpPresetRow"></div>
+      <div class="mp-preset-empty" id="mpPresetEmpty" style="display:none;">
+        저장된 프리셋이 없어요.<br>별점 메이커에서 디자인을 저장하면 여기에도 나타나요.
+      </div>
+
       <div class="mp-opt-label">배경색</div>
       <div class="mp-swatch-row" id="mpBgSwatches"></div>
 
@@ -581,7 +584,8 @@
     </div>
 
     <div class="mp-modal-actions">
-      <button class="mp-btn-primary" id="mpShareSave">이미지로 저장</button>
+      <button class="mp-btn-primary" id="mpShareSave">💾 저장</button>
+      <button class="mp-btn-primary" id="mpShareSend" style="display:none;">📤 공유</button>
       <button class="mp-btn-ghost" id="mpShareCancel">닫기</button>
     </div>
     <div class="mp-share-hint" id="mpShareHint">현재 선택한 기간(<span id="scHintPeriod">올해</span>) 기준으로 만들어져요.</div>
@@ -1013,6 +1017,16 @@
   const BG_PRESETS = ['#FFFFFF', '#FAF6EE', '#FFF4F4', '#F0F7F4', '#1E2A3A', '#2A2522'];
   const ACCENT_PRESETS = ['#E8B007', '#C2542B', '#E5484D', '#E07A9B', '#3B7FC4', '#4A9D6E', '#2A2522'];
 
+  // 기본 제공 프리셋 (별점 메이커 동기화와 무관하게 항상 제공)
+  const BASIC_PRESETS = [
+    { id: 'b_cream', name: '크림',     bgColor: '#FAF6EE', accentColor: '#C2542B', font: 'var(--font-body)',  align: 'left' },
+    { id: 'b_terra', name: '테라코타', bgColor: '#B0603F', accentColor: '#FFE9DC', font: 'var(--font-serif)', align: 'left' },
+    { id: 'b_dark',  name: '다크',     bgColor: '#2A2522', accentColor: '#E8B007', font: 'var(--font-body)',  align: 'left' },
+    { id: 'b_mint',  name: '민트',     bgColor: '#F0F7F4', accentColor: '#4A9D6E', font: 'var(--font-body)',  align: 'left' },
+    { id: 'b_navy',  name: '네이비',   bgColor: '#1E2A3A', accentColor: '#8FC1F0', font: 'var(--font-serif)', align: 'left' },
+    { id: 'b_paper', name: '화이트',   bgColor: '#FFFFFF', accentColor: '#2A2522', font: 'var(--font-serif)', align: 'center' }
+  ];
+
   const DEFAULT_CARD = {
     bgColor: '#FAF6EE',
     accentColor: '#C2542B',
@@ -1134,7 +1148,17 @@
     document.getElementById('scHintPeriod').textContent = range.label;
   }
 
+  function canShareImage() {
+    try {
+      if (!navigator.canShare || !navigator.share) return false;
+      const probe = new File([new Blob(['x'], { type: 'image/png' })], 'probe.png', { type: 'image/png' });
+      return navigator.canShare({ files: [probe] });
+    } catch (e) { return false; }
+  }
+
   function openShare() {
+    document.getElementById('mpShareSend').style.display = canShareImage() ? 'block' : 'none';
+    renderBasicPresetChips();
     renderPresetChips();
     syncCustomUI();
     renderShareCard();
@@ -1192,6 +1216,33 @@
     });
   }
 
+  // 프리셋 적용 (기본/별점메이커 공통)
+  function applyPresetStyle(o) {
+    cardStyle.bgColor = o.bgColor || DEFAULT_CARD.bgColor;
+    cardStyle.accentColor = o.accentColor || DEFAULT_CARD.accentColor;
+    cardStyle.font = o.font || DEFAULT_CARD.font;
+    cardStyle.align = o.align || DEFAULT_CARD.align;
+    saveCardStyle();
+    syncCustomUI();
+    renderShareCard();
+  }
+
+  // 기본 프리셋 칩
+  function renderBasicPresetChips() {
+    document.getElementById('mpBasicPresetRow').innerHTML = BASIC_PRESETS.map(p =>
+      '<button class="mp-preset-chip" data-basic-id="' + p.id + '">'
+      + '<span class="mp-preset-dot" style="background:' + p.bgColor + '"></span>'
+      + esc(p.name) + '</button>'
+    ).join('');
+  }
+
+  document.getElementById('mpBasicPresetRow').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-basic-id]');
+    if (!chip) return;
+    const p = BASIC_PRESETS.find(x => x.id === chip.dataset.basicId);
+    if (p) applyPresetStyle(p);
+  });
+
   // 프리셋 칩 렌더 (별점 메이커에서 저장한 것)
   function renderPresetChips() {
     const row = document.getElementById('mpPresetRow');
@@ -1217,13 +1268,9 @@
     const p = loadRatingMakerPresets().find(x => x.id === chip.dataset.presetId);
     if (!p) return;
     // 별점 메이커 프리셋 → 활동 카드 스타일로 매핑
-    cardStyle.bgColor = p.cardColor || DEFAULT_CARD.bgColor;
-    cardStyle.accentColor = p.starColor || DEFAULT_CARD.accentColor;
-    cardStyle.font = p.font || DEFAULT_CARD.font;
-    cardStyle.align = p.align || DEFAULT_CARD.align;
-    saveCardStyle();
-    syncCustomUI();
-    renderShareCard();
+    applyPresetStyle({
+      bgColor: p.cardColor, accentColor: p.starColor, font: p.font, align: p.align
+    });
   });
 
   // 폰트 / 정렬 / 문구
@@ -1270,57 +1317,70 @@
     renderShareCard();
   });
 
+  // 카드 → 캔버스 (저장/공유 공통)
+  async function renderCardCanvas() {
+    const html2canvas = await loadHtml2Canvas();
+    const card = document.getElementById('mpShareCard');
+    return html2canvas(card, {
+      backgroundColor: cardStyle.bgColor,
+      scale: 3,
+      useCORS: true,
+      logging: false
+    });
+  }
+  function cardFileName() {
+    return '체험단매니저_활동카드_' + range.label.replace(/[^0-9가-힣a-zA-Z]/g, '') + '.png';
+  }
+
+  // 저장 — 다운로드만, 공유 시트 절대 열지 않음
   document.getElementById('mpShareSave').addEventListener('click', async () => {
     const btn = document.getElementById('mpShareSave');
     const hint = document.getElementById('mpShareHint');
     btn.disabled = true;
     btn.textContent = '만드는 중…';
-
     try {
-      const html2canvas = await loadHtml2Canvas();
-      const card = document.getElementById('mpShareCard');
-      const bg = cardStyle.bgColor;
-
-      const canvas = await html2canvas(card, {
-        backgroundColor: bg,
-        scale: 3,
-        useCORS: true,
-        logging: false
-      });
-
-      const dataUrl = canvas.toDataURL('image/png');
-      const fname = '체험단매니저_활동카드_' + range.label.replace(/[^0-9가-힣a-zA-Z]/g, '') + '.png';
-
-      // 모바일 공유 시트 우선, 실패 시 다운로드
-      let shared = false;
-      if (navigator.canShare && navigator.share) {
-        try {
-          const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-          const file = new File([blob], fname, { type: 'image/png' });
-          if (blob && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file] });
-            shared = true;
-          }
-        } catch (err) {
-          if (err && err.name === 'AbortError') shared = true; // 사용자가 취소함
-        }
-      }
-
-      if (!shared) {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fname;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        hint.textContent = '저장했어요! 다운로드 폴더를 확인해 주세요.';
-      }
+      const canvas = await renderCardCanvas();
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = cardFileName();
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      hint.textContent = '저장했어요! 다운로드(사진) 폴더를 확인해 주세요.';
     } catch (err) {
-      console.error('[mypage] share card error:', err);
+      console.error('[mypage] card save error:', err);
       hint.textContent = '이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.';
     } finally {
       btn.disabled = false;
-      btn.textContent = '이미지로 저장';
+      btn.textContent = '💾 저장';
+    }
+  });
+
+  // 공유 — 공유 시트를 지원하는 환경에서만 노출
+  document.getElementById('mpShareSend').addEventListener('click', async () => {
+    const btn = document.getElementById('mpShareSend');
+    const hint = document.getElementById('mpShareHint');
+    btn.disabled = true;
+    btn.textContent = '준비 중…';
+    try {
+      const canvas = await renderCardCanvas();
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      if (!blob) throw new Error('BLOB_FAIL');
+      const file = new File([blob], cardFileName(), { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: '체험단 매니저 활동 카드' });
+      } else {
+        hint.textContent = '이 브라우저는 이미지 공유를 지원하지 않아요. 저장 후 직접 올려주세요.';
+      }
+    } catch (err) {
+      if (!err || err.name !== 'AbortError') {
+        console.error('[mypage] card share error:', err);
+        hint.textContent = '공유하지 못했어요. 저장 후 직접 올려주세요.';
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '📤 공유';
     }
   });
 
