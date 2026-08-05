@@ -132,7 +132,16 @@
 .mp-section-title { font-family: var(--font-serif, serif); font-size: 17px; color: var(--ink, #3d3229); margin: 0 0 12px; }
 
 /* ===== 완료 목록 ===== */
-.mp-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0 0 12px; }
+.mp-list-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 12px; }
+.mp-list-toggle {
+  display: flex; align-items: center; gap: 7px;
+  border: none; background: none; cursor: pointer;
+  padding: 4px 0; font-family: inherit; text-align: left;
+}
+.mp-list-caret {
+  font-size: 12px; color: var(--ink-faint, #9b8f82);
+  transition: transform .18s ease; display: inline-block;
+}
 .mp-list-filter { display: flex; gap: 6px; }
 .mp-filter-btn {
   border: 1px solid var(--line, #e8e0d4); background: none;
@@ -462,15 +471,21 @@
   <!-- 완료 목록 -->
   <section id="mpListSection" style="margin-top:22px;">
     <div class="mp-list-head">
-      <h2 class="mp-section-title" style="margin:0;">완료한 체험단 <span id="mpListPeriod" style="font-size:13px; color:var(--ink-faint,#9b8f82);"></span></h2>
-      <div class="mp-list-filter" id="mpListFilter">
+      <button class="mp-list-toggle" id="mpListToggle" aria-expanded="false">
+        <span class="mp-list-caret" id="mpListCaret">▸</span>
+        <span class="mp-section-title" style="margin:0;">완료한 체험단</span>
+        <span id="mpListPeriod" style="font-size:13px; color:var(--ink-faint,#9b8f82);"></span>
+      </button>
+      <div class="mp-list-filter" id="mpListFilter" style="display:none;">
         <button class="mp-filter-btn on" data-filter="all">전체</button>
         <button class="mp-filter-btn" data-filter="missing">금액 미입력</button>
       </div>
     </div>
-    <div class="mp-card" style="padding:6px 16px;">
-      <ul class="mp-list" id="mpList"></ul>
-      <div class="mp-list-empty" id="mpListEmpty" style="display:none;"></div>
+    <div id="mpListWrap" style="display:none;">
+      <div class="mp-card" style="padding:6px 16px;">
+        <ul class="mp-list" id="mpList"></ul>
+        <div class="mp-list-empty" id="mpListEmpty" style="display:none;"></div>
+      </div>
     </div>
   </section>
 
@@ -537,7 +552,7 @@
       </div>
     </div>
 
-    <button class="mp-fold-btn" id="mpFoldBtn">🎨 직접 꾸미기 열기</button>
+    <button class="mp-fold-btn" id="mpFoldBtn">🎨 직접 꾸미기</button>
     <div class="mp-fold-body" id="mpFoldBody">
       <div class="mp-opt-label">기본 프리셋</div>
       <div class="mp-preset-row" id="mpBasicPresetRow"></div>
@@ -588,7 +603,8 @@
       <button class="mp-btn-primary" id="mpShareSend" style="display:none;">📤 공유</button>
       <button class="mp-btn-ghost" id="mpShareCancel">닫기</button>
     </div>
-    <div class="mp-share-hint" id="mpShareHint">현재 선택한 기간(<span id="scHintPeriod">올해</span>) 기준으로 만들어져요.</div>
+    <div class="mp-share-hint">현재 선택한 기간(<span id="scHintPeriod">올해</span>) 기준으로 만들어져요.</div>
+    <div class="mp-share-hint" id="mpShareStatus"></div>
   </div>
 </div>
 
@@ -706,12 +722,15 @@
   function renderList() {
     const ul = document.getElementById('mpList');
     const empty = document.getElementById('mpListEmpty');
-    document.getElementById('mpListPeriod').textContent = '· ' + range.label;
+    const cnt = rows.filter(inRange).length;
+    document.getElementById('mpListPeriod').textContent = '· ' + range.label + ' ' + cnt + '건';
 
     const missingCount = rows.filter(r => inRange(r) && r.value == null).length;
     const fBtn = document.querySelector('.mp-filter-btn[data-filter="missing"]');
     fBtn.textContent = missingCount > 0 ? ('금액 미입력 (' + missingCount + ')') : '금액 미입력';
     document.querySelectorAll('.mp-filter-btn').forEach(b => b.classList.toggle('on', b.dataset.filter === listFilter));
+
+    if (!listOpen) return; // 접혀 있으면 목록 DOM은 그리지 않음
 
     let list = rows.filter(inRange);
     if (listFilter === 'missing') list = list.filter(r => r.value == null);
@@ -1068,14 +1087,7 @@
     const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     return lum > 0.6 ? '#2A2522' : '#FFFFFF';
   }
-  // 배경이 어두우면 강조색이 묻힐 수 있어 밝기 보정
-  function ensureVisible(accent, bg) {
-    const a = hexToRgb(accent), b = hexToRgb(bg);
-    const la = (0.299 * a.r + 0.587 * a.g + 0.114 * a.b) / 255;
-    const lb = (0.299 * b.r + 0.587 * b.g + 0.114 * b.b) / 255;
-    if (Math.abs(la - lb) >= 0.22) return accent;
-    return readableInk(bg); // 대비가 부족하면 글자색으로 대체
-  }
+
 
   function loadHtml2Canvas() {
     if (window.html2canvas) return Promise.resolve(window.html2canvas);
@@ -1116,7 +1128,7 @@
     card.style.fontFamily = cardStyle.font;
     card.style.textAlign = cardStyle.align;
     card.setAttribute('data-align', cardStyle.align);
-    document.getElementById('scAmount').style.color = ensureVisible(cardStyle.accentColor, cardStyle.bgColor);
+    document.getElementById('scAmount').style.color = cardStyle.accentColor;
 
     const nick = document.getElementById('mpName').textContent || '사용자';
     const headline = (cardStyle.headline || '').trim();
@@ -1157,6 +1169,7 @@
   }
 
   function openShare() {
+    document.getElementById('mpShareStatus').textContent = '';
     document.getElementById('mpShareSend').style.display = canShareImage() ? 'block' : 'none';
     renderBasicPresetChips();
     renderPresetChips();
@@ -1293,7 +1306,7 @@
   document.getElementById('mpFoldBtn').addEventListener('click', () => {
     const body = document.getElementById('mpFoldBody');
     const open = body.classList.toggle('open');
-    document.getElementById('mpFoldBtn').textContent = open ? '🎨 직접 꾸미기 접기' : '🎨 직접 꾸미기 열기';
+    document.getElementById('mpFoldBtn').textContent = '🎨 직접 꾸미기';
   });
 
   // 스와치 행 이벤트는 컨테이너에 1회만 위임 바인딩
@@ -1335,7 +1348,7 @@
   // 저장 — 다운로드만, 공유 시트 절대 열지 않음
   document.getElementById('mpShareSave').addEventListener('click', async () => {
     const btn = document.getElementById('mpShareSave');
-    const hint = document.getElementById('mpShareHint');
+    const hint = document.getElementById('mpShareStatus');
     btn.disabled = true;
     btn.textContent = '만드는 중…';
     try {
@@ -1359,7 +1372,7 @@
   // 공유 — 공유 시트를 지원하는 환경에서만 노출
   document.getElementById('mpShareSend').addEventListener('click', async () => {
     const btn = document.getElementById('mpShareSend');
-    const hint = document.getElementById('mpShareHint');
+    const hint = document.getElementById('mpShareStatus');
     btn.disabled = true;
     btn.textContent = '준비 중…';
     try {
@@ -1439,6 +1452,18 @@
     }
   });
 
+  // ===== 완료 목록 접기/펼치기 (기본 접힘) =====
+  let listOpen = false;
+  function setListOpen(open) {
+    listOpen = open;
+    document.getElementById('mpListWrap').style.display = open ? 'block' : 'none';
+    document.getElementById('mpListFilter').style.display = open ? 'flex' : 'none';
+    document.getElementById('mpListCaret').textContent = open ? '▾' : '▸';
+    document.getElementById('mpListToggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) renderList();
+  }
+  document.getElementById('mpListToggle').addEventListener('click', () => setListOpen(!listOpen));
+
   document.getElementById('mpListFilter').addEventListener('click', (e) => {
     const b = e.target.closest('.mp-filter-btn');
     if (!b || b.dataset.filter === listFilter) return;
@@ -1450,7 +1475,7 @@
   document.getElementById('mpMissing').addEventListener('click', () => {
     if (!document.getElementById('mpMissing').classList.contains('clickable')) return;
     listFilter = 'missing';
-    renderList();
+    setListOpen(true); // 접혀 있어도 펼쳐서 보여줌
     document.getElementById('mpListSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
