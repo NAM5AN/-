@@ -1156,12 +1156,10 @@
           cards.push({ state: 'next', name: t.name, desc: prog, order: 1 });
         } else {
           hiddenCount++;
+          cards.push({ state: 'hidden' });
         }
       });
     });
-
-    // 달성 → 다음 목표 → (숨김 요약) 순으로 정렬
-    cards.sort((a, b) => a.order - b.order);
 
     cntEl.textContent = doneCount + ' / ' + totalCount + '개 달성'
       + (hiddenCount > 0 ? ' · 미발견 ' + hiddenCount + '개' : '');
@@ -1175,23 +1173,22 @@
           + '<div class="mp-badge-desc">' + esc(c.desc) + '</div>'
           + '</div></div>';
       }
-      return '<div class="mp-badge locked">'
-        + '<div class="mp-badge-icon">🔒</div>'
-        + '<div style="min-width:0;">'
-        + '<div class="mp-badge-name">' + esc(c.name) + '</div>'
-        + '<div class="mp-badge-desc">' + esc(c.desc) + '</div>'
-        + '</div></div>';
-    }).join('');
-
-    // 미발견 업적은 개수만 물음표 카드로
-    if (hiddenCount > 0) {
-      html += '<div class="mp-badge hidden-badge">'
+      if (c.state === 'next') {
+        return '<div class="mp-badge locked">'
+          + '<div class="mp-badge-icon">🔒</div>'
+          + '<div style="min-width:0;">'
+          + '<div class="mp-badge-name">' + esc(c.name) + '</div>'
+          + '<div class="mp-badge-desc">' + esc(c.desc) + '</div>'
+          + '</div></div>';
+      }
+      // 미발견 — 이름·조건 모두 숨김
+      return '<div class="mp-badge hidden-badge">'
         + '<div class="mp-badge-icon">❓</div>'
         + '<div style="min-width:0;">'
         + '<div class="mp-badge-name">???</div>'
-        + '<div class="mp-badge-desc">미발견 ' + hiddenCount + '개</div>'
+        + '<div class="mp-badge-desc">미발견 업적</div>'
         + '</div></div>';
-    }
+    }).join('');
 
     box.innerHTML = html;
   }
@@ -1291,8 +1288,9 @@
 
   // 줌 레벨별 묶음 크기 (도 단위) — 레벨이 클수록(축소) 넓게 묶음
   function clusterCellSize(level) {
-    if (level <= 3) return 0;                       // 확대 상태: 묶지 않음
-    return 0.00025 * Math.pow(2, level);            // 예: L5≈0.008(≈900m), L8≈0.064(≈7km), L11≈0.5(≈55km)
+    if (level <= 4) return 0;                       // 확대 상태: 묶지 않음
+    // 화면상 약 40px 간격으로만 묶이도록 축척에 맞춤 (L7≈400m, L9≈1.6km, L11≈6.4km)
+    return 0.000028 * Math.pow(2, level);
   }
 
   // 거리 기반 병합 — 격자 경계에서 인접 지점이 갈라지는 문제를 피함
@@ -1408,6 +1406,11 @@
       info.addEventListener('click', (e) => {
         if (e.target.closest('.mp-info-list')) return; // 목록 스크롤 중 닫힘 방지
         overlay.setMap(null); mpOpenOverlay = null;
+      });
+
+      // 말풍선 안에서는 지도 줌/드래그로 이벤트가 새지 않게 차단
+      ['wheel', 'mousewheel', 'DOMMouseScroll', 'touchmove', 'touchstart', 'mousedown', 'dblclick'].forEach(evt => {
+        info.addEventListener(evt, (e) => { e.stopPropagation(); }, { passive: false });
       });
     });
   }
