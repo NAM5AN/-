@@ -193,7 +193,10 @@
 /* ===== 포트폴리오 공통 ===== */
 .mp-pf-note { font-size: 11px; color: var(--ink-faint, #9b8f82); margin: -6px 0 14px; }
 .mp-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 560px) { .mp-two { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .mp-two { grid-template-columns: 1fr; }
+  .mp-map-box { height: 320px; }
+}
 .mp-sub-title { font-size: 13px; font-weight: 700; color: var(--ink, #3d3229); margin: 0 0 12px; }
 .mp-empty-mini { font-size: 12px; color: var(--ink-faint, #9b8f82); text-align: center; padding: 18px 6px; }
 
@@ -409,7 +412,7 @@
 .mp-map-stat { font-size: 12px; color: var(--ink-faint, #9b8f82); }
 .mp-map-box {
   position: relative;
-  height: 300px; border-radius: 12px; overflow: hidden;
+  height: 440px; border-radius: 12px; overflow: hidden;
   border: 1px solid var(--line, #e8e0d4);
   background: var(--paper, #faf6ef);
 }
@@ -464,7 +467,11 @@
   font-size: 12px; font-weight: 700; color: var(--ink, #3d3229);
   padding: 0 2px 7px; border-bottom: 1px solid var(--line, #e8e0d4); margin-bottom: 6px;
 }
-.mp-info-list { max-height: 168px; overflow-y: auto; }
+.mp-info-list {
+  max-height: 210px; overflow-y: auto;
+  overscroll-behavior: contain;          /* 끝에 닿아도 페이지로 넘기지 않음 */
+  -webkit-overflow-scrolling: touch;
+}
 .mp-info-row {
   display: flex; align-items: center; gap: 6px;
   padding: 5px 2px; border-bottom: 1px solid var(--paper, #faf6ef);
@@ -1411,10 +1418,32 @@
         overlay.setMap(null); mpOpenOverlay = null;
       });
 
-      // 말풍선 안에서는 지도 줌/드래그로 이벤트가 새지 않게 차단
-      ['wheel', 'mousewheel', 'DOMMouseScroll', 'touchmove', 'touchstart', 'mousedown', 'dblclick'].forEach(evt => {
+      // 말풍선 안에서는 지도 줌/드래그·페이지 스크롤이 모두 일어나지 않게 차단
+      ['touchstart', 'mousedown', 'dblclick', 'click'].forEach(evt => {
         info.addEventListener(evt, (e) => { e.stopPropagation(); }, { passive: false });
       });
+
+      // 휠/터치 스크롤: 목록 안에서만 소비하고 끝에 닿아도 밖으로 넘기지 않음
+      function scrollGuard(e, delta) {
+        e.stopPropagation();
+        const list = e.target.closest ? e.target.closest('.mp-info-list') : null;
+        if (!list) { e.preventDefault(); return; }   // 목록 밖(머리말 등)이면 아무 스크롤도 없음
+        const atTop = list.scrollTop <= 0;
+        const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 1;
+        // 끝에 닿은 상태에서 더 밀면 페이지로 넘어가므로 기본 동작을 막음
+        if ((delta < 0 && atTop) || (delta > 0 && atBottom)) e.preventDefault();
+      }
+      info.addEventListener('wheel', (e) => scrollGuard(e, e.deltaY), { passive: false });
+      info.addEventListener('mousewheel', (e) => scrollGuard(e, -e.wheelDelta), { passive: false });
+      info.addEventListener('DOMMouseScroll', (e) => scrollGuard(e, e.detail), { passive: false });
+
+      let touchY = 0;
+      info.addEventListener('touchstart', (e) => {
+        touchY = e.touches[0].clientY;
+      }, { passive: true });
+      info.addEventListener('touchmove', (e) => {
+        scrollGuard(e, touchY - e.touches[0].clientY);
+      }, { passive: false });
     });
   }
 
