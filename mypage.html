@@ -8,6 +8,9 @@
 <title>마이페이지 - 체험단 매니저</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@400;700&family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/base.css">
 <link rel="stylesheet" href="styles/layout.css">
 <link rel="stylesheet" href="styles/components.css">
@@ -254,23 +257,21 @@
 .mp-sharecard {
   width: 320px; box-sizing: border-box;
   border-radius: 16px; padding: 24px 22px 20px;
-  background: #F5EFE6; color: #3d3229;
+  background: #FAF6EE; color: #2A2522;
   font-family: var(--font-body, system-ui, sans-serif);
+  text-align: left;
 }
-.mp-sharecard.theme-terra { background: #b0603f; color: #fff9f4; }
-.mp-sharecard.theme-dark  { background: #2e2823; color: #f2ece3; }
 .mp-sc-brand { font-size: 11px; letter-spacing: .04em; opacity: .75; }
 .mp-sc-who { font-size: 15px; font-weight: 700; margin-top: 3px; }
 .mp-sc-amount {
-  font-family: var(--font-serif, serif);
   font-size: 34px; font-weight: 700; line-height: 1.2;
   margin: 16px 0 2px; font-variant-numeric: tabular-nums;
-  color: #b0603f;
+  color: #C2542B;
 }
-.mp-sharecard.theme-terra .mp-sc-amount,
-.mp-sharecard.theme-dark .mp-sc-amount { color: inherit; }
 .mp-sc-caption { font-size: 13px; opacity: .85; }
-.mp-sc-stats { display: flex; gap: 18px; margin-top: 18px; }
+.mp-sc-stats { display: flex; gap: 18px; margin-top: 18px; flex-wrap: wrap; }
+.mp-sharecard[data-align="center"] .mp-sc-stats { justify-content: center; }
+.mp-sharecard[data-align="right"] .mp-sc-stats { justify-content: flex-end; }
 .mp-sc-stat-label { font-size: 10px; opacity: .7; }
 .mp-sc-stat-value { font-size: 16px; font-weight: 700; margin-top: 2px; }
 .mp-sc-foot {
@@ -281,13 +282,50 @@
 
 /* 모달 옵션 */
 .mp-opt-label { font-size: 11px; color: var(--ink-faint, #9b8f82); margin: 0 0 6px; }
-.mp-theme-row { display: flex; gap: 8px; margin-bottom: 14px; }
-.mp-theme-btn {
+/* 꾸미기 패널 */
+.mp-swatch-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
+.mp-swatch {
+  width: 26px; height: 26px; border-radius: 8px; cursor: pointer;
+  border: 1px solid rgba(0,0,0,.12); padding: 0;
+}
+.mp-swatch.active { box-shadow: 0 0 0 2px var(--terra, #b0603f); }
+.mp-color-input {
+  width: 34px; height: 26px; padding: 0; border: 1px solid var(--line, #e8e0d4);
+  border-radius: 8px; background: none; cursor: pointer;
+}
+.mp-select {
+  width: 100%; border: 1px solid var(--line, #e8e0d4); border-radius: 10px;
+  padding: 8px 10px; font-size: 13px; font-family: inherit;
+  color: var(--ink, #3d3229); background: var(--paper, #faf6ef); margin-bottom: 12px;
+}
+.mp-align-row { display: flex; gap: 6px; margin-bottom: 12px; }
+.mp-align-btn {
   flex: 1; border: 1px solid var(--line, #e8e0d4); background: none;
   border-radius: 10px; padding: 7px 0; font-size: 12px;
   color: var(--ink-soft, #6f6457); cursor: pointer; font-family: inherit;
 }
-.mp-theme-btn.on { border-color: var(--terra, #b0603f); color: var(--terra, #b0603f); font-weight: 700; }
+.mp-align-btn.on { border-color: var(--terra, #b0603f); color: var(--terra, #b0603f); font-weight: 700; }
+
+/* 프리셋 칩 */
+.mp-preset-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.mp-preset-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line, #e8e0d4); border-radius: 999px;
+  padding: 5px 11px; font-size: 12px; color: var(--ink-soft, #6f6457);
+  cursor: pointer; font-family: inherit; background: none;
+}
+.mp-preset-chip:hover { border-color: var(--terra, #b0603f); color: var(--terra, #b0603f); }
+.mp-preset-dot { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.12); }
+.mp-preset-empty { font-size: 11px; color: var(--ink-faint, #9b8f82); line-height: 1.7; margin-bottom: 12px; }
+.mp-preset-empty a { color: var(--terra, #b0603f); }
+
+.mp-fold-btn {
+  width: 100%; border: 1px dashed var(--line, #e8e0d4); background: none;
+  border-radius: 10px; padding: 8px 0; font-size: 12px; margin-bottom: 12px;
+  color: var(--ink-soft, #6f6457); cursor: pointer; font-family: inherit;
+}
+.mp-fold-body { display: none; }
+.mp-fold-body.open { display: block; }
 .mp-toggle-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .mp-toggle {
   display: inline-flex; align-items: center; gap: 5px;
@@ -499,11 +537,39 @@
       </div>
     </div>
 
-    <div class="mp-opt-label">카드 색상</div>
-    <div class="mp-theme-row" id="mpThemeRow">
-      <button class="mp-theme-btn on" data-theme="cream">크림</button>
-      <button class="mp-theme-btn" data-theme="terra">테라코타</button>
-      <button class="mp-theme-btn" data-theme="dark">다크</button>
+    <div class="mp-opt-label">저장한 프리셋 (별점 메이커 공유)</div>
+    <div class="mp-preset-row" id="mpPresetRow"></div>
+    <div class="mp-preset-empty" id="mpPresetEmpty" style="display:none;">
+      저장된 프리셋이 없어요.<br>별점 메이커에서 디자인을 저장하면 여기에도 나타나요.
+    </div>
+
+    <button class="mp-fold-btn" id="mpFoldBtn">🎨 직접 꾸미기 열기</button>
+    <div class="mp-fold-body" id="mpFoldBody">
+      <div class="mp-opt-label">배경색</div>
+      <div class="mp-swatch-row" id="mpBgSwatches"></div>
+
+      <div class="mp-opt-label">강조색 (금액)</div>
+      <div class="mp-swatch-row" id="mpAccentSwatches"></div>
+
+      <div class="mp-opt-label">폰트</div>
+      <select class="mp-select" id="mpFontSelect">
+        <option value="var(--font-body)">기본 고딕 (프리텐다드)</option>
+        <option value="var(--font-serif)">명조 (고운바탕)</option>
+        <option value="'Noto Sans KR', sans-serif">노토 산스 (깔끔한 고딕)</option>
+        <option value="'Nanum Myeongjo', serif">나눔 명조 (우아한 명조)</option>
+        <option value="'Gaegu', cursive">개구 (손글씨)</option>
+        <option value="'Black Han Sans', sans-serif">블랙 한 산스 (굵은 제목용)</option>
+      </select>
+
+      <div class="mp-opt-label">정렬</div>
+      <div class="mp-align-row" id="mpAlignRow">
+        <button class="mp-align-btn on" data-align="left">왼쪽</button>
+        <button class="mp-align-btn" data-align="center">가운데</button>
+        <button class="mp-align-btn" data-align="right">오른쪽</button>
+      </div>
+
+      <div class="mp-opt-label">한 줄 문구 (비우면 기본 문구)</div>
+      <input type="text" class="mp-select" id="mpHeadline" maxlength="24" placeholder="예: 2026 상반기 활동 기록">
     </div>
 
     <div class="mp-opt-label">카드에 넣을 정보</div>
@@ -936,9 +1002,66 @@
   });
 
   // ===== 공유 카드 모달 =====
-  let shareTheme = 'cream';
   const shareOpts = { nickname: true, count: true, category: true, region: true };
   let h2cPromise = null;
+
+  // 별점 메이커와 공유하는 저장 키 (같은 도메인 → localStorage 공유)
+  const RM_PRESETS_KEY = 'rating-maker-custom-presets-v1';
+  const MP_CARD_KEY = 'mypage-card-custom-v1';
+
+  // 별점 메이커와 동일한 색 팔레트
+  const BG_PRESETS = ['#FFFFFF', '#FAF6EE', '#FFF4F4', '#F0F7F4', '#1E2A3A', '#2A2522'];
+  const ACCENT_PRESETS = ['#E8B007', '#C2542B', '#E5484D', '#E07A9B', '#3B7FC4', '#4A9D6E', '#2A2522'];
+
+  const DEFAULT_CARD = {
+    bgColor: '#FAF6EE',
+    accentColor: '#C2542B',
+    font: 'var(--font-body)',
+    align: 'left',
+    headline: ''
+  };
+  let cardStyle = Object.assign({}, DEFAULT_CARD);
+
+  function loadCardStyle() {
+    try {
+      const raw = localStorage.getItem(MP_CARD_KEY);
+      if (raw) cardStyle = Object.assign({}, DEFAULT_CARD, JSON.parse(raw) || {});
+    } catch (e) { cardStyle = Object.assign({}, DEFAULT_CARD); }
+  }
+  function saveCardStyle() {
+    try { localStorage.setItem(MP_CARD_KEY, JSON.stringify(cardStyle)); } catch (e) {}
+  }
+
+  // 별점 메이커 프리셋 읽기 (읽기 전용 — 여기서 수정/삭제하지 않음)
+  function loadRatingMakerPresets() {
+    try {
+      const raw = localStorage.getItem(RM_PRESETS_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.filter(x => x && x.name) : [];
+    } catch (e) { return []; }
+  }
+
+  // 별점 메이커와 동일한 명암 계산
+  function hexToRgb(hex) {
+    let h = String(hex || '').replace('#', '').trim();
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h, 16);
+    if (isNaN(n)) return { r: 255, g: 255, b: 255 };
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function readableInk(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return lum > 0.6 ? '#2A2522' : '#FFFFFF';
+  }
+  // 배경이 어두우면 강조색이 묻힐 수 있어 밝기 보정
+  function ensureVisible(accent, bg) {
+    const a = hexToRgb(accent), b = hexToRgb(bg);
+    const la = (0.299 * a.r + 0.587 * a.g + 0.114 * a.b) / 255;
+    const lb = (0.299 * b.r + 0.587 * b.g + 0.114 * b.b) / 255;
+    if (Math.abs(la - lb) >= 0.22) return accent;
+    return readableInk(bg); // 대비가 부족하면 글자색으로 대체
+  }
 
   function loadHtml2Canvas() {
     if (window.html2canvas) return Promise.resolve(window.html2canvas);
@@ -971,12 +1094,21 @@
   function renderShareCard() {
     const s = computeStats();
     const card = document.getElementById('mpShareCard');
-    card.className = 'mp-sharecard' + (shareTheme === 'cream' ? '' : ' theme-' + shareTheme);
+
+    // 스타일 적용
+    const ink = readableInk(cardStyle.bgColor);
+    card.style.background = cardStyle.bgColor;
+    card.style.color = ink;
+    card.style.fontFamily = cardStyle.font;
+    card.style.textAlign = cardStyle.align;
+    card.setAttribute('data-align', cardStyle.align);
+    document.getElementById('scAmount').style.color = ensureVisible(cardStyle.accentColor, cardStyle.bgColor);
 
     const nick = document.getElementById('mpName').textContent || '사용자';
-    document.getElementById('scWho').textContent = shareOpts.nickname
-      ? (nick + ' 님의 ' + range.label)
-      : (range.label + ' 활동 리포트');
+    const headline = (cardStyle.headline || '').trim();
+    document.getElementById('scWho').textContent = headline
+      ? headline
+      : (shareOpts.nickname ? (nick + ' 님의 ' + range.label) : (range.label + ' 활동 리포트'));
 
     document.getElementById('scAmount').textContent = s.sum.toLocaleString('ko-KR') + '원';
     document.getElementById('scCaption').textContent = '체험단 매니저와 함께 아꼈어요';
@@ -1003,6 +1135,8 @@
   }
 
   function openShare() {
+    renderPresetChips();
+    syncCustomUI();
     renderShareCard();
     document.getElementById('mpShareModal').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -1023,13 +1157,110 @@
     if (e.key === 'Escape' && document.getElementById('mpShareModal').classList.contains('open')) closeShare();
   });
 
-  document.getElementById('mpThemeRow').addEventListener('click', (e) => {
-    const b = e.target.closest('.mp-theme-btn');
-    if (!b) return;
-    shareTheme = b.dataset.theme;
-    document.querySelectorAll('.mp-theme-btn').forEach(x => x.classList.toggle('on', x === b));
+  // ===== 꾸미기 컨트롤 =====
+  function renderSwatches(containerId, colors, key) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = colors.map(c =>
+      '<button type="button" class="mp-swatch" data-color="' + c + '" style="background:' + c + '" title="' + c + '"></button>'
+    ).join('')
+      + '<input type="color" class="mp-color-input" data-key="' + key + '" value="' + cardStyle[key] + '">';
+    markSwatch(containerId, cardStyle[key]);
+  }
+  function markSwatch(containerId, color) {
+    const t = String(color || '').toLowerCase();
+    document.querySelectorAll('#' + containerId + ' .mp-swatch').forEach(b => {
+      b.classList.toggle('active', String(b.dataset.color || '').toLowerCase() === t);
+    });
+  }
+
+  function bindSwatchRow(containerId, key) {
+    document.getElementById(containerId).addEventListener('click', (e) => {
+      const sw = e.target.closest('.mp-swatch');
+      if (!sw) return;
+      cardStyle[key] = sw.dataset.color;
+      const inp = document.querySelector('#' + containerId + ' .mp-color-input');
+      if (inp) inp.value = sw.dataset.color;
+      markSwatch(containerId, sw.dataset.color);
+      saveCardStyle(); renderShareCard();
+    });
+    document.getElementById(containerId).addEventListener('input', (e) => {
+      const inp = e.target.closest('.mp-color-input');
+      if (!inp) return;
+      cardStyle[key] = inp.value;
+      markSwatch(containerId, inp.value);
+      saveCardStyle(); renderShareCard();
+    });
+  }
+
+  // 프리셋 칩 렌더 (별점 메이커에서 저장한 것)
+  function renderPresetChips() {
+    const row = document.getElementById('mpPresetRow');
+    const empty = document.getElementById('mpPresetEmpty');
+    const presets = loadRatingMakerPresets();
+
+    if (!presets.length) {
+      row.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    row.innerHTML = presets.map(p =>
+      '<button class="mp-preset-chip" data-preset-id="' + esc(p.id) + '">'
+      + '<span class="mp-preset-dot" style="background:' + esc(p.cardColor || '#fff') + '"></span>'
+      + esc(p.name) + '</button>'
+    ).join('');
+  }
+
+  document.getElementById('mpPresetRow').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-preset-id]');
+    if (!chip) return;
+    const p = loadRatingMakerPresets().find(x => x.id === chip.dataset.presetId);
+    if (!p) return;
+    // 별점 메이커 프리셋 → 활동 카드 스타일로 매핑
+    cardStyle.bgColor = p.cardColor || DEFAULT_CARD.bgColor;
+    cardStyle.accentColor = p.starColor || DEFAULT_CARD.accentColor;
+    cardStyle.font = p.font || DEFAULT_CARD.font;
+    cardStyle.align = p.align || DEFAULT_CARD.align;
+    saveCardStyle();
+    syncCustomUI();
     renderShareCard();
   });
+
+  // 폰트 / 정렬 / 문구
+  document.getElementById('mpFontSelect').addEventListener('change', (e) => {
+    cardStyle.font = e.target.value;
+    saveCardStyle(); renderShareCard();
+  });
+  document.getElementById('mpAlignRow').addEventListener('click', (e) => {
+    const b = e.target.closest('.mp-align-btn');
+    if (!b) return;
+    cardStyle.align = b.dataset.align;
+    document.querySelectorAll('.mp-align-btn').forEach(x => x.classList.toggle('on', x === b));
+    saveCardStyle(); renderShareCard();
+  });
+  document.getElementById('mpHeadline').addEventListener('input', (e) => {
+    cardStyle.headline = e.target.value;
+    saveCardStyle(); renderShareCard();
+  });
+
+  document.getElementById('mpFoldBtn').addEventListener('click', () => {
+    const body = document.getElementById('mpFoldBody');
+    const open = body.classList.toggle('open');
+    document.getElementById('mpFoldBtn').textContent = open ? '🎨 직접 꾸미기 접기' : '🎨 직접 꾸미기 열기';
+  });
+
+  // 스와치 행 이벤트는 컨테이너에 1회만 위임 바인딩
+  bindSwatchRow('mpBgSwatches', 'bgColor');
+  bindSwatchRow('mpAccentSwatches', 'accentColor');
+
+  // 컨트롤 UI를 현재 cardStyle에 동기화
+  function syncCustomUI() {
+    renderSwatches('mpBgSwatches', BG_PRESETS, 'bgColor');
+    renderSwatches('mpAccentSwatches', ACCENT_PRESETS, 'accentColor');
+    document.getElementById('mpFontSelect').value = cardStyle.font;
+    document.querySelectorAll('.mp-align-btn').forEach(b => b.classList.toggle('on', b.dataset.align === cardStyle.align));
+    document.getElementById('mpHeadline').value = cardStyle.headline || '';
+  }
 
   document.getElementById('mpToggleRow').addEventListener('change', (e) => {
     const inp = e.target.closest('input[data-opt]');
@@ -1048,7 +1279,7 @@
     try {
       const html2canvas = await loadHtml2Canvas();
       const card = document.getElementById('mpShareCard');
-      const bg = shareTheme === 'terra' ? '#b0603f' : (shareTheme === 'dark' ? '#2e2823' : '#F5EFE6');
+      const bg = cardStyle.bgColor;
 
       const canvas = await html2canvas(card, {
         backgroundColor: bg,
@@ -1230,6 +1461,7 @@
 
   // ===== 초기화 =====
   async function init() {
+    loadCardStyle();
     const { data: { session } } = await sb.auth.getSession();
     if (!session) { location.replace('/'); return; }
 
