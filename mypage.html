@@ -212,13 +212,15 @@
 .mp-hl-label { font-size: 11px; color: var(--ink-faint, #9b8f82); }
 .mp-hl-value { font-size: 17px; font-weight: 700; color: var(--ink, #3d3229); margin-top: 2px; word-break: keep-all; }
 
-/* 마일스톤 뱃지 */
+/* 업적 */
 .mp-badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .mp-badge {
   display: flex; align-items: center; gap: 10px;
   border: 1px solid var(--line, #e8e0d4); border-radius: 12px; padding: 11px 12px;
 }
-.mp-badge.locked { opacity: .5; }
+.mp-badge.locked { opacity: .55; }
+.mp-badge.hidden-badge { opacity: .38; border-style: dashed; }
+.mp-badge.hidden-badge .mp-badge-icon { background: var(--paper, #faf6ef); }
 .mp-badge-icon {
   width: 36px; height: 36px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -358,6 +360,49 @@
   padding: 11px 16px; font-size: 14px; font-family: inherit;
 }
 .mp-share-hint { font-size: 11px; color: var(--ink-faint, #9b8f82); text-align: center; margin-top: 10px; }
+
+/* 상세 목록 모달 (카테고리·최고가 공용) */
+.mp-detail-box {
+  background: var(--card, #fff); border-radius: 18px;
+  width: 100%; max-width: 420px; max-height: 88vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.mp-detail-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px 12px; border-bottom: 1px solid var(--line, #e8e0d4);
+}
+.mp-detail-title { font-family: var(--font-serif, serif); font-size: 16px; color: var(--ink, #3d3229); }
+.mp-detail-sub { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 3px; }
+.mp-detail-list { overflow-y: auto; padding: 6px 18px 16px; }
+.mp-detail-row {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 11px 0; border-bottom: 1px solid var(--line, #e8e0d4);
+}
+.mp-detail-row:last-child { border-bottom: none; }
+.mp-detail-row.top { background: linear-gradient(90deg, rgba(217,166,142,.14), transparent 70%); border-radius: 8px; padding-left: 8px; margin-left: -8px; }
+.mp-detail-rank {
+  font-size: 11px; color: var(--ink-faint, #9b8f82);
+  width: 18px; flex-shrink: 0; padding-top: 2px; font-variant-numeric: tabular-nums;
+}
+.mp-detail-ico { font-size: 15px; flex-shrink: 0; padding-top: 1px; }
+.mp-detail-main { flex: 1; min-width: 0; }
+.mp-detail-store { font-size: 14px; font-weight: 600; color: var(--ink, #3d3229); }
+.mp-detail-content {
+  font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mp-detail-meta { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 4px; }
+.mp-detail-value {
+  font-size: 13px; font-weight: 700; color: var(--terra, #b0603f);
+  flex-shrink: 0; padding-top: 1px; font-variant-numeric: tabular-nums;
+}
+
+/* 클릭 가능한 통계 요소 */
+.mp-cat-row.clickable { cursor: pointer; border-radius: 8px; padding: 4px 6px; margin: 0 -6px 7px; }
+.mp-cat-row.clickable:hover { background: var(--paper, #faf6ef); }
+.mp-hl-box.clickable { cursor: pointer; transition: background .15s; position: relative; }
+.mp-hl-box.clickable:hover { background: var(--terra-soft, #f2e0d6); }
+.mp-hl-more { font-size: 10px; color: var(--terra, #b0603f); margin-top: 3px; }
 
 /* 활동 지도 */
 .mp-map-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
@@ -554,13 +599,27 @@
       </div>
     </div>
 
-    <!-- 마일스톤 뱃지 -->
+    <!-- 업적 -->
     <div style="margin-top:22px;">
-      <div class="mp-sub-title" style="font-size:14px;">🎖️ 마일스톤 뱃지</div>
+      <div class="mp-sub-title" style="font-size:14px;">🎖️ 업적</div>
       <div class="mp-badge-count" id="mpBadgeCount"></div>
       <div class="mp-badge-grid" id="mpBadges"></div>
     </div>
   </section>
+</div>
+
+<!-- 상세 목록 모달 (카테고리·최고가 공용) -->
+<div class="mp-modal" id="mpDetailModal">
+  <div class="mp-detail-box">
+    <div class="mp-detail-head">
+      <div>
+        <div class="mp-detail-title" id="mpDetailTitle">상세</div>
+        <div class="mp-detail-sub" id="mpDetailSub"></div>
+      </div>
+      <button class="mp-modal-close" id="mpDetailClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="mp-detail-list" id="mpDetailList"></div>
+  </div>
 </div>
 
 <!-- 공유 카드 모달 -->
@@ -812,6 +871,47 @@
     }
   }
 
+  // ===== 공용 상세 목록 모달 =====
+  function openDetail(title, sub, items, opts) {
+    opts = opts || {};
+    document.getElementById('mpDetailTitle').textContent = title;
+    document.getElementById('mpDetailSub').textContent = sub || '';
+
+    const sorted = items.slice().sort(opts.byValue
+      ? (a, b) => (b.value || 0) - (a.value || 0)
+      : (a, b) => b.at - a.at);
+
+    document.getElementById('mpDetailList').innerHTML = sorted.length === 0
+      ? '<div class="mp-list-empty">표시할 항목이 없어요.</div>'
+      : sorted.map((p, i) =>
+          '<div class="mp-detail-row' + (opts.byValue && i === 0 ? ' top' : '') + '">'
+          + (opts.byValue ? '<div class="mp-detail-rank">' + (i + 1) + '</div>' : '')
+          + '<div class="mp-detail-ico">' + getCategoryIcon(p) + '</div>'
+          + '<div class="mp-detail-main">'
+          + '<div class="mp-detail-store">' + esc(p.store || '(이름 없음)') + '</div>'
+          + (p.content ? '<div class="mp-detail-content" title="' + esc(p.content) + '">' + esc(p.content) + '</div>' : '')
+          + '<div class="mp-detail-meta">' + fmtDateShort(p.at) + ' 완료'
+          + (p.region ? ' · ' + esc(p.region) : '') + '</div>'
+          + '</div>'
+          + '<div class="mp-detail-value">' + (p.value != null ? p.value.toLocaleString('ko-KR') + '원' : '-') + '</div>'
+          + '</div>'
+        ).join('');
+
+    document.getElementById('mpDetailModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDetail() {
+    document.getElementById('mpDetailModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('mpDetailClose').addEventListener('click', closeDetail);
+  document.getElementById('mpDetailModal').addEventListener('click', (e) => {
+    if (e.target.id === 'mpDetailModal') closeDetail();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('mpDetailModal').classList.contains('open')) closeDetail();
+  });
+
   // ===== 포트폴리오: 카테고리 분포 =====
   // 카카오 카테고리는 "음식점 > 한식 > 곰탕" 형태 → 첫 조각으로 묶음
   function normCategory(c) {
@@ -835,18 +935,37 @@
     }
     const sorted = Object.keys(counts).map(k => ({ name: k, n: counts[k] })).sort((a, b) => b.n - a.n);
     const top = sorted.slice(0, 5);
+    const restNames = sorted.slice(5).map(x => x.name);
     const restN = sorted.slice(5).reduce((s, x) => s + x.n, 0);
-    if (restN > 0) top.push({ name: '기타', n: restN });
+    if (restN > 0) top.push({ name: '기타', n: restN, rest: restNames });
+
+    // 클릭 시 어떤 항목을 보여줄지 인덱스로 저장
+    catGroups = top.map(c => c.rest
+      ? { name: '기타', names: c.rest }
+      : { name: c.name, names: [c.name] });
 
     box.innerHTML = top.map((c, i) => {
       const pct = Math.round(c.n / total * 100);
-      return '<div class="mp-cat-row">'
-        + '<div class="mp-cat-head"><span class="mp-cat-name">' + esc(c.name) + '</span>'
+      return '<div class="mp-cat-row clickable" data-cat-idx="' + i + '">'
+        + '<div class="mp-cat-head"><span class="mp-cat-name">' + esc(c.name) + ' ›</span>'
         + '<span class="mp-cat-pct">' + pct + '% · ' + c.n + '건</span></div>'
         + '<div class="mp-cat-track"><div class="mp-cat-fill" style="width:' + pct + '%; background:' + CAT_COLORS[i % CAT_COLORS.length] + ';"></div></div>'
         + '</div>';
     }).join('');
   }
+
+  let catGroups = [];
+  document.getElementById('mpCat').addEventListener('click', (e) => {
+    const row = e.target.closest('[data-cat-idx]');
+    if (!row) return;
+    const g = catGroups[Number(row.dataset.catIdx)];
+    if (!g) return;
+    const items = rows.filter(r => {
+      const c = normCategory(r.category) || '기타';
+      return g.names.indexOf(c) !== -1;
+    });
+    openDetail(g.name, items.length + '건 · 완료 최신순', items);
+  });
 
   // ===== 포트폴리오: 기록 하이라이트 =====
   function renderHighlights() {
@@ -875,712 +994,207 @@
     const topRegion = Object.keys(regionCnt).sort((a, b) => regionCnt[b] - regionCnt[a])[0] || '-';
 
     const items = [
-      { label: '최고가 체험단', value: maxVal != null ? fmtMoneyShort(maxVal) : '-' },
+      { label: '최고가 체험단', value: maxVal != null ? fmtMoneyShort(maxVal) : '-', act: maxVal != null ? 'top' : null, more: '눌러서 보기' },
       { label: '활동 일수', value: days.toLocaleString('ko-KR') + '일째' },
-      { label: '단골 업체', value: repeatStores + '곳' },
-      { label: '최다 활동 지역', value: topRegion }
+      { label: '단골 업체', value: repeatStores + '곳', act: repeatStores > 0 ? 'repeat' : null, more: '눌러서 보기' },
+      { label: '최다 활동 지역', value: topRegion, act: topRegion !== '-' ? 'region' : null, more: '눌러서 보기' }
     ];
     box.innerHTML = items.map(it =>
-      '<div class="mp-hl-box"><div class="mp-hl-label">' + it.label + '</div>'
-      + '<div class="mp-hl-value">' + esc(it.value) + '</div></div>'
+      '<div class="mp-hl-box' + (it.act ? ' clickable" data-hl="' + it.act : '') + '">'
+      + '<div class="mp-hl-label">' + it.label + '</div>'
+      + '<div class="mp-hl-value">' + esc(it.value) + '</div>'
+      + (it.act ? '<div class="mp-hl-more">' + it.more + ' ›</div>' : '')
+      + '</div>'
     ).join('');
   }
 
-  // ===== 포트폴리오: 마일스톤 뱃지 =====
+  document.getElementById('mpHl').addEventListener('click', (e) => {
+    const box = e.target.closest('[data-hl]');
+    if (!box) return;
+    const kind = box.dataset.hl;
+
+    if (kind === 'top') {
+      const withVal = rows.filter(r => r.value != null);
+      openDetail('금액 상위 체험단', withVal.length + '건 · 금액순', withVal, { byValue: true });
+
+    } else if (kind === 'repeat') {
+      const cnt = {};
+      rows.forEach(r => { const x = (r.store || '').trim(); if (x) cnt[x] = (cnt[x] || 0) + 1; });
+      const repeats = Object.keys(cnt).filter(k => cnt[k] >= 2);
+      const items = rows.filter(r => repeats.indexOf((r.store || '').trim()) !== -1);
+      openDetail('단골 업체', repeats.length + '곳 · 총 ' + items.length + '건', items);
+
+    } else if (kind === 'region') {
+      const cnt = {};
+      rows.forEach(r => { const g = (r.region || '').trim(); if (g) cnt[g] = (cnt[g] || 0) + 1; });
+      const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+      if (!top) return;
+      const items = rows.filter(r => (r.region || '').trim() === top);
+      openDetail(top, items.length + '건 · 완료 최신순', items);
+    }
+  });
+
+  // ===== 포트폴리오: 업적 =====
   function renderBadges() {
     const box = document.getElementById('mpBadges');
     const cntEl = document.getElementById('mpBadgeCount');
 
+    // ── 집계 지표 ──
     const total = rows.length;
     const sum = rows.reduce((s, r) => s + (r.value || 0), 0);
     const cats = new Set(rows.map(r => normCategory(r.category)).filter(Boolean)).size;
     const regions = new Set(rows.map(r => (r.region || '').trim()).filter(Boolean)).size;
+    const maxVal = rows.reduce((m, r) => Math.max(m, r.value || 0), 0);
+
     const storeCnt = {};
-    rows.forEach(r => { const s = (r.store || '').trim(); if (s) storeCnt[s] = (storeCnt[s] || 0) + 1; });
+    rows.forEach(r => { const x = (r.store || '').trim(); if (x) storeCnt[x] = (storeCnt[x] || 0) + 1; });
     const maxRepeat = Object.keys(storeCnt).reduce((m, k) => Math.max(m, storeCnt[k]), 0);
 
-    const DEFS = [
-      { icon: '🌱', name: '첫 걸음',      need: 1,       cur: total,     unit: '건',   desc: '첫 체험단 완료' },
-      { icon: '🔥', name: '열 걸음',      need: 10,      cur: total,     unit: '건',   desc: '10건 완료' },
-      { icon: '⭐', name: '반백 리뷰어',  need: 50,      cur: total,     unit: '건',   desc: '50건 완료' },
-      { icon: '👑', name: '백전노장',      need: 100,     cur: total,     unit: '건',   desc: '100건 완료' },
-      { icon: '💰', name: '첫 10만원',    need: 100000,  cur: sum,       unit: '원',   desc: '누적 10만원 절약' },
-      { icon: '💎', name: '100만원 클럽', need: 1000000, cur: sum,       unit: '원',   desc: '누적 100만원 절약' },
-      { icon: '🏆', name: '500만원 클럽', need: 5000000, cur: sum,       unit: '원',   desc: '누적 500만원 절약' },
-      { icon: '🎯', name: '만능 리뷰어',  need: 3,       cur: cats,      unit: '종',   desc: '카테고리 3종 이상' },
-      { icon: '🗺️', name: '지역 탐험가',  need: 5,       cur: regions,   unit: '곳',   desc: '지역 5곳 이상' },
-      { icon: '🤝', name: '단골 손님',    need: 2,       cur: maxRepeat, unit: '회',   desc: '같은 업체 2회 이상' }
+    // 활동 일수 (첫 완료 ~ 오늘)
+    let days = 0;
+    if (total > 0) {
+      const first = new Date(Math.min.apply(null, rows.map(r => r.at.getTime())));
+      days = Math.max(1, Math.floor((startOfToday() - new Date(first.getFullYear(), first.getMonth(), first.getDate())) / 86400000) + 1);
+    }
+
+    // 하루 최다 / 한 달 최다 / 활동한 개월 수
+    const dayCnt = {}, monCnt = {};
+    rows.forEach(r => {
+      const d = r.at.getFullYear() + '-' + r.at.getMonth() + '-' + r.at.getDate();
+      const m = r.at.getFullYear() + '-' + r.at.getMonth();
+      dayCnt[d] = (dayCnt[d] || 0) + 1;
+      monCnt[m] = (monCnt[m] || 0) + 1;
+    });
+    const maxDay = Object.keys(dayCnt).reduce((m, k) => Math.max(m, dayCnt[k]), 0);
+    const maxMonth = Object.keys(monCnt).reduce((m, k) => Math.max(m, monCnt[k]), 0);
+    const activeMonths = Object.keys(monCnt).length;
+
+    // 금액이 채워진 비율 (기록 습관)
+    const filled = rows.filter(r => r.value != null).length;
+
+    // ── 업적 계열 (같은 줄기 안에서 순서대로 해금) ──
+    const CHAINS = [
+      { unit: '건', cur: total, tiers: [
+        { icon: '🌱', name: '첫 걸음',     need: 1,   desc: '첫 체험단 완료' },
+        { icon: '🔥', name: '열 걸음',     need: 10,  desc: '10건 완료' },
+        { icon: '⭐', name: '반백 리뷰어', need: 50,  desc: '50건 완료' },
+        { icon: '👑', name: '백전노장',    need: 100, desc: '100건 완료' },
+        { icon: '🏛️', name: '전설의 기록', need: 300, desc: '300건 완료' }
+      ]},
+      { unit: '원', cur: sum, tiers: [
+        { icon: '💰', name: '첫 10만원',    need: 100000,   desc: '누적 10만원 절약' },
+        { icon: '💵', name: '50만원 돌파',  need: 500000,   desc: '누적 50만원 절약' },
+        { icon: '💎', name: '100만원 클럽', need: 1000000,  desc: '누적 100만원 절약' },
+        { icon: '🏆', name: '500만원 클럽', need: 5000000,  desc: '누적 500만원 절약' },
+        { icon: '🦄', name: '천만원의 사나이', need: 10000000, desc: '누적 1000만원 절약' }
+      ]},
+      { unit: '종', cur: cats, tiers: [
+        { icon: '🎯', name: '만능 리뷰어', need: 3,  desc: '카테고리 3종 이상' },
+        { icon: '🎪', name: '팔방미인',    need: 6,  desc: '카테고리 6종 이상' },
+        { icon: '🌈', name: '전방위 탐험', need: 10, desc: '카테고리 10종 이상' }
+      ]},
+      { unit: '곳', cur: regions, tiers: [
+        { icon: '📌', name: '동네 터줏대감', need: 3,  desc: '지역 3곳 이상' },
+        { icon: '🗺️', name: '지역 탐험가',   need: 5,  desc: '지역 5곳 이상' },
+        { icon: '🧭', name: '전국구',        need: 10, desc: '지역 10곳 이상' },
+        { icon: '🌏', name: '방방곡곡',      need: 20, desc: '지역 20곳 이상' }
+      ]},
+      { unit: '회', cur: maxRepeat, tiers: [
+        { icon: '🤝', name: '단골 손님',   need: 2, desc: '같은 업체 2회 이상' },
+        { icon: '💞', name: '찐단골',      need: 3, desc: '같은 업체 3회 이상' },
+        { icon: '🏠', name: '제2의 집',    need: 5, desc: '같은 업체 5회 이상' }
+      ]},
+      { unit: '원', cur: maxVal, tiers: [
+        { icon: '🎁', name: '알찬 하루',   need: 50000,  desc: '단일 5만원 이상 체험' },
+        { icon: '🎖️', name: '큰 손 체험',  need: 100000, desc: '단일 10만원 이상 체험' },
+        { icon: '💫', name: '럭셔리 체험', need: 300000, desc: '단일 30만원 이상 체험' }
+      ]},
+      { unit: '일', cur: days, tiers: [
+        { icon: '📅', name: '한 달 개근',  need: 30,  desc: '활동 30일째' },
+        { icon: '🗓️', name: '백일의 기록', need: 100, desc: '활동 100일째' },
+        { icon: '🎂', name: '1주년',       need: 365, desc: '활동 1년 달성' },
+        { icon: '🌳', name: '고참 리뷰어', need: 730, desc: '활동 2년 달성' }
+      ]},
+      { unit: '개월', cur: activeMonths, tiers: [
+        { icon: '🌙', name: '꾸준한 달',   need: 3,  desc: '3개월 활동' },
+        { icon: '🍀', name: '반년 지기',   need: 6,  desc: '6개월 활동' },
+        { icon: '📆', name: '열두 달',     need: 12, desc: '12개월 활동' }
+      ]},
+      { unit: '건', cur: maxMonth, tiers: [
+        { icon: '⚡', name: '불꽃의 달',   need: 5,  desc: '한 달 5건 완료' },
+        { icon: '🚀', name: '폭주 기관차', need: 10, desc: '한 달 10건 완료' },
+        { icon: '☄️', name: '월간 챔피언', need: 20, desc: '한 달 20건 완료' }
+      ]},
+      { unit: '건', cur: maxDay, tiers: [
+        { icon: '☀️', name: '바쁜 하루',   need: 2, desc: '하루 2건 완료' },
+        { icon: '🌪️', name: '초인적 하루', need: 3, desc: '하루 3건 완료' },
+        { icon: '🎢', name: '광란의 하루', need: 5, desc: '하루 5건 완료' }
+      ]},
+      { unit: '건', cur: filled, tiers: [
+        { icon: '📝', name: '기록의 시작', need: 10, desc: '금액 기록 10건' },
+        { icon: '📊', name: '꼼꼼한 기록', need: 50, desc: '금액 기록 50건' }
+      ]}
     ];
 
-    const done = DEFS.filter(d => d.cur >= d.need).length;
-    cntEl.textContent = done + ' / ' + DEFS.length + '개 달성';
+    // ── 표시 규칙 ──
+    // 달성 → 그대로 / 다음 목표(직전 단계 달성) → 자물쇠+진행률 / 그 이후 → 물음표
+    const cards = [];
+    let doneCount = 0, totalCount = 0, hiddenCount = 0;
 
-    box.innerHTML = DEFS.map(d => {
-      const ok = d.cur >= d.need;
-      const prog = d.unit === '원'
-        ? fmtMoneyShort(Math.min(d.cur, d.need)) + ' / ' + fmtMoneyShort(d.need)
-        : Math.min(d.cur, d.need) + ' / ' + d.need + d.unit;
-      return '<div class="mp-badge' + (ok ? '' : ' locked') + '">'
-        + '<div class="mp-badge-icon">' + (ok ? d.icon : '🔒') + '</div>'
-        + '<div style="min-width:0;">'
-        + '<div class="mp-badge-name">' + esc(d.name) + '</div>'
-        + '<div class="mp-badge-desc">' + (ok ? d.desc : prog) + '</div>'
-        + '</div></div>';
-    }).join('');
-  }
-
-  // ===== 카테고리 아이콘 (메인 페이지와 동일 규칙) =====
-  const CATEGORY_ICONS = [
-    { pattern: /카페|커피|coffee|cafe|에스프레소|로스터/i, icon: '☕' },
-    { pattern: /디저트|케이크|베이커리|빵|제과|마카롱|쿠키|와플|크로플|도넛|크레페|아이스크림|젤라또|빙수/i, icon: '🥐' },
-    { pattern: /초밥|스시|사시미|회|일식|이자카야|라멘|돈까스|우동|소바|덮밥|규동|텐동/i, icon: '🍣' },
-    { pattern: /중식|중화|짜장|짬뽕|마라|훠궈|딤섬|양꼬치/i, icon: '🥡' },
-    { pattern: /파스타|피자|스테이크|양식|이탈리안|프렌치|스페인|타파스/i, icon: '🍝' },
-    { pattern: /햄버거|버거|패스트푸드/i, icon: '🍔' },
-    { pattern: /치킨|닭갈비|찜닭|닭발/i, icon: '🍗' },
-    { pattern: /삼겹살|돼지|소고기|한우|갈비|고깃집|숯불|구이|곱창|막창|족발|보쌈/i, icon: '🥩' },
-    { pattern: /분식|떡볶이|김밥|순대|어묵|튀김|핫도그/i, icon: '🍢' },
-    { pattern: /한식|국밥|백반|냉면|찌개|국수|칼국수|만두|쌈밥|비빔밥|설렁탕|곰탕|순두부|해장국|보리밥|쌈|쌈장/i, icon: '🍚' },
-    { pattern: /해산물|조개|회집|장어|문어|새우|랍스터|게|꽃게|대게/i, icon: '🦐' },
-    { pattern: /샐러드|건강|채식|비건|포케/i, icon: '🥗' },
-    { pattern: /술집|호프|와인|이자카야|포차|바|펍|위스키|칵테일|맥주/i, icon: '🍺' },
-    { pattern: /떡|떡집|한과|전통/i, icon: '🍡' },
-    { pattern: /과일|청과|주스|스무디|쥬스/i, icon: '🍓' },
-    { pattern: /음식점|식당|레스토랑|키친|다이닝|푸드/i, icon: '🍽️' },
-    { pattern: /피부과|피부|에스테틱|스킨/i, icon: '✨' },
-    { pattern: /성형|미용|시술/i, icon: '💎' },
-    { pattern: /치과|덴탈/i, icon: '🦷' },
-    { pattern: /안과|안경|렌즈/i, icon: '👓' },
-    { pattern: /한의원|한방/i, icon: '🌿' },
-    { pattern: /병원|의원|클리닉|메디컬|내과|외과|소아과|이비인후과|정형외과|산부인과/i, icon: '🏥' },
-    { pattern: /약국/i, icon: '💊' },
-    { pattern: /미용실|헤어|살롱|cut|커트|펌|염색/i, icon: '💇' },
-    { pattern: /네일|페디/i, icon: '💅' },
-    { pattern: /마사지|스파|왁싱|타이|아로마|두피/i, icon: '💆' },
-    { pattern: /속눈썹|래쉬/i, icon: '👁️' },
-    { pattern: /화장품|코스메틱|cosmetic/i, icon: '💄' },
-    { pattern: /헬스|피트니스|짐|gym|크로스핏/i, icon: '💪' },
-    { pattern: /요가|필라테스|발레/i, icon: '🧘' },
-    { pattern: /수영|풀|swim/i, icon: '🏊' },
-    { pattern: /클라이밍|볼더링/i, icon: '🧗' },
-    { pattern: /골프|스크린골프/i, icon: '⛳' },
-    { pattern: /테니스|스쿼시|배드민턴/i, icon: '🎾' },
-    { pattern: /펜션|호텔|모텔|숙박|풀빌라|리조트|게스트하우스|민박/i, icon: '🏨' },
-    { pattern: /캠핑|글램핑|차박/i, icon: '🏕️' },
-    { pattern: /서점|책|북카페|독립서점/i, icon: '📚' },
-    { pattern: /꽃|플라워|플로리스트|화원/i, icon: '💐' },
-    { pattern: /사진|스튜디오|포토|증명사진/i, icon: '📷' },
-    { pattern: /공방|클래스|원데이|체험|만들기|diy/i, icon: '🎨' },
-    { pattern: /펫|동물|강아지|고양이|반려|애견|미용\s*샵/i, icon: '🐾' },
-    { pattern: /노래방|코노|karaoke/i, icon: '🎤' },
-    { pattern: /pc방|게임|보드게임|방탈출/i, icon: '🎮' },
-    { pattern: /영화|시네마|cgv|메가박스|롯데시네마/i, icon: '🎬' },
-    { pattern: /마트|편의점|시장|쇼핑|아울렛|백화점/i, icon: '🛍️' },
-    { pattern: /세탁|크리닝|빨래/i, icon: '👕' },
-    { pattern: /자동차|정비|세차|타이어/i, icon: '🚗' },
-    { pattern: /가구|인테리어|소품/i, icon: '🛋️' },
-    { pattern: /학원|교습|과외|수학|영어/i, icon: '📖' }
-  ];
-
-  function getCategoryIcon(entry) {
-    if (!entry) return '📍';
-    const text = [entry.category, entry.store, entry.content].filter(Boolean).join(' ');
-    if (!text) return '📍';
-    for (const ci of CATEGORY_ICONS) {
-      if (ci.pattern.test(text)) return ci.icon;
-    }
-    return '📍';
-  }
-
-  // ===== 포트폴리오: 활동 지도 =====
-  const KAKAO_KEY = '21466d7ae884ca307c2ec034bd6887e1';
-  let kakaoLoadPromise = null;
-  let mpMap = null, mpBounds = null, mpOpenOverlay = null;
-
-  function loadKakaoSDK() {
-    if (window.kakao && window.kakao.maps && window.kakao.maps.LatLng) {
-      return Promise.resolve(window.kakao);
-    }
-    if (kakaoLoadPromise) return kakaoLoadPromise;
-    kakaoLoadPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + encodeURIComponent(KAKAO_KEY) + '&autoload=false';
-      script.onload = () => {
-        if (!window.kakao || !window.kakao.maps) { reject(new Error('SDK_LOAD_FAIL')); return; }
-        window.kakao.maps.load(() => resolve(window.kakao));
-      };
-      script.onerror = () => reject(new Error('SDK_LOAD_FAIL'));
-      document.head.appendChild(script);
-    });
-    return kakaoLoadPromise;
-  }
-
-  function mapPoints() {
-    return rows.filter(r =>
-      typeof r.lat === 'number' && typeof r.lng === 'number' &&
-      isFinite(r.lat) && isFinite(r.lng) && (r.lat !== 0 || r.lng !== 0)
-    );
-  }
-
-  // 줌 레벨별 묶음 크기 (도 단위) — 레벨이 클수록(축소) 넓게 묶음
-  function clusterCellSize(level) {
-    if (level <= 3) return 0;                       // 확대 상태: 묶지 않음
-    return 0.00025 * Math.pow(2, level);            // 예: L5≈0.008(≈900m), L8≈0.064(≈7km), L11≈0.5(≈55km)
-  }
-
-  // 거리 기반 병합 — 격자 경계에서 인접 지점이 갈라지는 문제를 피함
-  function buildClusters(pts, level) {
-    const cell = clusterCellSize(level);
-    if (cell === 0) return pts.map(p => ({ items: [p], lat: p.lat, lng: p.lng }));
-
-    const used = new Array(pts.length).fill(false);
-    const clusters = [];
-    // 위도순으로 훑으며 반경 안의 미사용 지점을 흡수
-    const idx = pts.map((p, i) => i).sort((a, b) => pts[a].lat - pts[b].lat);
-
-    idx.forEach(i => {
-      if (used[i]) return;
-      used[i] = true;
-      const items = [pts[i]];
-      let lat = pts[i].lat, lng = pts[i].lng;
-
-      idx.forEach(j => {
-        if (used[j]) return;
-        // 경도는 위도에 따라 실제 거리가 줄어드므로 보정
-        const dLat = pts[j].lat - lat;
-        const dLng = (pts[j].lng - lng) * Math.cos(lat * Math.PI / 180);
-        if (Math.sqrt(dLat * dLat + dLng * dLng) <= cell) {
-          used[j] = true;
-          items.push(pts[j]);
-          lat = items.reduce((s, x) => s + x.lat, 0) / items.length;
-          lng = items.reduce((s, x) => s + x.lng, 0) / items.length;
+    CHAINS.forEach(chain => {
+      let nextShown = false;
+      chain.tiers.forEach(t => {
+        totalCount++;
+        if (chain.cur >= t.need) {
+          doneCount++;
+          cards.push({ state: 'done', icon: t.icon, name: t.name, desc: t.desc, order: 0 });
+        } else if (!nextShown) {
+          nextShown = true;
+          const prog = chain.unit === '원'
+            ? fmtMoneyShort(chain.cur) + ' / ' + fmtMoneyShort(t.need)
+            : chain.cur + ' / ' + t.need + chain.unit;
+          cards.push({ state: 'next', name: t.name, desc: prog, order: 1 });
+        } else {
+          hiddenCount++;
         }
       });
-      clusters.push({ items, lat, lng });
     });
-    return clusters;
-  }
 
-  // 현재 표시 중인 오버레이 정리
-  let mpOverlays = [];
-  function clearMapOverlays() {
-    mpOverlays.forEach(o => o.setMap(null));
-    mpOverlays = [];
-    if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
-  }
+    // 달성 → 다음 목표 → (숨김 요약) 순으로 정렬
+    cards.sort((a, b) => a.order - b.order);
 
-  function buildInfoContent(items) {
-    const box = document.createElement('div');
-    box.className = 'mp-map-info' + (items.length > 1 ? ' multi' : '');
+    cntEl.textContent = doneCount + ' / ' + totalCount + '개 달성'
+      + (hiddenCount > 0 ? ' · 미발견 ' + hiddenCount + '개' : '');
 
-    if (items.length === 1) {
-      const p = items[0];
-      box.innerHTML = '<b>' + esc(p.store || '(이름 없음)') + '</b>'
-        + '<small>' + fmtDateShort(p.at) + ' 완료'
-        + (p.value != null ? ' · ' + p.value.toLocaleString('ko-KR') + '원' : '')
-        + '</small>';
-    } else {
-      const sorted = items.slice().sort((a, b) => b.at - a.at);
-      box.innerHTML = '<div class="mp-info-head">이 지역 ' + items.length + '곳</div>'
-        + '<div class="mp-info-list">'
-        + sorted.map(p =>
-            '<div class="mp-info-row">'
-            + '<span class="mp-info-ico">' + getCategoryIcon(p) + '</span>'
-            + '<span class="mp-info-name">' + esc(p.store || '(이름 없음)') + '</span>'
-            + '<span class="mp-info-meta">' + fmtDateShort(p.at)
-            + (p.value != null ? ' · ' + p.value.toLocaleString('ko-KR') + '원' : '') + '</span>'
-            + '</div>'
-          ).join('')
-        + '</div>';
-    }
-    return box;
-  }
-
-  function drawMarkers() {
-    if (!mpMap || !window.kakao) return;
-    const kakao = window.kakao;
-    clearMapOverlays();
-
-    const pts = mapPoints();
-    const clusters = buildClusters(pts, mpMap.getLevel());
-
-    clusters.forEach(c => {
-      const pos = new kakao.maps.LatLng(c.lat, c.lng);
-      const single = c.items.length === 1;
-
-      const el = document.createElement('div');
-      if (single) {
-        el.className = 'mp-map-pin';
-        el.innerHTML = '<span>' + getCategoryIcon(c.items[0]) + '</span>';
-      } else {
-        el.className = 'mp-map-cluster';
-        // 개수에 따라 크기 단계
-        if (c.items.length >= 10) el.classList.add('lg');
-        else if (c.items.length >= 5) el.classList.add('md');
-        el.textContent = c.items.length;
+    let html = cards.map(c => {
+      if (c.state === 'done') {
+        return '<div class="mp-badge">'
+          + '<div class="mp-badge-icon">' + c.icon + '</div>'
+          + '<div style="min-width:0;">'
+          + '<div class="mp-badge-name">' + esc(c.name) + '</div>'
+          + '<div class="mp-badge-desc">' + esc(c.desc) + '</div>'
+          + '</div></div>';
       }
+      return '<div class="mp-badge locked">'
+        + '<div class="mp-badge-icon">🔒</div>'
+        + '<div style="min-width:0;">'
+        + '<div class="mp-badge-name">' + esc(c.name) + '</div>'
+        + '<div class="mp-badge-desc">' + esc(c.desc) + '</div>'
+        + '</div></div>';
+    }).join('');
 
-      const marker = new kakao.maps.CustomOverlay({
-        position: pos, content: el, yAnchor: single ? 1 : 0.5, clickable: true, zIndex: single ? 2 : 3
-      });
-      marker.setMap(mpMap);
-      mpOverlays.push(marker);
-
-      const info = buildInfoContent(c.items);
-      const overlay = new kakao.maps.CustomOverlay({
-        position: pos, content: info, yAnchor: single ? 2.1 : 1.25, clickable: true, zIndex: 10
-      });
-
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (mpOpenOverlay) mpOpenOverlay.setMap(null);
-        if (mpOpenOverlay === overlay) { mpOpenOverlay = null; return; }
-        overlay.setMap(mpMap);
-        mpOpenOverlay = overlay;
-      });
-      info.addEventListener('click', (e) => {
-        if (e.target.closest('.mp-info-list')) return; // 목록 스크롤 중 닫힘 방지
-        overlay.setMap(null); mpOpenOverlay = null;
-      });
-    });
-  }
-
-  async function renderMap() {
-    if (mpMap) return; // 최초 1회만 초기화 (이후는 drawMarkers가 갱신)
-    const msg = document.getElementById('mpMapMsg');
-    const statEl = document.getElementById('mpMapStat');
-    const fitBtn = document.getElementById('mpMapFit');
-    const pts = mapPoints();
-
-    const regions = new Set(rows.map(r => (r.region || '').trim()).filter(Boolean));
-    statEl.textContent = pts.length > 0
-      ? (pts.length + '곳 · ' + (regions.size || 1) + '개 지역')
-      : '';
-
-    if (pts.length === 0) {
-      msg.classList.remove('hidden');
-      msg.innerHTML = '위치 정보가 있는 완료 체험단이 아직 없어요.<br>등록 시 주소를 입력하면 지도에 표시돼요.';
-      return;
+    // 미발견 업적은 개수만 물음표 카드로
+    if (hiddenCount > 0) {
+      html += '<div class="mp-badge hidden-badge">'
+        + '<div class="mp-badge-icon">❓</div>'
+        + '<div style="min-width:0;">'
+        + '<div class="mp-badge-name">???</div>'
+        + '<div class="mp-badge-desc">미발견 ' + hiddenCount + '개</div>'
+        + '</div></div>';
     }
 
-    let kakao;
-    try {
-      kakao = await loadKakaoSDK();
-    } catch (e) {
-      console.error('[mypage] kakao sdk fail:', e);
-      msg.classList.remove('hidden');
-      msg.innerHTML = '지도를 불러오지 못했어요.<br>잠시 후 새로고침해 주세요.';
-      return;
-    }
-
-    msg.classList.add('hidden');
-    fitBtn.style.display = 'block';
-
-    mpMap = new kakao.maps.Map(document.getElementById('mpMapCanvas'), {
-      center: new kakao.maps.LatLng(pts[0].lat, pts[0].lng),
-      level: 7
-    });
-
-    kakao.maps.event.addListener(mpMap, 'click', () => {
-      if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
-    });
-    // 줌이 바뀌면 묶음 단위 재계산
-    kakao.maps.event.addListener(mpMap, 'zoom_changed', drawMarkers);
-
-    mpBounds = new kakao.maps.LatLngBounds();
-    pts.forEach(p => mpBounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
-
-    if (pts.length === 1) {
-      mpMap.setCenter(new kakao.maps.LatLng(pts[0].lat, pts[0].lng));
-      mpMap.setLevel(4);
-    } else {
-      mpMap.setBounds(mpBounds);
-    }
-    mpMap.relayout();
-    drawMarkers();
+    box.innerHTML = html;
   }
-
-  document.getElementById('mpMapFit').addEventListener('click', () => {
-    if (!mpMap || !mpBounds) return;
-    if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
-    const pts = mapPoints();
-    if (pts.length === 1) { mpMap.setLevel(4); mpMap.setCenter(new window.kakao.maps.LatLng(pts[0].lat, pts[0].lng)); }
-    else mpMap.setBounds(mpBounds);
-    drawMarkers();
-  });
-
-  // ===== 공유 카드 모달 =====
-  const shareOpts = { nickname: true, count: true, category: true, region: true };
-  let h2cPromise = null;
-
-  // 별점 메이커와 공유하는 저장 키 (같은 도메인 → localStorage 공유)
-  const RM_PRESETS_KEY = 'rating-maker-custom-presets-v1';
-  const MP_CARD_KEY = 'mypage-card-custom-v1';
-
-  // 별점 메이커와 동일한 색 팔레트
-  const BG_PRESETS = ['#FFFFFF', '#FAF6EE', '#FFF4F4', '#F0F7F4', '#1E2A3A', '#2A2522'];
-  const ACCENT_PRESETS = ['#E8B007', '#C2542B', '#E5484D', '#E07A9B', '#3B7FC4', '#4A9D6E', '#2A2522'];
-
-  // 기본 제공 프리셋 (별점 메이커 동기화와 무관하게 항상 제공)
-  const BASIC_PRESETS = [
-    { id: 'b_cream', name: '크림',     bgColor: '#FAF6EE', accentColor: '#C2542B', font: 'var(--font-body)',  align: 'left' },
-    { id: 'b_terra', name: '테라코타', bgColor: '#B0603F', accentColor: '#FFE9DC', font: 'var(--font-serif)', align: 'left' },
-    { id: 'b_dark',  name: '다크',     bgColor: '#2A2522', accentColor: '#E8B007', font: 'var(--font-body)',  align: 'left' },
-    { id: 'b_mint',  name: '민트',     bgColor: '#F0F7F4', accentColor: '#4A9D6E', font: 'var(--font-body)',  align: 'left' },
-    { id: 'b_navy',  name: '네이비',   bgColor: '#1E2A3A', accentColor: '#8FC1F0', font: 'var(--font-serif)', align: 'left' },
-    { id: 'b_paper', name: '화이트',   bgColor: '#FFFFFF', accentColor: '#2A2522', font: 'var(--font-serif)', align: 'center' }
-  ];
-
-  const DEFAULT_CARD = {
-    bgColor: '#FAF6EE',
-    accentColor: '#C2542B',
-    font: 'var(--font-body)',
-    align: 'left',
-    headline: ''
-  };
-  let cardStyle = Object.assign({}, DEFAULT_CARD);
-
-  function loadCardStyle() {
-    try {
-      const raw = localStorage.getItem(MP_CARD_KEY);
-      if (raw) cardStyle = Object.assign({}, DEFAULT_CARD, JSON.parse(raw) || {});
-    } catch (e) { cardStyle = Object.assign({}, DEFAULT_CARD); }
-  }
-  function saveCardStyle() {
-    try { localStorage.setItem(MP_CARD_KEY, JSON.stringify(cardStyle)); } catch (e) {}
-  }
-
-  // 별점 메이커 프리셋 읽기 (읽기 전용 — 여기서 수정/삭제하지 않음)
-  function loadRatingMakerPresets() {
-    try {
-      const raw = localStorage.getItem(RM_PRESETS_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr.filter(x => x && x.name) : [];
-    } catch (e) { return []; }
-  }
-
-  // 별점 메이커와 동일한 명암 계산
-  function hexToRgb(hex) {
-    let h = String(hex || '').replace('#', '').trim();
-    if (h.length === 3) h = h.split('').map(c => c + c).join('');
-    const n = parseInt(h, 16);
-    if (isNaN(n)) return { r: 255, g: 255, b: 255 };
-    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-  }
-  function readableInk(hex) {
-    const { r, g, b } = hexToRgb(hex);
-    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return lum > 0.6 ? '#2A2522' : '#FFFFFF';
-  }
-
-
-  function loadHtml2Canvas() {
-    if (window.html2canvas) return Promise.resolve(window.html2canvas);
-    if (h2cPromise) return h2cPromise;
-    h2cPromise = new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-      s.onload = () => window.html2canvas ? resolve(window.html2canvas) : reject(new Error('H2C_FAIL'));
-      s.onerror = () => reject(new Error('H2C_FAIL'));
-      document.head.appendChild(s);
-    });
-    return h2cPromise;
-  }
-
-  function topCategoryInRange() {
-    const counts = {};
-    rows.forEach(r => {
-      if (!inRange(r)) return;
-      const c = normCategory(r.category);
-      if (c) counts[c] = (counts[c] || 0) + 1;
-    });
-    return Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || null;
-  }
-  function regionCountInRange() {
-    const set = new Set();
-    rows.forEach(r => { if (inRange(r)) { const g = (r.region || '').trim(); if (g) set.add(g); } });
-    return set.size;
-  }
-
-  function renderShareCard() {
-    const s = computeStats();
-    const card = document.getElementById('mpShareCard');
-
-    // 스타일 적용
-    const ink = readableInk(cardStyle.bgColor);
-    card.style.background = cardStyle.bgColor;
-    card.style.color = ink;
-    card.style.fontFamily = cardStyle.font;
-    card.style.textAlign = cardStyle.align;
-    card.setAttribute('data-align', cardStyle.align);
-    document.getElementById('scAmount').style.color = cardStyle.accentColor;
-
-    const nick = document.getElementById('mpName').textContent || '사용자';
-    const headline = (cardStyle.headline || '').trim();
-    document.getElementById('scWho').textContent = headline
-      ? headline
-      : (shareOpts.nickname ? (nick + ' 님의 ' + range.label) : (range.label + ' 활동 리포트'));
-
-    document.getElementById('scAmount').textContent = s.sum.toLocaleString('ko-KR') + '원';
-    document.getElementById('scCaption').textContent = '체험단 매니저와 함께 아꼈어요';
-
-    const stats = [];
-    if (shareOpts.count) stats.push({ label: '완료', value: s.cnt + '건' });
-    if (shareOpts.category) {
-      const c = topCategoryInRange();
-      if (c) stats.push({ label: '주력 분야', value: c });
-    }
-    if (shareOpts.region) {
-      const n = regionCountInRange();
-      if (n > 0) stats.push({ label: '활동 지역', value: n + '곳' });
-    }
-    document.getElementById('scStats').innerHTML = stats.map(st =>
-      '<div><div class="mp-sc-stat-label">' + esc(st.label) + '</div>'
-      + '<div class="mp-sc-stat-value">' + esc(st.value) + '</div></div>'
-    ).join('');
-
-    const now = new Date();
-    document.getElementById('scDate').textContent =
-      now.getFullYear() + '.' + (now.getMonth() + 1) + '.' + now.getDate();
-    document.getElementById('scHintPeriod').textContent = range.label;
-  }
-
-  function canShareImage() {
-    try {
-      if (!navigator.canShare || !navigator.share) return false;
-      const probe = new File([new Blob(['x'], { type: 'image/png' })], 'probe.png', { type: 'image/png' });
-      return navigator.canShare({ files: [probe] });
-    } catch (e) { return false; }
-  }
-
-  function openShare() {
-    document.getElementById('mpShareStatus').textContent = '';
-    document.getElementById('mpShareSend').style.display = canShareImage() ? 'block' : 'none';
-    renderBasicPresetChips();
-    renderPresetChips();
-    syncCustomUI();
-    renderShareCard();
-    document.getElementById('mpShareModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    loadHtml2Canvas().catch(() => {}); // 미리 받아두기
-  }
-  function closeShare() {
-    document.getElementById('mpShareModal').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-
-  document.getElementById('mpShareBtn').addEventListener('click', openShare);
-  document.getElementById('mpShareClose').addEventListener('click', closeShare);
-  document.getElementById('mpShareCancel').addEventListener('click', closeShare);
-  document.getElementById('mpShareModal').addEventListener('click', (e) => {
-    if (e.target.id === 'mpShareModal') closeShare();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.getElementById('mpShareModal').classList.contains('open')) closeShare();
-  });
-
-  // ===== 꾸미기 컨트롤 =====
-  function renderSwatches(containerId, colors, key) {
-    const el = document.getElementById(containerId);
-    el.innerHTML = colors.map(c =>
-      '<button type="button" class="mp-swatch" data-color="' + c + '" style="background:' + c + '" title="' + c + '"></button>'
-    ).join('')
-      + '<input type="color" class="mp-color-input" data-key="' + key + '" value="' + cardStyle[key] + '">';
-    markSwatch(containerId, cardStyle[key]);
-  }
-  function markSwatch(containerId, color) {
-    const t = String(color || '').toLowerCase();
-    document.querySelectorAll('#' + containerId + ' .mp-swatch').forEach(b => {
-      b.classList.toggle('active', String(b.dataset.color || '').toLowerCase() === t);
-    });
-  }
-
-  function bindSwatchRow(containerId, key) {
-    document.getElementById(containerId).addEventListener('click', (e) => {
-      const sw = e.target.closest('.mp-swatch');
-      if (!sw) return;
-      cardStyle[key] = sw.dataset.color;
-      const inp = document.querySelector('#' + containerId + ' .mp-color-input');
-      if (inp) inp.value = sw.dataset.color;
-      markSwatch(containerId, sw.dataset.color);
-      saveCardStyle(); renderShareCard();
-    });
-    document.getElementById(containerId).addEventListener('input', (e) => {
-      const inp = e.target.closest('.mp-color-input');
-      if (!inp) return;
-      cardStyle[key] = inp.value;
-      markSwatch(containerId, inp.value);
-      saveCardStyle(); renderShareCard();
-    });
-  }
-
-  // 프리셋 적용 (기본/별점메이커 공통)
-  function applyPresetStyle(o) {
-    cardStyle.bgColor = o.bgColor || DEFAULT_CARD.bgColor;
-    cardStyle.accentColor = o.accentColor || DEFAULT_CARD.accentColor;
-    cardStyle.font = o.font || DEFAULT_CARD.font;
-    cardStyle.align = o.align || DEFAULT_CARD.align;
-    saveCardStyle();
-    syncCustomUI();
-    renderShareCard();
-  }
-
-  // 기본 프리셋 칩
-  function renderBasicPresetChips() {
-    document.getElementById('mpBasicPresetRow').innerHTML = BASIC_PRESETS.map(p =>
-      '<button class="mp-preset-chip" data-basic-id="' + p.id + '">'
-      + '<span class="mp-preset-dot" style="background:' + p.bgColor + '"></span>'
-      + esc(p.name) + '</button>'
-    ).join('');
-  }
-
-  document.getElementById('mpBasicPresetRow').addEventListener('click', (e) => {
-    const chip = e.target.closest('[data-basic-id]');
-    if (!chip) return;
-    const p = BASIC_PRESETS.find(x => x.id === chip.dataset.basicId);
-    if (p) applyPresetStyle(p);
-  });
-
-  // 프리셋 칩 렌더 (별점 메이커에서 저장한 것)
-  function renderPresetChips() {
-    const row = document.getElementById('mpPresetRow');
-    const empty = document.getElementById('mpPresetEmpty');
-    const presets = loadRatingMakerPresets();
-
-    if (!presets.length) {
-      row.innerHTML = '';
-      empty.style.display = 'block';
-      return;
-    }
-    empty.style.display = 'none';
-    row.innerHTML = presets.map(p =>
-      '<button class="mp-preset-chip" data-preset-id="' + esc(p.id) + '">'
-      + '<span class="mp-preset-dot" style="background:' + esc(p.cardColor || '#fff') + '"></span>'
-      + esc(p.name) + '</button>'
-    ).join('');
-  }
-
-  document.getElementById('mpPresetRow').addEventListener('click', (e) => {
-    const chip = e.target.closest('[data-preset-id]');
-    if (!chip) return;
-    const p = loadRatingMakerPresets().find(x => x.id === chip.dataset.presetId);
-    if (!p) return;
-    // 별점 메이커 프리셋 → 활동 카드 스타일로 매핑
-    applyPresetStyle({
-      bgColor: p.cardColor, accentColor: p.starColor, font: p.font, align: p.align
-    });
-  });
-
-  // 폰트 / 정렬 / 문구
-  document.getElementById('mpFontSelect').addEventListener('change', (e) => {
-    cardStyle.font = e.target.value;
-    saveCardStyle(); renderShareCard();
-  });
-  document.getElementById('mpAlignRow').addEventListener('click', (e) => {
-    const b = e.target.closest('.mp-align-btn');
-    if (!b) return;
-    cardStyle.align = b.dataset.align;
-    document.querySelectorAll('.mp-align-btn').forEach(x => x.classList.toggle('on', x === b));
-    saveCardStyle(); renderShareCard();
-  });
-  document.getElementById('mpHeadline').addEventListener('input', (e) => {
-    cardStyle.headline = e.target.value;
-    saveCardStyle(); renderShareCard();
-  });
-
-  document.getElementById('mpFoldBtn').addEventListener('click', () => {
-    const body = document.getElementById('mpFoldBody');
-    const open = body.classList.toggle('open');
-    document.getElementById('mpFoldBtn').textContent = '🎨 직접 꾸미기';
-  });
-
-  // 스와치 행 이벤트는 컨테이너에 1회만 위임 바인딩
-  bindSwatchRow('mpBgSwatches', 'bgColor');
-  bindSwatchRow('mpAccentSwatches', 'accentColor');
-
-  // 컨트롤 UI를 현재 cardStyle에 동기화
-  function syncCustomUI() {
-    renderSwatches('mpBgSwatches', BG_PRESETS, 'bgColor');
-    renderSwatches('mpAccentSwatches', ACCENT_PRESETS, 'accentColor');
-    document.getElementById('mpFontSelect').value = cardStyle.font;
-    document.querySelectorAll('.mp-align-btn').forEach(b => b.classList.toggle('on', b.dataset.align === cardStyle.align));
-    document.getElementById('mpHeadline').value = cardStyle.headline || '';
-  }
-
-  document.getElementById('mpToggleRow').addEventListener('change', (e) => {
-    const inp = e.target.closest('input[data-opt]');
-    if (!inp) return;
-    shareOpts[inp.dataset.opt] = inp.checked;
-    inp.closest('.mp-toggle').classList.toggle('on', inp.checked);
-    renderShareCard();
-  });
-
-  // 카드 → 캔버스 (저장/공유 공통)
-  async function renderCardCanvas() {
-    const html2canvas = await loadHtml2Canvas();
-    const card = document.getElementById('mpShareCard');
-    return html2canvas(card, {
-      backgroundColor: cardStyle.bgColor,
-      scale: 3,
-      useCORS: true,
-      logging: false
-    });
-  }
-  function cardFileName() {
-    return '체험단매니저_활동카드_' + range.label.replace(/[^0-9가-힣a-zA-Z]/g, '') + '.png';
-  }
-
-  // 저장 — 다운로드만, 공유 시트 절대 열지 않음
-  document.getElementById('mpShareSave').addEventListener('click', async () => {
-    const btn = document.getElementById('mpShareSave');
-    const hint = document.getElementById('mpShareStatus');
-    btn.disabled = true;
-    btn.textContent = '만드는 중…';
-    try {
-      const canvas = await renderCardCanvas();
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
-      a.download = cardFileName();
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      hint.textContent = '저장했어요! 다운로드(사진) 폴더를 확인해 주세요.';
-    } catch (err) {
-      console.error('[mypage] card save error:', err);
-      hint.textContent = '이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.';
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '💾 저장';
-    }
-  });
-
-  // 공유 — 공유 시트를 지원하는 환경에서만 노출
-  document.getElementById('mpShareSend').addEventListener('click', async () => {
-    const btn = document.getElementById('mpShareSend');
-    const hint = document.getElementById('mpShareStatus');
-    btn.disabled = true;
-    btn.textContent = '준비 중…';
-    try {
-      const canvas = await renderCardCanvas();
-      const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-      if (!blob) throw new Error('BLOB_FAIL');
-      const file = new File([blob], cardFileName(), { type: 'image/png' });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: '체험단 매니저 활동 카드' });
-      } else {
-        hint.textContent = '이 브라우저는 이미지 공유를 지원하지 않아요. 저장 후 직접 올려주세요.';
-      }
-    } catch (err) {
-      if (!err || err.name !== 'AbortError') {
-        console.error('[mypage] card share error:', err);
-        hint.textContent = '공유하지 못했어요. 저장 후 직접 올려주세요.';
-      }
-    } finally {
-      btn.disabled = false;
-      btn.textContent = '📤 공유';
-    }
-  });
 
   function renderPortfolio() { renderMap(); renderCategory(); renderHighlights(); renderBadges(); }
   function renderAll() { renderStats(); renderList(); renderPortfolio(); }
