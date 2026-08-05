@@ -2313,13 +2313,13 @@
 
       // ── 요약 ──
       const sum = wb.addWorksheet('요약', { views: [{ showGridLines: false }] });
-      sum.getColumn(1).width = 4;
-      sum.getColumn(2).width = 22;
-      sum.getColumn(3).width = 20;
-      sum.getColumn(4).width = 4;
-      sum.getColumn(5).width = 20;
-      sum.getColumn(6).width = 20;
-      sum.getColumn(7).width = 4;
+      sum.getColumn(1).width = 3;   // 여백
+      sum.getColumn(2).width = 19;  // 라벨 / 연도
+      sum.getColumn(3).width = 15;  // 값 / 건수
+      sum.getColumn(4).width = 15;  // 금액 합계
+      sum.getColumn(5).width = 17;  // 건당 평균
+      sum.getColumn(6).width = 13;  // 미입력
+      sum.getColumn(7).width = 3;   // 여백
 
       // 제목 배너
       sum.mergeCells('B2:F3');
@@ -2340,7 +2340,7 @@
       sub.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.paper } };
 
       // 대표 지표 카드 3개
-      function bigCard(cellRange, label, value, fmt) {
+      function bigCard(cellRange, value, fmt) {
         sum.mergeCells(cellRange);
         const top = cellRange.split(':')[0];
         const c = sum.getCell(top);
