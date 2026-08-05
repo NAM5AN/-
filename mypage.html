@@ -387,7 +387,7 @@
 }
 .mp-map-pin span {
   transform: rotate(45deg);
-  color: #fff; font-size: 11px; font-weight: 700; line-height: 1;
+  font-size: 13px; line-height: 1;
 }
 .mp-map-info {
   background: #fff; border: 1px solid var(--line, #e8e0d4);
@@ -398,6 +398,38 @@
 }
 .mp-map-info b { display: block; font-size: 13px; margin-bottom: 2px; }
 .mp-map-info small { color: var(--ink-faint, #9b8f82); }
+
+/* 묶음(클러스터) 마커 */
+.mp-map-cluster {
+  min-width: 30px; height: 30px; padding: 0 7px;
+  border-radius: 999px; box-sizing: border-box;
+  background: var(--terra, #b0603f); color: #fff;
+  border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.28);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.mp-map-cluster.md { min-width: 36px; height: 36px; font-size: 14px; }
+.mp-map-cluster.lg { min-width: 44px; height: 44px; font-size: 15px; }
+
+/* 묶음 말풍선 (여러 건 목록) */
+.mp-map-info.multi { white-space: normal; max-width: 260px; padding: 10px 10px 8px; }
+.mp-info-head {
+  font-size: 12px; font-weight: 700; color: var(--ink, #3d3229);
+  padding: 0 2px 7px; border-bottom: 1px solid var(--line, #e8e0d4); margin-bottom: 6px;
+}
+.mp-info-list { max-height: 168px; overflow-y: auto; }
+.mp-info-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 2px; border-bottom: 1px solid var(--paper, #faf6ef);
+}
+.mp-info-row:last-child { border-bottom: none; }
+.mp-info-ico { font-size: 13px; flex-shrink: 0; }
+.mp-info-name {
+  flex: 1; min-width: 0; font-size: 12px; color: var(--ink, #3d3229);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mp-info-meta { font-size: 10px; color: var(--ink-faint, #9b8f82); flex-shrink: 0; }
 .mp-map-zoom {
   position: absolute; right: 10px; bottom: 10px; z-index: 3;
   border: 1px solid var(--line, #e8e0d4); background: #fff;
@@ -896,6 +928,69 @@
     }).join('');
   }
 
+  // ===== 카테고리 아이콘 (메인 페이지와 동일 규칙) =====
+  const CATEGORY_ICONS = [
+    { pattern: /카페|커피|coffee|cafe|에스프레소|로스터/i, icon: '☕' },
+    { pattern: /디저트|케이크|베이커리|빵|제과|마카롱|쿠키|와플|크로플|도넛|크레페|아이스크림|젤라또|빙수/i, icon: '🥐' },
+    { pattern: /초밥|스시|사시미|회|일식|이자카야|라멘|돈까스|우동|소바|덮밥|규동|텐동/i, icon: '🍣' },
+    { pattern: /중식|중화|짜장|짬뽕|마라|훠궈|딤섬|양꼬치/i, icon: '🥡' },
+    { pattern: /파스타|피자|스테이크|양식|이탈리안|프렌치|스페인|타파스/i, icon: '🍝' },
+    { pattern: /햄버거|버거|패스트푸드/i, icon: '🍔' },
+    { pattern: /치킨|닭갈비|찜닭|닭발/i, icon: '🍗' },
+    { pattern: /삼겹살|돼지|소고기|한우|갈비|고깃집|숯불|구이|곱창|막창|족발|보쌈/i, icon: '🥩' },
+    { pattern: /분식|떡볶이|김밥|순대|어묵|튀김|핫도그/i, icon: '🍢' },
+    { pattern: /한식|국밥|백반|냉면|찌개|국수|칼국수|만두|쌈밥|비빔밥|설렁탕|곰탕|순두부|해장국|보리밥|쌈|쌈장/i, icon: '🍚' },
+    { pattern: /해산물|조개|회집|장어|문어|새우|랍스터|게|꽃게|대게/i, icon: '🦐' },
+    { pattern: /샐러드|건강|채식|비건|포케/i, icon: '🥗' },
+    { pattern: /술집|호프|와인|이자카야|포차|바|펍|위스키|칵테일|맥주/i, icon: '🍺' },
+    { pattern: /떡|떡집|한과|전통/i, icon: '🍡' },
+    { pattern: /과일|청과|주스|스무디|쥬스/i, icon: '🍓' },
+    { pattern: /음식점|식당|레스토랑|키친|다이닝|푸드/i, icon: '🍽️' },
+    { pattern: /피부과|피부|에스테틱|스킨/i, icon: '✨' },
+    { pattern: /성형|미용|시술/i, icon: '💎' },
+    { pattern: /치과|덴탈/i, icon: '🦷' },
+    { pattern: /안과|안경|렌즈/i, icon: '👓' },
+    { pattern: /한의원|한방/i, icon: '🌿' },
+    { pattern: /병원|의원|클리닉|메디컬|내과|외과|소아과|이비인후과|정형외과|산부인과/i, icon: '🏥' },
+    { pattern: /약국/i, icon: '💊' },
+    { pattern: /미용실|헤어|살롱|cut|커트|펌|염색/i, icon: '💇' },
+    { pattern: /네일|페디/i, icon: '💅' },
+    { pattern: /마사지|스파|왁싱|타이|아로마|두피/i, icon: '💆' },
+    { pattern: /속눈썹|래쉬/i, icon: '👁️' },
+    { pattern: /화장품|코스메틱|cosmetic/i, icon: '💄' },
+    { pattern: /헬스|피트니스|짐|gym|크로스핏/i, icon: '💪' },
+    { pattern: /요가|필라테스|발레/i, icon: '🧘' },
+    { pattern: /수영|풀|swim/i, icon: '🏊' },
+    { pattern: /클라이밍|볼더링/i, icon: '🧗' },
+    { pattern: /골프|스크린골프/i, icon: '⛳' },
+    { pattern: /테니스|스쿼시|배드민턴/i, icon: '🎾' },
+    { pattern: /펜션|호텔|모텔|숙박|풀빌라|리조트|게스트하우스|민박/i, icon: '🏨' },
+    { pattern: /캠핑|글램핑|차박/i, icon: '🏕️' },
+    { pattern: /서점|책|북카페|독립서점/i, icon: '📚' },
+    { pattern: /꽃|플라워|플로리스트|화원/i, icon: '💐' },
+    { pattern: /사진|스튜디오|포토|증명사진/i, icon: '📷' },
+    { pattern: /공방|클래스|원데이|체험|만들기|diy/i, icon: '🎨' },
+    { pattern: /펫|동물|강아지|고양이|반려|애견|미용\s*샵/i, icon: '🐾' },
+    { pattern: /노래방|코노|karaoke/i, icon: '🎤' },
+    { pattern: /pc방|게임|보드게임|방탈출/i, icon: '🎮' },
+    { pattern: /영화|시네마|cgv|메가박스|롯데시네마/i, icon: '🎬' },
+    { pattern: /마트|편의점|시장|쇼핑|아울렛|백화점/i, icon: '🛍️' },
+    { pattern: /세탁|크리닝|빨래/i, icon: '👕' },
+    { pattern: /자동차|정비|세차|타이어/i, icon: '🚗' },
+    { pattern: /가구|인테리어|소품/i, icon: '🛋️' },
+    { pattern: /학원|교습|과외|수학|영어/i, icon: '📖' }
+  ];
+
+  function getCategoryIcon(entry) {
+    if (!entry) return '📍';
+    const text = [entry.category, entry.store, entry.content].filter(Boolean).join(' ');
+    if (!text) return '📍';
+    for (const ci of CATEGORY_ICONS) {
+      if (ci.pattern.test(text)) return ci.icon;
+    }
+    return '📍';
+  }
+
   // ===== 포트폴리오: 활동 지도 =====
   const KAKAO_KEY = '21466d7ae884ca307c2ec034bd6887e1';
   let kakaoLoadPromise = null;
@@ -926,14 +1021,136 @@
     );
   }
 
+  // 줌 레벨별 묶음 크기 (도 단위) — 레벨이 클수록(축소) 넓게 묶음
+  function clusterCellSize(level) {
+    if (level <= 3) return 0;                       // 확대 상태: 묶지 않음
+    return 0.00025 * Math.pow(2, level);            // 예: L5≈0.008(≈900m), L8≈0.064(≈7km), L11≈0.5(≈55km)
+  }
+
+  // 거리 기반 병합 — 격자 경계에서 인접 지점이 갈라지는 문제를 피함
+  function buildClusters(pts, level) {
+    const cell = clusterCellSize(level);
+    if (cell === 0) return pts.map(p => ({ items: [p], lat: p.lat, lng: p.lng }));
+
+    const used = new Array(pts.length).fill(false);
+    const clusters = [];
+    // 위도순으로 훑으며 반경 안의 미사용 지점을 흡수
+    const idx = pts.map((p, i) => i).sort((a, b) => pts[a].lat - pts[b].lat);
+
+    idx.forEach(i => {
+      if (used[i]) return;
+      used[i] = true;
+      const items = [pts[i]];
+      let lat = pts[i].lat, lng = pts[i].lng;
+
+      idx.forEach(j => {
+        if (used[j]) return;
+        // 경도는 위도에 따라 실제 거리가 줄어드므로 보정
+        const dLat = pts[j].lat - lat;
+        const dLng = (pts[j].lng - lng) * Math.cos(lat * Math.PI / 180);
+        if (Math.sqrt(dLat * dLat + dLng * dLng) <= cell) {
+          used[j] = true;
+          items.push(pts[j]);
+          lat = items.reduce((s, x) => s + x.lat, 0) / items.length;
+          lng = items.reduce((s, x) => s + x.lng, 0) / items.length;
+        }
+      });
+      clusters.push({ items, lat, lng });
+    });
+    return clusters;
+  }
+
+  // 현재 표시 중인 오버레이 정리
+  let mpOverlays = [];
+  function clearMapOverlays() {
+    mpOverlays.forEach(o => o.setMap(null));
+    mpOverlays = [];
+    if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
+  }
+
+  function buildInfoContent(items) {
+    const box = document.createElement('div');
+    box.className = 'mp-map-info' + (items.length > 1 ? ' multi' : '');
+
+    if (items.length === 1) {
+      const p = items[0];
+      box.innerHTML = '<b>' + esc(p.store || '(이름 없음)') + '</b>'
+        + '<small>' + fmtDateShort(p.at) + ' 완료'
+        + (p.value != null ? ' · ' + p.value.toLocaleString('ko-KR') + '원' : '')
+        + '</small>';
+    } else {
+      const sorted = items.slice().sort((a, b) => b.at - a.at);
+      box.innerHTML = '<div class="mp-info-head">이 지역 ' + items.length + '곳</div>'
+        + '<div class="mp-info-list">'
+        + sorted.map(p =>
+            '<div class="mp-info-row">'
+            + '<span class="mp-info-ico">' + getCategoryIcon(p) + '</span>'
+            + '<span class="mp-info-name">' + esc(p.store || '(이름 없음)') + '</span>'
+            + '<span class="mp-info-meta">' + fmtDateShort(p.at)
+            + (p.value != null ? ' · ' + p.value.toLocaleString('ko-KR') + '원' : '') + '</span>'
+            + '</div>'
+          ).join('')
+        + '</div>';
+    }
+    return box;
+  }
+
+  function drawMarkers() {
+    if (!mpMap || !window.kakao) return;
+    const kakao = window.kakao;
+    clearMapOverlays();
+
+    const pts = mapPoints();
+    const clusters = buildClusters(pts, mpMap.getLevel());
+
+    clusters.forEach(c => {
+      const pos = new kakao.maps.LatLng(c.lat, c.lng);
+      const single = c.items.length === 1;
+
+      const el = document.createElement('div');
+      if (single) {
+        el.className = 'mp-map-pin';
+        el.innerHTML = '<span>' + getCategoryIcon(c.items[0]) + '</span>';
+      } else {
+        el.className = 'mp-map-cluster';
+        // 개수에 따라 크기 단계
+        if (c.items.length >= 10) el.classList.add('lg');
+        else if (c.items.length >= 5) el.classList.add('md');
+        el.textContent = c.items.length;
+      }
+
+      const marker = new kakao.maps.CustomOverlay({
+        position: pos, content: el, yAnchor: single ? 1 : 0.5, clickable: true, zIndex: single ? 2 : 3
+      });
+      marker.setMap(mpMap);
+      mpOverlays.push(marker);
+
+      const info = buildInfoContent(c.items);
+      const overlay = new kakao.maps.CustomOverlay({
+        position: pos, content: info, yAnchor: single ? 2.1 : 1.25, clickable: true, zIndex: 10
+      });
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (mpOpenOverlay) mpOpenOverlay.setMap(null);
+        if (mpOpenOverlay === overlay) { mpOpenOverlay = null; return; }
+        overlay.setMap(mpMap);
+        mpOpenOverlay = overlay;
+      });
+      info.addEventListener('click', (e) => {
+        if (e.target.closest('.mp-info-list')) return; // 목록 스크롤 중 닫힘 방지
+        overlay.setMap(null); mpOpenOverlay = null;
+      });
+    });
+  }
+
   async function renderMap() {
-    if (mpMap) return; // 마커 중복 방지 — 최초 1회만 그림
+    if (mpMap) return; // 최초 1회만 초기화 (이후는 drawMarkers가 갱신)
     const msg = document.getElementById('mpMapMsg');
     const statEl = document.getElementById('mpMapStat');
     const fitBtn = document.getElementById('mpMapFit');
     const pts = mapPoints();
 
-    // 통계 문구 (지도 로드와 무관하게 먼저)
     const regions = new Set(rows.map(r => (r.region || '').trim()).filter(Boolean));
     statEl.textContent = pts.length > 0
       ? (pts.length + '곳 · ' + (regions.size || 1) + '개 지역')
@@ -958,54 +1175,19 @@
     msg.classList.add('hidden');
     fitBtn.style.display = 'block';
 
-    const container = document.getElementById('mpMapCanvas');
-    if (!mpMap) {
-      mpMap = new kakao.maps.Map(container, {
-        center: new kakao.maps.LatLng(pts[0].lat, pts[0].lng),
-        level: 7
-      });
-      // 지도 클릭 시 열린 말풍선 닫기
-      kakao.maps.event.addListener(mpMap, 'click', () => {
-        if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
-      });
-    }
+    mpMap = new kakao.maps.Map(document.getElementById('mpMapCanvas'), {
+      center: new kakao.maps.LatLng(pts[0].lat, pts[0].lng),
+      level: 7
+    });
+
+    kakao.maps.event.addListener(mpMap, 'click', () => {
+      if (mpOpenOverlay) { mpOpenOverlay.setMap(null); mpOpenOverlay = null; }
+    });
+    // 줌이 바뀌면 묶음 단위 재계산
+    kakao.maps.event.addListener(mpMap, 'zoom_changed', drawMarkers);
 
     mpBounds = new kakao.maps.LatLngBounds();
-
-    pts.forEach(p => {
-      const pos = new kakao.maps.LatLng(p.lat, p.lng);
-      mpBounds.extend(pos);
-
-      const pin = document.createElement('div');
-      pin.className = 'mp-map-pin';
-      pin.innerHTML = '<span>📍</span>';
-
-      const marker = new kakao.maps.CustomOverlay({
-        position: pos, content: pin, yAnchor: 1, clickable: true
-      });
-      marker.setMap(mpMap);
-
-      // 말풍선
-      const info = document.createElement('div');
-      info.className = 'mp-map-info';
-      info.innerHTML = '<b>' + esc(p.store || '(이름 없음)') + '</b>'
-        + '<small>' + fmtDateShort(p.at) + ' 완료'
-        + (p.value != null ? ' · ' + p.value.toLocaleString('ko-KR') + '원' : '')
-        + '</small>';
-
-      const overlay = new kakao.maps.CustomOverlay({
-        position: pos, content: info, yAnchor: 2.1, clickable: true
-      });
-
-      pin.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (mpOpenOverlay) mpOpenOverlay.setMap(null);
-        if (mpOpenOverlay === overlay) { mpOpenOverlay = null; return; }
-        overlay.setMap(mpMap);
-        mpOpenOverlay = overlay;
-      });
-      info.addEventListener('click', () => { overlay.setMap(null); mpOpenOverlay = null; });
-    });
+    pts.forEach(p => mpBounds.extend(new kakao.maps.LatLng(p.lat, p.lng)));
 
     if (pts.length === 1) {
       mpMap.setCenter(new kakao.maps.LatLng(pts[0].lat, pts[0].lng));
@@ -1014,6 +1196,7 @@
       mpMap.setBounds(mpBounds);
     }
     mpMap.relayout();
+    drawMarkers();
   }
 
   document.getElementById('mpMapFit').addEventListener('click', () => {
@@ -1022,6 +1205,7 @@
     const pts = mapPoints();
     if (pts.length === 1) { mpMap.setLevel(4); mpMap.setCenter(new window.kakao.maps.LatLng(pts[0].lat, pts[0].lng)); }
     else mpMap.setBounds(mpBounds);
+    drawMarkers();
   });
 
   // ===== 공유 카드 모달 =====
