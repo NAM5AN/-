@@ -235,38 +235,6 @@
 .mp-badge-desc { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 2px; }
 .mp-badge-count { font-size: 12px; color: var(--ink-faint, #9b8f82); margin: -4px 0 12px; }
 
-/* 업적 — 헤더/탭 */
-.mp-ac-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.mp-ac-tabs { display: flex; gap: 5px; flex-shrink: 0; }
-.mp-ac-tab {
-  border: 1px solid var(--line, #e8e0d4); background: none;
-  border-radius: 999px; padding: 5px 12px; font-size: 12px;
-  color: var(--ink-soft, #6f6457); cursor: pointer; font-family: inherit;
-}
-.mp-ac-tab.on { background: var(--terra, #b0603f); border-color: var(--terra, #b0603f); color: #fff; font-weight: 700; }
-
-/* A. 계열별 한 줄 */
-.mp-ac-chains {
-  background: var(--card, #fff); border: 1px solid var(--line, #e8e0d4);
-  border-radius: 14px; padding: 2px 14px;
-}
-.mp-ac-row { border-bottom: 1px solid var(--line, #e8e0d4); }
-.mp-ac-row:last-child { border-bottom: none; }
-.mp-ac-row-main { display: flex; align-items: center; gap: 11px; padding: 11px 0; cursor: pointer; }
-.mp-ac-icon { font-size: 20px; flex-shrink: 0; width: 24px; text-align: center; }
-.mp-ac-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.mp-ac-title { font-size: 13px; font-weight: 600; color: var(--ink, #3d3229); }
-.mp-ac-count { font-size: 11px; color: var(--ink-faint, #9b8f82); font-variant-numeric: tabular-nums; }
-.mp-ac-track { height: 5px; background: var(--paper, #faf6ef); border-radius: 3px; margin-top: 5px; overflow: hidden; }
-.mp-ac-fill { height: 100%; background: var(--terra, #b0603f); border-radius: 3px; transition: width .4s ease; }
-.mp-ac-sub { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 4px; }
-.mp-ac-caret { font-size: 11px; color: var(--ink-faint, #9b8f82); flex-shrink: 0; }
-.mp-ac-tiers { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 0 12px 35px; }
-.mp-ac-chip { font-size: 11px; padding: 4px 9px; border-radius: 8px; white-space: nowrap; }
-.mp-ac-chip.done { background: var(--terra-soft, #f2e0d6); color: var(--terra, #b0603f); font-weight: 600; }
-.mp-ac-chip.next { background: var(--paper, #faf6ef); color: var(--ink-soft, #6f6457); }
-.mp-ac-chip.hidden { background: var(--paper, #faf6ef); color: var(--ink-faint, #9b8f82); opacity: .7; }
-
 /* B. 진열장 */
 .mp-ac-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px;
@@ -283,15 +251,36 @@
 .mp-ac-cell.done { background: var(--terra-soft, #f2e0d6); }
 .mp-ac-cell.next { background: var(--paper, #faf6ef); opacity: .8; }
 .mp-ac-cell.hide { background: var(--paper, #faf6ef); opacity: .45; }
-.mp-ac-cell.sel { box-shadow: 0 0 0 2px var(--terra, #b0603f); }
-.mp-ac-detail {
-  margin-top: 10px; padding: 11px 13px;
-  background: var(--paper, #faf6ef); border-radius: 10px;
-  font-size: 12px; color: var(--ink-soft, #6f6457); line-height: 1.6;
+/* 업적 상세 팝업 */
+.mp-acpop-box {
+  position: relative; text-align: center;
+  background: var(--card, #fff); border-radius: 20px;
+  width: 100%; max-width: 300px; padding: 30px 24px 26px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.2);
 }
-.mp-ac-detail b { color: var(--ink, #3d3229); }
-.mp-ac-ok { color: var(--terra, #b0603f); font-weight: 700; }
-.mp-ac-prog { color: var(--ink-faint, #9b8f82); }
+.mp-acpop-icon {
+  width: 76px; height: 76px; margin: 0 auto 14px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 38px; background: var(--terra-soft, #f2e0d6);
+}
+.mp-acpop-icon.next { background: var(--paper, #faf6ef); }
+.mp-acpop-icon.hide { background: var(--paper, #faf6ef); opacity: .6; }
+.mp-acpop-badge {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 4px 11px; border-radius: 999px; margin-bottom: 10px;
+  background: var(--terra, #b0603f); color: #fff;
+}
+.mp-acpop-badge.next { background: var(--paper, #faf6ef); color: var(--ink-soft, #6f6457); }
+.mp-acpop-badge.hide { background: var(--paper, #faf6ef); color: var(--ink-faint, #9b8f82); }
+.mp-acpop-name {
+  font-family: var(--font-serif, serif); font-size: 20px;
+  color: var(--ink, #3d3229); margin-bottom: 6px;
+}
+.mp-acpop-desc { font-size: 13px; color: var(--ink-soft, #6f6457); line-height: 1.6; }
+.mp-acpop-prog { margin-top: 16px; }
+.mp-acpop-track { height: 7px; background: var(--paper, #faf6ef); border-radius: 4px; overflow: hidden; }
+.mp-acpop-fill { height: 100%; background: var(--terra, #b0603f); border-radius: 4px; }
+.mp-acpop-num { font-size: 11px; color: var(--ink-faint, #9b8f82); margin-top: 7px; font-variant-numeric: tabular-nums; }
 
 /* 공유 버튼 */
 .mp-share-btn {
@@ -666,19 +655,23 @@
 
     <!-- 업적 -->
     <div style="margin-top:22px;">
-      <div class="mp-ac-top">
-        <div>
-          <div class="mp-sub-title" style="font-size:14px; margin:0;">🎖️ 업적</div>
-          <div class="mp-badge-count" id="mpBadgeCount" style="margin:4px 0 0;"></div>
-        </div>
-        <div class="mp-ac-tabs" id="mpAcTabs">
-          <button class="mp-ac-tab on" data-view="chain">계열별</button>
-          <button class="mp-ac-tab" data-view="case">진열장</button>
-        </div>
-      </div>
-      <div id="mpBadges" style="margin-top:12px;"></div>
+      <div class="mp-sub-title" style="font-size:14px;">🎖️ 업적</div>
+      <div class="mp-badge-count" id="mpBadgeCount"></div>
+      <div id="mpBadges"></div>
     </div>
   </section>
+</div>
+
+<!-- 업적 상세 팝업 -->
+<div class="mp-modal" id="mpAcPop">
+  <div class="mp-acpop-box">
+    <button class="mp-modal-close" id="mpAcPopClose" aria-label="닫기" style="position:absolute; top:12px; right:14px;">✕</button>
+    <div class="mp-acpop-icon" id="mpAcPopIcon">🌱</div>
+    <div class="mp-acpop-badge" id="mpAcPopBadge">달성 완료</div>
+    <div class="mp-acpop-name" id="mpAcPopName">업적</div>
+    <div class="mp-acpop-desc" id="mpAcPopDesc"></div>
+    <div class="mp-acpop-prog" id="mpAcPopProg" style="display:none;"></div>
+  </div>
 </div>
 
 <!-- 상세 목록 모달 (카테고리·최고가 공용) -->
@@ -1109,8 +1102,6 @@
 
   // ===== 포트폴리오: 업적 =====
   // ===== 포트폴리오: 업적 =====
-  let achieveView = 'chain';   // 'chain' = 계열별 / 'case' = 진열장
-  let openChain = -1;          // 펼쳐진 계열 index
   let achieveData = null;      // { chains, done, total }
 
   function buildAchievements() {
@@ -1232,40 +1223,6 @@
     return { chains: CHAINS, done: done, total: total2 };
   }
 
-  // ── A. 계열별 한 줄 ──
-  function renderChainView() {
-    const d = achieveData;
-    return '<div class="mp-ac-chains">' + d.chains.map((ch, i) => {
-      const pct = Math.round(ch.doneCount / ch.tiers.length * 100);
-      const open = openChain === i;
-
-      let sub;
-      if (ch.next) sub = '다음: ' + esc(ch.next.name) + ' · ' + esc(ch.next.progress);
-      else sub = '전 단계 달성! 🎉';
-
-      let expand = '';
-      if (open) {
-        expand = '<div class="mp-ac-tiers">' + ch.tiers.map(t => {
-          if (t.state === 'done') return '<span class="mp-ac-chip done">' + t.icon + ' ' + esc(t.name) + '</span>';
-          if (t.state === 'next') return '<span class="mp-ac-chip next">🔒 ' + esc(t.name) + ' ' + esc(t.progress) + '</span>';
-          return '<span class="mp-ac-chip hidden">❓ ???</span>';
-        }).join('') + '</div>';
-      }
-
-      return '<div class="mp-ac-row' + (open ? ' open' : '') + '" data-chain="' + i + '">'
-        + '<div class="mp-ac-row-main">'
-        + '<span class="mp-ac-icon">' + ch.icon + '</span>'
-        + '<div style="flex:1; min-width:0;">'
-        + '<div class="mp-ac-head"><span class="mp-ac-title">' + esc(ch.title) + '</span>'
-        + '<span class="mp-ac-count">' + ch.doneCount + '/' + ch.tiers.length + '</span></div>'
-        + '<div class="mp-ac-track"><div class="mp-ac-fill" style="width:' + pct + '%"></div></div>'
-        + '<div class="mp-ac-sub">' + sub + '</div>'
-        + '</div>'
-        + '<span class="mp-ac-caret">' + (open ? '▴' : '▾') + '</span>'
-        + '</div>' + expand + '</div>';
-    }).join('') + '</div>';
-  }
-
   // ── B. 진열장 (아이콘 그리드) ──
   function renderCaseView() {
     const d = achieveData;
@@ -1283,8 +1240,7 @@
         }
       });
     });
-    return '<div class="mp-ac-grid">' + cells.join('') + '</div>'
-      + '<div class="mp-ac-detail" id="mpAcDetail">아이콘을 누르면 자세히 볼 수 있어요.</div>';
+    return '<div class="mp-ac-grid">' + cells.join('') + '</div>';
   }
 
   function flatTiers() {
@@ -1297,49 +1253,66 @@
     achieveData = buildAchievements();
     document.getElementById('mpBadgeCount').textContent =
       achieveData.done + ' / ' + achieveData.total + '개 달성';
-    document.querySelectorAll('.mp-ac-tab').forEach(b =>
-      b.classList.toggle('on', b.dataset.view === achieveView));
-    document.getElementById('mpBadges').innerHTML =
-      achieveView === 'chain' ? renderChainView() : renderCaseView();
+    document.getElementById('mpBadges').innerHTML = renderCaseView();
   }
 
-  // 탭 전환
-  document.getElementById('mpAcTabs').addEventListener('click', (e) => {
-    const b = e.target.closest('.mp-ac-tab');
-    if (!b || b.dataset.view === achieveView) return;
-    achieveView = b.dataset.view;
-    openChain = -1;
-    renderBadges();
+  // 업적 아이콘 클릭 → 팝업 상세
+  document.getElementById('mpBadges').addEventListener('click', (e) => {
+    const cell = e.target.closest('[data-tier]');
+    if (!cell) return;
+    const item = flatTiers()[Number(cell.dataset.tier)];
+    if (!item) return;
+    openAchieve(item);
   });
 
-  // 계열 펼치기 / 진열장 상세
-  document.getElementById('mpBadges').addEventListener('click', (e) => {
-    const row = e.target.closest('[data-chain]');
-    if (row) {
-      const i = Number(row.dataset.chain);
-      openChain = (openChain === i) ? -1 : i;
-      renderBadges();
-      return;
+  function openAchieve(item) {
+    const t = item.t, ch = item.ch;
+    const iconEl = document.getElementById('mpAcPopIcon');
+    const badge = document.getElementById('mpAcPopBadge');
+
+    if (t.state === 'done') {
+      iconEl.textContent = t.icon;
+      iconEl.className = 'mp-acpop-icon done';
+      document.getElementById('mpAcPopName').textContent = t.name;
+      document.getElementById('mpAcPopDesc').textContent = t.desc;
+      badge.textContent = '달성 완료';
+      badge.className = 'mp-acpop-badge done';
+      document.getElementById('mpAcPopProg').style.display = 'none';
+    } else if (t.state === 'next') {
+      iconEl.textContent = '🔒';
+      iconEl.className = 'mp-acpop-icon next';
+      document.getElementById('mpAcPopName').textContent = t.name;
+      document.getElementById('mpAcPopDesc').textContent = t.desc;
+      badge.textContent = '다음 목표';
+      badge.className = 'mp-acpop-badge next';
+      const pEl = document.getElementById('mpAcPopProg');
+      pEl.style.display = 'block';
+      const pct = Math.max(0, Math.min(100, Math.round(ch.cur / t.need * 100)));
+      pEl.innerHTML = '<div class="mp-acpop-track"><div class="mp-acpop-fill" style="width:' + pct + '%"></div></div>'
+        + '<div class="mp-acpop-num">' + esc(t.progress) + ' · ' + pct + '%</div>';
+    } else {
+      iconEl.textContent = '❓';
+      iconEl.className = 'mp-acpop-icon hide';
+      document.getElementById('mpAcPopName').textContent = '???';
+      document.getElementById('mpAcPopDesc').textContent = '아직 발견하지 못한 업적이에요.';
+      badge.textContent = ch.title + ' 계열';
+      badge.className = 'mp-acpop-badge hide';
+      document.getElementById('mpAcPopProg').style.display = 'none';
     }
-    const cell = e.target.closest('[data-tier]');
-    if (cell) {
-      const item = flatTiers()[Number(cell.dataset.tier)];
-      if (!item) return;
-      const t = item.t;
-      const box = document.getElementById('mpAcDetail');
-      if (t.state === 'done') {
-        box.innerHTML = '<b>' + t.icon + ' ' + esc(t.name) + '</b> · ' + esc(t.desc)
-          + ' <span class="mp-ac-ok">달성</span>';
-      } else if (t.state === 'next') {
-        box.innerHTML = '<b>🔒 ' + esc(t.name) + '</b> · ' + esc(t.desc)
-          + ' <span class="mp-ac-prog">' + esc(t.progress) + '</span>';
-      } else {
-        box.innerHTML = '<b>❓ ???</b> · 아직 발견하지 못한 업적이에요 ('
-          + esc(item.ch.title) + ' 계열)';
-      }
-      document.querySelectorAll('.mp-ac-cell').forEach(c => c.classList.remove('sel'));
-      cell.classList.add('sel');
-    }
+
+    document.getElementById('mpAcPop').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeAchieve() {
+    document.getElementById('mpAcPop').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('mpAcPopClose').addEventListener('click', closeAchieve);
+  document.getElementById('mpAcPop').addEventListener('click', (e) => {
+    if (e.target.id === 'mpAcPop') closeAchieve();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('mpAcPop').classList.contains('open')) closeAchieve();
   });
 
   // ===== 카테고리 아이콘 (메인 페이지와 동일 규칙) =====
