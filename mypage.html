@@ -783,6 +783,24 @@
     return meta.name || meta.full_name || meta.preferred_username || user.email?.split('@')[0] || '사용자';
   }
   function emailToInitial(email) { return email ? email.charAt(0).toUpperCase() : '?'; }
+  // ===== 팝업 열 때 스크롤 잠금 (스크롤바 폭만큼 보정해 화면 밀림 방지) =====
+  let scrollLocks = 0;
+  function lockScroll() {
+    if (scrollLocks === 0) {
+      const sbw = window.innerWidth - document.documentElement.clientWidth;
+      if (sbw > 0) document.body.style.paddingRight = sbw + 'px';
+      document.body.style.overflow = 'hidden';
+    }
+    scrollLocks++;
+  }
+  function unlockScroll() {
+    scrollLocks = Math.max(0, scrollLocks - 1);
+    if (scrollLocks === 0) {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+  }
+
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -964,11 +982,11 @@
         ).join('');
 
     document.getElementById('mpDetailModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    lockScroll();
   }
   function closeDetail() {
     document.getElementById('mpDetailModal').classList.remove('open');
-    document.body.style.overflow = '';
+    unlockScroll();
   }
   document.getElementById('mpDetailClose').addEventListener('click', closeDetail);
   document.getElementById('mpDetailModal').addEventListener('click', (e) => {
@@ -1301,11 +1319,11 @@
     }
 
     document.getElementById('mpAcPop').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    lockScroll();
   }
   function closeAchieve() {
     document.getElementById('mpAcPop').classList.remove('open');
-    document.body.style.overflow = '';
+    unlockScroll();
   }
   document.getElementById('mpAcPopClose').addEventListener('click', closeAchieve);
   document.getElementById('mpAcPop').addEventListener('click', (e) => {
@@ -1778,12 +1796,12 @@
     syncCustomUI();
     renderShareCard();
     document.getElementById('mpShareModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    lockScroll();
     loadHtml2Canvas().catch(() => {}); // 미리 받아두기
   }
   function closeShare() {
     document.getElementById('mpShareModal').classList.remove('open');
-    document.body.style.overflow = '';
+    unlockScroll();
   }
 
   document.getElementById('mpShareBtn').addEventListener('click', openShare);
