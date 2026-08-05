@@ -1289,8 +1289,11 @@
   // 줌 레벨별 묶음 크기 (도 단위) — 레벨이 클수록(축소) 넓게 묶음
   function clusterCellSize(level) {
     if (level <= 4) return 0;                       // 확대 상태: 묶지 않음
-    // 화면상 약 40px 간격으로만 묶이도록 축척에 맞춤 (L7≈400m, L9≈1.6km, L11≈6.4km)
-    return 0.000028 * Math.pow(2, level);
+    // 레벨 9(축척 4km)까지는 화면상 약 40px 간격 유지
+    const near = 0.000028 * Math.pow(2, level);
+    if (level <= 9) return near;
+    // 그보다 축소하면 지역 단위로 빠르게 합쳐지도록 가속 (L10≈5km, L11≈16km, L12≈52km)
+    return 0.000028 * Math.pow(2, 9) * Math.pow(3.2, level - 9);
   }
 
   // 거리 기반 병합 — 격자 경계에서 인접 지점이 갈라지는 문제를 피함
