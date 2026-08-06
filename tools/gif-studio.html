@@ -714,81 +714,248 @@ async function decodeGifSource(item){
   return { kind:'gif', natW:W, natH:H, duration:t, hasAlpha, gifFrames:out, video:null, url:null };
 }
 
-/* ====================== 코덱 폴백: ffmpeg.wasm (HEVC 등 → H.264) ====================== */
-// 시스템 코덱이 없어도 브라우저 안에서 직접 디코딩하기 위한 폴백.
-// 단일 스레드 코어라 COOP/COEP 헤더가 필요 없고, 코덱 미지원 영상에서만 최초 1회 로드됨(약 31MB).
-function loadScript(src){
-  return new Promise((res, rej) => {
-    const s = document.createElement('script');
-    s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('스크립트 로드 실패'));
-    document.head.appendChild(s);
+/* ====================== 코덱 폴백: 자체 호스팅 ffmpeg.wasm (HEVC 등 → H.264) ====================== */
+// 브라우저가 HEVC 등 원본 코덱을 읽지 못할 때만 사용한다.
+// @ffmpeg/ffmpeg의 CDN Worker 로딩에 의존하지 않고, 이 문서 안의 경량 Worker 클라이언트를 사용한다.
+// ffmpeg-core.js / ffmpeg-core.wasm은 같은 출처의 ./vendor/ffmpeg/ 를 최우선으로 사용하고,
+// 배포 파일이 누락된 경우에만 jsDelivr → unpkg 순서로 폴백한다.
+// 단일 스레드 코어이므로 COOP/COEP 및 SharedArrayBuffer가 필요 없다.
+
+const FFMPEG_CORE_VERSION = '0.12.10';
+const FFMPEG_LOCAL_BASE = new URL('./vendor/ffmpeg/', document.baseURI).href;
+const FFMPEG_ASSET_SOURCES = [
+  {
+    name: '사이트 내장 코어',
+    core: new URL('ffmpeg-core.js', FFMPEG_LOCAL_BASE).href,
+    wasm: new URL('ffmpeg-core.wasm', FFMPEG_LOCAL_BASE).href,
+  },
+  {
+    name: 'jsDelivr 보조 서버',
+    core: `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm/ffmpeg-core.js`,
+    wasm: `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm/ffmpeg-core.wasm`,
+  },
+  {
+    name: 'unpkg 보조 서버',
+    core: `https://unpkg.com/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm/ffmpeg-core.js`,
+    wasm: `https://unpkg.com/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm/ffmpeg-core.wasm`,
+  },
+];
+
+function fetchWithTimeout(url, options={}, timeoutMs=120000){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  return fetch(url, { ...options, signal:ctrl.signal }).finally(() => clearTimeout(timer));
+}
+
+async function fetchCoreAssetPair(source){
+  const common = { mode:'cors', credentials:'omit', cache:'force-cache' };
+  const [jsRes, wasmRes] = await Promise.all([
+    fetchWithTimeout(source.core, common),
+    fetchWithTimeout(source.wasm, common),
+  ]);
+  if(!jsRes.ok) throw new Error(`core JS HTTP ${jsRes.status}`);
+  if(!wasmRes.ok) throw new Error(`core WASM HTTP ${wasmRes.status}`);
+
+  const [jsText, wasmBytes] = await Promise.all([jsRes.text(), wasmRes.arrayBuffer()]);
+  // SPA의 404 대체 HTML을 200으로 돌려주는 서버까지 감지한다.
+  if(!jsText.includes('createFFmpegCore')) throw new Error('core JS 내용이 올바르지 않음');
+  if(wasmBytes.byteLength < 1024 * 1024) throw new Error('core WASM 파일이 너무 작거나 올바르지 않음');
+
+  return {
+    coreURL: URL.createObjectURL(new Blob([jsText], { type:'text/javascript' })),
+    wasmURL: URL.createObjectURL(new Blob([wasmBytes], { type:'application/wasm' })),
+  };
+}
+
+// @ffmpeg/ffmpeg의 공개 메시지 규약만 사용하는 최소 클라이언트.
+// 외부 ffmpeg.js / util.js / class worker 파일이 필요 없다.
+class EmbeddedFFmpegClient {
+  constructor(){
+    this.worker = null;
+    this.loaded = false;
+    this.seq = 0;
+    this.pending = new Map();
+    this.listeners = { log:[], progress:[] };
+    this.workerURL = null;
+  }
+  on(type, fn){ if(this.listeners[type] && !this.listeners[type].includes(fn)) this.listeners[type].push(fn); }
+  off(type, fn){ if(this.listeners[type]) this.listeners[type] = this.listeners[type].filter(x => x !== fn); }
+  _onMessage = ({data:{id,type,data}}) => {
+    if(type === 'LOG' || type === 'PROGRESS'){
+      for(const fn of this.listeners[type.toLowerCase()] || []) try{ fn(data); }catch(_){}
+      return;
+    }
+    const p = this.pending.get(id);
+    if(!p) return;
+    this.pending.delete(id);
+    if(type === 'ERROR') p.reject(new Error(String(data || 'FFmpeg worker error')));
+    else p.resolve(data);
+  };
+  _send(type, data, transfer=[]){
+    if(!this.worker) return Promise.reject(new Error('FFmpeg worker가 시작되지 않았습니다.'));
+    return new Promise((resolve, reject) => {
+      const id = ++this.seq;
+      this.pending.set(id, {resolve, reject});
+      try{ this.worker.postMessage({id,type,data}, transfer); }
+      catch(e){ this.pending.delete(id); reject(e); }
+    });
+  }
+  async load(config){
+    if(this.loaded) return false;
+    if(!this.worker){
+      this.workerURL = URL.createObjectURL(new Blob([FFMPEG_INLINE_WORKER], {type:'text/javascript'}));
+      this.worker = new Worker(this.workerURL, {type:'module', name:'gif-studio-ffmpeg'});
+      this.worker.onmessage = this._onMessage;
+      this.worker.onerror = e => {
+        const err = new Error(e?.message || 'FFmpeg worker 실행 오류');
+        for(const [,p] of this.pending) p.reject(err);
+        this.pending.clear();
+      };
+    }
+    const first = await this._send('LOAD', config);
+    this.loaded = true;
+    return first;
+  }
+  exec(args, timeout=-1){ return this._send('EXEC', {args, timeout}); }
+  ffprobe(args, timeout=-1){ return this._send('FFPROBE', {args, timeout}); }
+  writeFile(path, data){ return this._send('WRITE_FILE', {path, data}); }
+  readFile(path, encoding='binary'){ return this._send('READ_FILE', {path, encoding}); }
+  deleteFile(path){ return this._send('DELETE_FILE', {path}); }
+  terminate(){
+    const err = new Error('FFmpeg 작업이 종료되었습니다.');
+    for(const [,p] of this.pending) p.reject(err);
+    this.pending.clear();
+    if(this.worker) this.worker.terminate();
+    this.worker = null; this.loaded = false;
+    if(this.workerURL) URL.revokeObjectURL(this.workerURL);
+    this.workerURL = null;
+  }
+}
+
+// 의존성 없는 self-contained module worker.
+const FFMPEG_INLINE_WORKER = String.raw`
+let core = null;
+
+function encodeConfig(value){
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  let binary = '';
+  for(let i=0; i<bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+async function loadCore({coreURL, wasmURL, workerURL}){
+  const first = !core;
+  let factory;
+  try{
+    const mod = await import(coreURL);
+    factory = mod.default || mod.createFFmpegCore;
+  }catch(e){
+    throw new Error('ffmpeg-core.js 모듈을 불러오지 못했습니다: ' + (e && e.message ? e.message : e));
+  }
+  if(typeof factory !== 'function') throw new Error('ffmpeg-core.js에서 createFFmpegCore를 찾지 못했습니다.');
+  const encoded = encodeConfig({wasmURL, workerURL:workerURL || ''});
+  core = await factory({ mainScriptUrlOrBlob: coreURL + '#' + encoded });
+  core.setLogger(data => self.postMessage({type:'LOG', data}));
+  core.setProgress(data => self.postMessage({type:'PROGRESS', data}));
+  return first;
+}
+
+function exec({args, timeout=-1}){
+  core.setTimeout(timeout);
+  core.exec(...args);
+  const ret = core.ret;
+  core.reset();
+  return ret;
+}
+function ffprobe({args, timeout=-1}){
+  core.setTimeout(timeout);
+  core.ffprobe(...args);
+  const ret = core.ret;
+  core.reset();
+  return ret;
+}
+function listDir(path){
+  return core.FS.readdir(path).map(name => {
+    const stat = core.FS.stat(path.replace(/\/$/, '') + '/' + name);
+    return {name, isDir:core.FS.isDir(stat.mode)};
   });
 }
-let ffmpegInst = null, ffmpegLoadP = null;
-function loadFfmpeg(){
-  if(ffmpegInst) return Promise.resolve(ffmpegInst);
-  if(ffmpegLoadP) return ffmpegLoadP;
-  // ffmpeg.wasm 패키지 버전을 명시해 CDN 주소가 깨지지 않도록 고정한다.
-  // 동적 import가 차단되는 환경을 대비해 일반 <script> 로딩도 순차적으로 시도한다.
-  const CDNS = ['https://cdn.jsdelivr.net/npm', 'https://unpkg.com'];
-  const FFMPEG_VERSION = '0.12.10';
-  const UTIL_VERSION = '0.12.1';
-  const CORE_VERSION = '0.12.10';
 
-  async function loadUmd(url, globalName){
-    if(self[globalName]) return;
-    let importErr = null;
-    try{
-      await import(url);
-    }catch(e){
-      importErr = e;
-      console.warn('[ffmpeg] 동적 import 실패, script 로딩 재시도:', url, e);
+self.onmessage = async ({data:{id,type,data}}) => {
+  const transfer = [];
+  let result;
+  try{
+    if(type !== 'LOAD' && !core) throw new Error('FFmpeg가 아직 로드되지 않았습니다.');
+    switch(type){
+      case 'LOAD': result = await loadCore(data); break;
+      case 'EXEC': result = exec(data); break;
+      case 'FFPROBE': result = ffprobe(data); break;
+      case 'WRITE_FILE': core.FS.writeFile(data.path, data.data); result = true; break;
+      case 'READ_FILE': result = core.FS.readFile(data.path, {encoding:data.encoding}); break;
+      case 'DELETE_FILE': core.FS.unlink(data.path); result = true; break;
+      case 'RENAME': core.FS.rename(data.oldPath, data.newPath); result = true; break;
+      case 'CREATE_DIR': core.FS.mkdir(data.path); result = true; break;
+      case 'LIST_DIR': result = listDir(data.path); break;
+      case 'DELETE_DIR': core.FS.rmdir(data.path); result = true; break;
+      case 'MOUNT': {
+        const fs = core.FS.filesystems[data.fsType];
+        result = !!fs && (core.FS.mount(fs, data.options, data.mountPoint), true);
+        break;
+      }
+      case 'UNMOUNT': core.FS.unmount(data.mountPoint); result = true; break;
+      default: throw new Error('알 수 없는 FFmpeg 메시지: ' + type);
     }
-    if(self[globalName]) return;
-    try{
-      await loadScript(url);
-    }catch(scriptErr){
-      const msg = [importErr?.message, scriptErr?.message].filter(Boolean).join(' / ');
-      throw new Error(`${globalName} 로드 실패${msg ? ': '+msg : ''}`);
-    }
-    if(!self[globalName]) throw new Error(`${globalName} 전역 객체가 생성되지 않았습니다.`);
+  }catch(e){
+    self.postMessage({id, type:'ERROR', data:String(e && e.message ? e.message : e)});
+    return;
   }
+  if(result instanceof Uint8Array) transfer.push(result.buffer);
+  self.postMessage({id, type, data:result}, transfer);
+};
+`;
+
+let ffmpegInst = null, ffmpegLoadP = null;
+async function loadFfmpeg(){
+  if(ffmpegInst) return ffmpegInst;
+  if(ffmpegLoadP) return ffmpegLoadP;
+  if(typeof WebAssembly !== 'object') throw new Error('이 브라우저는 WebAssembly를 지원하지 않습니다.');
+  if(typeof Worker !== 'function') throw new Error('이 브라우저는 Web Worker를 지원하지 않습니다.');
 
   ffmpegLoadP = (async () => {
     let lastErr = null;
-    for(const base of CDNS){
+    for(const source of FFMPEG_ASSET_SOURCES){
+      let urls = null;
+      let client = null;
       try{
-        const FF   = `${base}/@ffmpeg/ffmpeg@${FFMPEG_VERSION}/dist/umd`;
-        const UTIL = `${base}/@ffmpeg/util@${UTIL_VERSION}/dist/umd`;
-        const CORE = `${base}/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
-
-        await loadUmd(`${FF}/ffmpeg.js`, 'FFmpegWASM');
-        await loadUmd(`${UTIL}/index.js`, 'FFmpegUtil');
-
-        const { FFmpeg } = self.FFmpegWASM;
-        const { toBlobURL } = self.FFmpegUtil;
-        const classWorkerURL = await toBlobURL(`${FF}/814.ffmpeg.js`, 'text/javascript');
-        const coreURL = await toBlobURL(`${CORE}/ffmpeg-core.js`, 'text/javascript');
-        const wasmURL = await toBlobURL(`${CORE}/ffmpeg-core.wasm`, 'application/wasm');
-        const ff = new FFmpeg();
-        ff.on('log', ({ message }) => console.log('[ffmpeg]', message));
-        await ff.load({ classWorkerURL, coreURL, wasmURL });
-        ffmpegInst = ff;
-        console.log('[ffmpeg] 로드 성공:', base);
-        return ff;
+        console.log('[ffmpeg] 코어 시도:', source.name, source.core);
+        urls = await fetchCoreAssetPair(source);
+        client = new EmbeddedFFmpegClient();
+        client.on('log', ({message}) => console.log('[ffmpeg]', message));
+        await client.load({coreURL:urls.coreURL, wasmURL:urls.wasmURL});
+        client._assetURLs = urls;
+        ffmpegInst = client;
+        console.log('[ffmpeg] 로드 성공:', source.name);
+        return client;
       }catch(e){
-        console.error('[ffmpeg] CDN 실패:', base, e);
         lastErr = e;
-        // 다음 CDN에서는 UMD 전역 객체도 새로 불러오게 한다.
-        try{ delete self.FFmpegWASM; }catch(_){}
-        try{ delete self.FFmpegUtil; }catch(_){}
+        console.error('[ffmpeg] 코어 실패:', source.name, e);
+        try{ client?.terminate(); }catch(_){}
+        if(urls){
+          try{ URL.revokeObjectURL(urls.coreURL); }catch(_){}
+          try{ URL.revokeObjectURL(urls.wasmURL); }catch(_){}
+        }
       }
     }
-    throw new Error('ffmpeg를 불러오지 못했어요 (' + ((lastErr && lastErr.message) || lastErr) + '). 브라우저 확장 프로그램이나 네트워크가 jsDelivr·unpkg를 모두 차단하는지 확인해 주세요.');
+    throw new Error(
+      '내장 FFmpeg 코어와 보조 서버를 모두 불러오지 못했습니다. ' +
+      '배포할 때 이 HTML 옆의 vendor/ffmpeg 폴더에 ffmpeg-core.js와 ffmpeg-core.wasm을 함께 올려 주세요. ' +
+      '(' + (lastErr?.message || lastErr || '원인 불명') + ')'
+    );
   })();
   ffmpegLoadP.catch(() => { ffmpegLoadP = null; });
   return ffmpegLoadP;
 }
+
 // 코덱 미지원 영상을 H.264 mp4로 변환 (item별 1회만 실행되도록 캐시)
 function transcodeToH264(item){
   if(item.transcodeP) return item.transcodeP;
@@ -798,13 +965,12 @@ function transcodeToH264(item){
     let ff;
     try{ ff = await loadFfmpeg(); }
     catch(e){ console.error('[ffmpeg load]', e); throw new Error('코덱 변환기를 불러오지 못했어요 — ' + (e?.message || e) + '. H.264 mp4로 변환해 올려도 돼요.'); }
-    const { fetchFile } = self.FFmpegUtil;
     const inName = 'in_'+item.id+'.bin', outName = 'out_'+item.id+'.mp4';
     const onProg = ({ progress }) => { if(progress>0 && progress<=1) setProgress(item, 0.05 + progress*0.9); };
     ff.on('progress', onProg);
     setStatus(item, '코덱 호환 변환 중… (HEVC 등 → H.264, 길면 오래 걸려요)');
     try{
-      await ff.writeFile(inName, await fetchFile(item.file));
+      await ff.writeFile(inName, new Uint8Array(await item.file.arrayBuffer()));
       await ff.exec(['-i', inName, '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', outName]);
       const data = await ff.readFile(outName);
       const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
