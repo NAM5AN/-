@@ -1,0 +1,38 @@
+name: FFmpeg 파일 추가
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  add-ffmpeg:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 저장소 불러오기
+        uses: actions/checkout@v4
+
+      - name: FFmpeg 파일 다운로드
+        run: |
+          mkdir -p tools/vendor/ffmpeg
+
+          npm pack @ffmpeg/core@0.12.10
+          tar -xzf ffmpeg-core-0.12.10.tgz
+
+          cp package/dist/esm/ffmpeg-core.js tools/vendor/ffmpeg/ffmpeg-core.js
+          cp package/dist/esm/ffmpeg-core.wasm tools/vendor/ffmpeg/ffmpeg-core.wasm
+
+          ls -lh tools/vendor/ffmpeg
+
+      - name: GitHub 저장소에 추가
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add tools/vendor/ffmpeg/ffmpeg-core.js
+          git add tools/vendor/ffmpeg/ffmpeg-core.wasm
+
+          git commit -m "FFmpeg 코어 파일 추가"
+          git push
