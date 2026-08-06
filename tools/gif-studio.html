@@ -611,9 +611,53 @@ function renderItem(item){
   refs.thumb.onclick = () => openPreviewModal(item);
 
   // 썸네일 (가벼운 단일 프레임)
-  ensureThumb(item).then(url => {
-    if(url){ refs.thumb.style.backgroundImage = `url(${url})`; refs.thumb.firstChild.textContent=''; }
-  }).catch(()=>{});
+  ensureThumb(item).then(url => applyThumbToCard(item, url)).catch(()=>{});
+}
+
+function applyThumbToCard(item, url){
+  if(!url || item?.removed || !item?.refs?.thumb) return;
+  item.refs.thumb.style.backgroundImage = `url(${url})`;
+  // 카드 생성 시 첫 자식은 🎬/🎞️ 아이콘 텍스트 노드다. 실제 프레임이 준비되면 숨긴다.
+  if(item.refs.thumb.firstChild) item.refs.thumb.firstChild.textContent='';
+}
+
+// 코덱 폴백 변환이 끝난 영상은 item.src를 계속 열어두지 않고 임시 video로 썸네일만 즉시 만든다.
+// 자동 준비 대상이 많아도 영상별 HTMLVideoElement가 메모리에 누적되지 않도록 한다.
+async function refreshVideoThumb(item){
+  if(item?.kind!=='video' || item.removed || !item.transcoded) return null;
+  if(item.thumbRefreshP) return item.thumbRefreshP;
+
+  item.thumbRefreshP=(async()=>{
+    let src=null;
+    try{
+      src=await tryLoadVideo(item.transcoded);
+      const v=src.video;
+      await new Promise(r=>{
+        if(v.readyState>=2) r();
+        else{
+          let done=false;
+          const finish=()=>{ if(done) return; done=true; v.onloadeddata=null; r(); };
+          v.onloadeddata=finish;
+          setTimeout(finish, 3000);
+        }
+      });
+      await seekVideo(v, Math.min(0.1, Math.max(0, (src.duration||1)/2)));
+
+      const sc=Math.min(1, 128/src.natW);
+      const c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(src.natW*sc));
+      c.height=Math.max(1,Math.round(src.natH*sc));
+      c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+
+      item.thumbUrl=c.toDataURL('image/png');
+      applyThumbToCard(item, item.thumbUrl);
+      return item.thumbUrl;
+    }finally{
+      disposeVideoProbe(src);
+      item.thumbRefreshP=null;
+    }
+  })();
+  return item.thumbRefreshP;
 }
 
 // 카드용 단일 프레임 썸네일 (full 미리보기 빌드 없이)
@@ -1080,6 +1124,11 @@ async function pumpCodecQueue(){
         const blob=await performH264Transcode(item);
         item.transcoded=blob;
         setCodecState(item, 'ready');
+        setCodecStatus(item, '편집 준비 완료 · 썸네일 생성 중…', 'ok');
+        // 변환본에서 첫 프레임을 즉시 뽑아 카드의 🎬 아이콘을 실제 썸네일로 교체한다.
+        // 썸네일 실패는 편집 가능 여부와 무관하므로 변환 작업 자체를 실패 처리하지 않는다.
+        try{ await refreshVideoThumb(item); }
+        catch(e){ console.warn('[thumb] 변환 완료 썸네일 생성 실패:', item.name, e); }
         setCodecStatus(item, '편집 준비 완료 · 바로 편집할 수 있어요', 'ok');
         job.resolve(blob);
       }catch(e){
