@@ -428,6 +428,14 @@ let seq = 0;
 let libs = null;
 let busy = false;
 
+// 코덱 폴백이 실제로 필요한 환경에서만 자동으로 나머지 영상을 준비한다.
+let codecFallbackMode = false;
+let codecSweepP = null;
+let codecSweepRequested = false;
+let codecQueueRunning = false;
+let codecActiveJob = null;
+const codecQueue = [];
+
 /* ---------- 라이브러리 지연 로딩 ---------- */
 async function loadLibs(){
   if(libs) return libs;
@@ -463,7 +471,7 @@ async function acquireWakeLock(){
   }catch(_){ wakeLock=null; }
 }
 async function releaseWakeLock(){ try{ if(wakeLock) await wakeLock.release(); }catch(_){} wakeLock=null; }
-document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && busy) acquireWakeLock(); });
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && (busy || codecQueueRunning)) acquireWakeLock(); });
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 // 이미지를 dw×dh 대상에 rot(0/90/180/270, 시계방향)으로 회전해 꽉 채워 그림
 function drawRot(ctx, img, rot, dw, dh){
@@ -539,13 +547,17 @@ function addFiles(files){
       natW:null, natH:null, duration:null,
       crop:null, reverse:false, trim:null, rotate:0, speed:1,
       src:null, preview:null,
-      resultBlob:null, resultSize:null, resultDims:null, error:false, transcoded:null,
+      resultBlob:null, resultSize:null, resultDims:null, error:false, processing:false,
+      transcoded:null, transcodeP:null, nativeProbeP:null,
+      codecState:isGif(file)?'na':'unknown', removed:false,
     };
     items.push(item);
     renderItem(item);
     persistSave(item);
   }
   syncUI();
+  // 이미 이 브라우저에서 코덱 폴백이 필요하다고 판정된 뒤 추가된 영상도 자동 준비 대상에 포함한다.
+  if(codecFallbackMode) scheduleCodecSweep();
 }
 
 function renderItem(item){
@@ -584,7 +596,7 @@ function renderItem(item){
   item.refs = refs;
   refs.name.textContent = item.name;
   refs.stats.innerHTML = baseStats(item);
-  refs.rm.onclick = () => { items = items.filter(x=>x!==item); freeItem(item); card.remove(); persistDelete(item.id); syncUI(); };
+  refs.rm.onclick = () => { item.removed=true; items = items.filter(x=>x!==item); freeItem(item); card.remove(); persistDelete(item.id); syncUI(); };
   refs.dl.onclick = () => download(item);
   refs.run.onclick = () => runOne(item);
   refs.retry.onclick = () => retryItem(item);
@@ -634,9 +646,37 @@ function baseStats(item){
 }
 function setStatus(item, msg, cls=''){ item.refs.status.textContent=msg; item.refs.status.className='status'+(cls?(' '+cls):''); }
 function setProgress(item, p){ item.refs.bar.style.width = clamp(p,0,1)*100+'%'; }
+function setCodecState(item, state){ item.codecState=state; syncUI(); }
+function setCodecStatus(item, msg, cls=''){
+  if(!item?.refs || item.removed || item.processing || item.resultBlob) return;
+  setStatus(item, msg, cls);
+}
+function codecIdleStatus(item){
+  if(item.kind==='video' && codecFallbackMode){
+    if(item.codecState==='ready' || item.transcoded) return ['편집 준비 완료 · 바로 편집할 수 있어요','ok'];
+    if(item.codecState==='native') return ['브라우저에서 바로 사용 가능','ok'];
+    if(item.codecState==='checking') return ['코덱 호환 여부 확인 중…',''];
+    if(item.codecState==='queued') return ['코덱 호환 변환 대기 중…',''];
+    if(item.codecState==='transcoding') return ['코덱 호환 변환 중…',''];
+    if(item.codecState==='error') return ['코덱 준비 실패 · 편집할 때 다시 시도해 주세요','err'];
+  }
+  return ['대기 · 시작 버튼을 누르세요',''];
+}
+function codecSummary(){
+  if(!codecFallbackMode) return '';
+  const vids=items.filter(i=>i.kind==='video');
+  if(!vids.length) return '';
+  const done=vids.filter(i=>i.codecState==='native' || i.codecState==='ready' || !!i.transcoded).length;
+  const failed=vids.filter(i=>i.codecState==='error').length;
+  const pending=vids.some(i=>['unknown','checking','needs-transcode','queued','transcoding'].includes(i.codecState));
+  if(codecQueueRunning || codecSweepP || pending) return ` · 편집 준비 ${done}/${vids.length}`;
+  if(failed) return ` · 편집 준비 ${done}/${vids.length} · ${failed}개 실패`;
+  return ' · 편집 준비 완료';
+}
 function syncUI(){
   actions.style.display = items.length ? 'flex' : 'none';
-  countEl.textContent = items.length ? `${items.length}개 파일` : '';
+  countEl.textContent = items.length ? `${items.length}개 파일${codecSummary()}` : '';
+  clearBtn.disabled = busy || codecQueueRunning;
 }
 function freeItem(item){
   if(item.preview && item.preview.frames) item.preview.frames.forEach(f => { if(f.canvas){ f.canvas.width=f.canvas.height=0; } });
@@ -653,7 +693,8 @@ function resetItemResult(item){
   item.resultBlob=null; item.resultSize=null; item.resultDims=null; item.error=false;
   if(item.refs){
     item.refs.stats.innerHTML = baseStats(item);
-    setStatus(item, '대기 · 시작 버튼을 누르세요'); setProgress(item, 0);
+    const [idleMsg,idleCls]=codecIdleStatus(item);
+    setStatus(item, idleMsg, idleCls); setProgress(item, 0);
     item.refs.dl.disabled = true;
     item.refs.retry.style.display='none'; item.refs.run.style.display='';
     item.refs.run.disabled = busy; item.refs.run.textContent = item.kind==='video'?'변환':'압축';
@@ -956,38 +997,182 @@ async function loadFfmpeg(){
   return ffmpegLoadP;
 }
 
-// 코덱 미지원 영상을 H.264 mp4로 변환 (item별 1회만 실행되도록 캐시)
-function transcodeToH264(item){
-  if(item.transcodeP) return item.transcodeP;
-  item.transcodeP = (async () => {
-    setStatus(item, '코덱 호환 변환 준비 중… (최초 1회 디코더 다운로드, 조금 걸려요)');
-    setProgress(item, 0.02);
-    let ff;
-    try{ ff = await loadFfmpeg(); }
-    catch(e){ console.error('[ffmpeg load]', e); throw new Error('코덱 변환기를 불러오지 못했어요 — ' + (e?.message || e) + '. H.264 mp4로 변환해 올려도 돼요.'); }
-    const inName = 'in_'+item.id+'.bin', outName = 'out_'+item.id+'.mp4';
-    const onProg = ({ progress }) => { if(progress>0 && progress<=1) setProgress(item, 0.05 + progress*0.9); };
-    ff.on('progress', onProg);
-    setStatus(item, '코덱 호환 변환 중… (HEVC 등 → H.264, 길면 오래 걸려요)');
+// 코덱 미지원 영상은 하나의 FFmpeg 큐에서 순차 변환한다.
+// 첫 코덱 실패가 감지된 순간에만 나머지 영상의 자동 편집 준비를 시작한다.
+function promoteCodecJob(item){
+  const idx=codecQueue.findIndex(j=>j.item===item);
+  if(idx>0){
+    const [job]=codecQueue.splice(idx,1);
+    codecQueue.unshift(job);
+    setCodecStatus(item, '코덱 호환 변환 대기 중… (다음 순서로 우선 처리)');
+  }
+}
+
+function transcodeToH264(item, priority=false){
+  if(item.transcoded) return Promise.resolve(item.transcoded);
+  if(item.transcodeP){
+    if(priority) promoteCodecJob(item);
+    return item.transcodeP;
+  }
+
+  let resolveJob, rejectJob;
+  item.transcodeP = new Promise((resolve,reject)=>{ resolveJob=resolve; rejectJob=reject; });
+  const job={item, resolve:resolveJob, reject:rejectJob};
+  if(priority) codecQueue.unshift(job); else codecQueue.push(job);
+  setCodecState(item, 'queued');
+  setCodecStatus(item, priority ? '코덱 호환 변환 대기 중… (우선 처리)' : '코덱 호환 변환 대기 중…');
+  pumpCodecQueue();
+  return item.transcodeP;
+}
+
+async function performH264Transcode(item){
+  setCodecState(item, 'transcoding');
+  setCodecStatus(item, '코덱 호환 변환 준비 중… (최초 1회 디코더를 불러와요)');
+  setProgress(item, 0.02);
+  let ff;
+  try{ ff = await loadFfmpeg(); }
+  catch(e){
+    console.error('[ffmpeg load]', e);
+    throw new Error('코덱 변환기를 불러오지 못했어요 — ' + (e?.message || e) + '. H.264 mp4로 변환해 올려도 돼요.');
+  }
+
+  const inName='in_'+item.id+'.bin', outName='out_'+item.id+'.mp4';
+  const onProg=({progress})=>{
+    if(progress>0 && progress<=1 && !item.removed) setProgress(item, 0.05 + progress*0.9);
+  };
+  ff.on('progress', onProg);
+  setCodecStatus(item, '코덱 호환 변환 중… (HEVC 등 → H.264)');
+  try{
+    await ff.writeFile(inName, new Uint8Array(await item.file.arrayBuffer()));
+    await ff.exec(['-i', inName, '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', outName]);
+    const data=await ff.readFile(outName);
+    const bytes=data instanceof Uint8Array ? data : new Uint8Array(data);
+    if(!bytes || bytes.length<1) throw new Error('빈 출력');
+    return new Blob([bytes], {type:'video/mp4'});
+  }catch(e){
+    console.error(e);
+    throw new Error('코덱 변환에 실패했어요. 영상이 너무 크거나 지원되지 않는 형식일 수 있어요 — H.264 mp4로 변환해 올려 주세요.');
+  }finally{
+    ff.off('progress', onProg);
+    try{ await ff.deleteFile(inName); }catch(_){}
+    try{ await ff.deleteFile(outName); }catch(_){}
+    if(!item.removed) setProgress(item, 0);
+  }
+}
+
+async function pumpCodecQueue(){
+  if(codecQueueRunning) return;
+  codecQueueRunning=true;
+  acquireWakeLock();
+  syncUI();
+  try{
+    while(codecQueue.length){
+      const job=codecQueue.shift();
+      const item=job.item;
+      codecActiveJob=job;
+      if(item.removed || !items.includes(item)){
+        item.transcodeP=null;
+        job.reject(new Error('목록에서 제거된 파일입니다.'));
+        codecActiveJob=null;
+        continue;
+      }
+      try{
+        const blob=await performH264Transcode(item);
+        item.transcoded=blob;
+        setCodecState(item, 'ready');
+        setCodecStatus(item, '편집 준비 완료 · 바로 편집할 수 있어요', 'ok');
+        job.resolve(blob);
+      }catch(e){
+        setCodecState(item, 'error');
+        setCodecStatus(item, '코덱 준비 실패 · 편집할 때 다시 시도해 주세요', 'err');
+        job.reject(e);
+      }finally{
+        item.transcodeP=null;
+        codecActiveJob=null;
+        syncUI();
+      }
+    }
+  }finally{
+    codecQueueRunning=false;
+    codecActiveJob=null;
+    syncUI();
+    if(!busy) releaseWakeLock();
+  }
+}
+
+function disposeVideoProbe(src){
+  if(!src) return;
+  try{ src.video?.pause(); }catch(_){}
+  try{ if(src.video){ src.video.removeAttribute('src'); src.video.load(); } }catch(_){}
+  try{ if(src.url) URL.revokeObjectURL(src.url); }catch(_){}
+}
+
+function probeNativeVideo(item){
+  if(item.transcoded || item.codecState==='ready') return Promise.resolve(false);
+  if(item.codecState==='native') return Promise.resolve(true);
+  if(item.codecState==='needs-transcode') return Promise.resolve(false);
+  if(item.nativeProbeP) return item.nativeProbeP;
+  item.nativeProbeP=(async()=>{
+    setCodecState(item, 'checking');
+    setCodecStatus(item, '코덱 호환 여부 확인 중…');
     try{
-      await ff.writeFile(inName, new Uint8Array(await item.file.arrayBuffer()));
-      await ff.exec(['-i', inName, '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', outName]);
-      const data = await ff.readFile(outName);
-      const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-      if(!bytes || bytes.length < 1) throw new Error('빈 출력');
-      return new Blob([bytes], { type:'video/mp4' });
-    }catch(e){
-      console.error(e);
-      throw new Error('코덱 변환에 실패했어요. 영상이 너무 크거나 지원되지 않는 형식일 수 있어요 — H.264 mp4로 변환해 올려 주세요.');
+      const src=await tryLoadVideo(item.file);
+      disposeVideoProbe(src);
+      setCodecState(item, 'native');
+      setCodecStatus(item, '브라우저에서 바로 사용 가능', 'ok');
+      return true;
+    }catch(_){
+      setCodecState(item, 'needs-transcode');
+      return false;
     }finally{
-      ff.off('progress', onProg);
-      try{ await ff.deleteFile(inName); }catch(_){}
-      try{ await ff.deleteFile(outName); }catch(_){}
-      setProgress(item, 0);
+      item.nativeProbeP=null;
     }
   })();
-  item.transcodeP.catch(() => { item.transcodeP = null; });
-  return item.transcodeP;
+  return item.nativeProbeP;
+}
+
+function activateCodecFallbackMode(){
+  if(!codecFallbackMode){
+    codecFallbackMode=true;
+    console.log('[codec] 브라우저 기본 디코딩 실패 감지 — 나머지 영상 자동 편집 준비 시작');
+  }
+  codecSweepRequested=true;
+  syncUI();
+  scheduleCodecSweep();
+}
+
+function scheduleCodecSweep(){
+  if(!codecFallbackMode){ return; }
+  codecSweepRequested=true;
+  if(codecSweepP) return;
+  codecSweepP=(async()=>{
+    do{
+      codecSweepRequested=false;
+      const snapshot=[...items];
+      for(const item of snapshot){
+        if(item.removed || !items.includes(item) || item.kind!=='video') continue;
+        if(item.processing || item.src || item.transcoded) continue;
+        if(['native','ready','queued','transcoding','error'].includes(item.codecState)) continue;
+        try{
+          if(item.codecState==='needs-transcode'){
+            await transcodeToH264(item, false);
+            continue;
+          }
+          const nativeOK=await probeNativeVideo(item);
+          if(!nativeOK) await transcodeToH264(item, false);
+        }catch(e){
+          if(item.removed || !items.includes(item)) continue;
+          console.warn('[codec] 자동 편집 준비 실패:', item.name, e);
+          setCodecState(item, 'error');
+          setCodecStatus(item, '코덱 준비 실패 · 편집할 때 다시 시도해 주세요', 'err');
+        }
+      }
+    }while(codecSweepRequested);
+  })().finally(()=>{
+    codecSweepP=null;
+    syncUI();
+    if(codecSweepRequested) scheduleCodecSweep();
+  });
 }
 
 // blob/File을 <video>로 로드 시도 (성공 시 src 객체 반환, 실패 시 reject)
@@ -1014,17 +1199,39 @@ async function loadVideoSource(item, allowTranscode=true){
   // 1) 파일 자체를 읽을 수 있는지 먼저 확인 (클라우드 전용·이동·삭제된 파일 감지)
   try{ await item.file.slice(0, 1).arrayBuffer(); }
   catch(_){ throw new Error('파일을 읽을 수 없어요. USB·외장 드라이브에 있거나, 클라우드 전용 파일(OneDrive 등)이거나, 이동·삭제됐을 수 있어요 — 파일을 기기 내부(바탕화면·다운로드 등)로 복사한 뒤 다시 올려 주세요.'); }
-  // 2) 이미 코덱 변환해둔 파일이 있으면 그걸로 로드
-  if(item.transcoded){ return await tryLoadVideo(item.transcoded); }
-  // 3) 네이티브 디코딩 시도 → 실패하면(코덱 미지원) ffmpeg.wasm으로 H.264 변환 후 재시도
-  try{
-    return await tryLoadVideo(item.file);
-  }catch(e){
-    // 썸네일 등 가벼운 호출에서는 변환하지 않고 그냥 실패 처리 (placeholder 유지)
-    if(!allowTranscode) throw new Error('이 브라우저가 이 동영상 코덱을 지원하지 않을 수 있어요 (HEVC 등).');
-    item.transcoded = await transcodeToH264(item);
+
+  // 2) 이미 준비된 호환 변환본이 있으면 즉시 사용
+  if(item.transcoded){
+    setCodecState(item, 'ready');
     return await tryLoadVideo(item.transcoded);
   }
+
+  // 3) 백그라운드 호환성 검사가 진행 중이었다면 결과를 공유한다.
+  if(item.nativeProbeP){
+    const nativeOK=await item.nativeProbeP;
+    if(nativeOK) return await tryLoadVideo(item.file);
+  }else if(item.codecState==='native'){
+    return await tryLoadVideo(item.file);
+  }else if(!['needs-transcode','queued','transcoding','error'].includes(item.codecState)){
+    try{
+      const src=await tryLoadVideo(item.file);
+      setCodecState(item, 'native');
+      return src;
+    }catch(_){
+      setCodecState(item, 'needs-transcode');
+    }
+  }
+
+  // 썸네일처럼 가벼운 호출에서는 자동 변환을 시작하지 않는다.
+  if(!allowTranscode) throw new Error('이 브라우저가 이 동영상 코덱을 지원하지 않을 수 있어요 (HEVC 등).');
+
+  // 4) 사용자가 실제 편집/변환을 시도한 영상은 우선 처리하고,
+  //    첫 실패가 감지된 이때부터 나머지 영상도 자동으로 순차 준비한다.
+  const transcodeP=transcodeToH264(item, true);
+  activateCodecFallbackMode();
+  item.transcoded=await transcodeP;
+  setCodecState(item, 'ready');
+  return await tryLoadVideo(item.transcoded);
 }
 
 // 특정 시각 t(초)의 프레임을 캔버스(dst)에 그림. 동영상은 seek 필요(비동기).
@@ -1235,6 +1442,7 @@ async function compressToTarget(decoded, targetBytes, maxColors, item, estBytes)
 /* ====================== 단일 처리 ====================== */
 async function processItem(item, prep){
   if(item.resultBlob) return;
+  item.processing=true;
   const { targetBytes, maxColors, fps, maxWidth } = prep;
   // 처리 시작: 직전 상태 정리 (재시도 버튼 숨기고 실행 버튼 복원, 다운로드 잠금)
   item.error = false;
@@ -1279,6 +1487,9 @@ async function processItem(item, prep){
     setStatus(item, info ? e.message : '처리 중 오류가 발생했어요. 재시도 버튼을 눌러 다시 시도해 주세요.', 'err');
     setProgress(item, 0);
     markError(item);
+  }finally{
+    item.processing=false;
+    syncUI();
   }
 }
 
@@ -1338,7 +1549,7 @@ async function prep(){
 function setBusy(b){
   busy = b;
   if(b) acquireWakeLock(); else releaseWakeLock();
-  runBtn.disabled=b; clearBtn.disabled=b;
+  runBtn.disabled=b; clearBtn.disabled=b || codecQueueRunning;
   items.forEach(it=>{ if(it.refs){ it.refs.run.disabled = b || !!it.resultBlob; it.refs.retry.disabled = b; } });
 }
 async function runOne(item){
@@ -1749,7 +1960,9 @@ try{ navigator.storage && navigator.storage.persist && navigator.storage.persist
       natW:null, natH:null, duration:null,
       crop:r.crop||null, reverse:!!r.reverse, trim:r.trim||null, rotate:r.rotate||0, speed:(r.speed>0?r.speed:1),
       src:null, preview:null,
-      resultBlob:null, resultSize:null, resultDims:null, error:false, transcoded:null,
+      resultBlob:null, resultSize:null, resultDims:null, error:false, processing:false,
+      transcoded:null, transcodeP:null, nativeProbeP:null,
+      codecState:r.kind==='video'?'unknown':'na', removed:false,
     };
     items.push(item);
     renderItem(item);
