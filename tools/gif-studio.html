@@ -728,18 +728,43 @@ let ffmpegInst = null, ffmpegLoadP = null;
 function loadFfmpeg(){
   if(ffmpegInst) return Promise.resolve(ffmpegInst);
   if(ffmpegLoadP) return ffmpegLoadP;
-  // 기존 GIF 라이브러리처럼 import()로 로드(일부 차단기/추적방지는 <script src=CDN>만 막음). jsdelivr 실패 시 unpkg도 시도.
+  // ffmpeg.wasm 패키지 버전을 명시해 CDN 주소가 깨지지 않도록 고정한다.
+  // 동적 import가 차단되는 환경을 대비해 일반 <script> 로딩도 순차적으로 시도한다.
   const CDNS = ['https://cdn.jsdelivr.net/npm', 'https://unpkg.com'];
+  const FFMPEG_VERSION = '0.12.10';
+  const UTIL_VERSION = '0.12.1';
+  const CORE_VERSION = '0.12.10';
+
+  async function loadUmd(url, globalName){
+    if(self[globalName]) return;
+    let importErr = null;
+    try{
+      await import(url);
+    }catch(e){
+      importErr = e;
+      console.warn('[ffmpeg] 동적 import 실패, script 로딩 재시도:', url, e);
+    }
+    if(self[globalName]) return;
+    try{
+      await loadScript(url);
+    }catch(scriptErr){
+      const msg = [importErr?.message, scriptErr?.message].filter(Boolean).join(' / ');
+      throw new Error(`${globalName} 로드 실패${msg ? ': '+msg : ''}`);
+    }
+    if(!self[globalName]) throw new Error(`${globalName} 전역 객체가 생성되지 않았습니다.`);
+  }
+
   ffmpegLoadP = (async () => {
     let lastErr = null;
     for(const base of CDNS){
       try{
-        const FF   = `${base}/@ffmpeg/[email protected]/dist/umd`;
-        const UTIL = `${base}/@ffmpeg/[email protected]/dist/umd`;
-        const CORE = `${base}/@ffmpeg/[email protected]/dist/esm`; // 모듈 워커가 import()로 읽으므로 ESM 코어
-        await import(`${FF}/ffmpeg.js`);   // UMD가 self.FFmpegWASM 설정
-        await import(`${UTIL}/index.js`);  // UMD가 self.FFmpegUtil 설정
-        if(!self.FFmpegWASM || !self.FFmpegUtil) throw new Error('전역 객체 없음');
+        const FF   = `${base}/@ffmpeg/ffmpeg@${FFMPEG_VERSION}/dist/umd`;
+        const UTIL = `${base}/@ffmpeg/util@${UTIL_VERSION}/dist/umd`;
+        const CORE = `${base}/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
+
+        await loadUmd(`${FF}/ffmpeg.js`, 'FFmpegWASM');
+        await loadUmd(`${UTIL}/index.js`, 'FFmpegUtil');
+
         const { FFmpeg } = self.FFmpegWASM;
         const { toBlobURL } = self.FFmpegUtil;
         const classWorkerURL = await toBlobURL(`${FF}/814.ffmpeg.js`, 'text/javascript');
@@ -751,9 +776,15 @@ function loadFfmpeg(){
         ffmpegInst = ff;
         console.log('[ffmpeg] 로드 성공:', base);
         return ff;
-      }catch(e){ console.error('[ffmpeg] CDN 실패:', base, e); lastErr = e; }
+      }catch(e){
+        console.error('[ffmpeg] CDN 실패:', base, e);
+        lastErr = e;
+        // 다음 CDN에서는 UMD 전역 객체도 새로 불러오게 한다.
+        try{ delete self.FFmpegWASM; }catch(_){}
+        try{ delete self.FFmpegUtil; }catch(_){}
+      }
     }
-    throw new Error('ffmpeg를 불러오지 못했어요 (' + ((lastErr && lastErr.message) || lastErr) + '). 이 네트워크/브라우저가 외부 CDN(jsdelivr·unpkg)을 막고 있을 수 있어요.');
+    throw new Error('ffmpeg를 불러오지 못했어요 (' + ((lastErr && lastErr.message) || lastErr) + '). 브라우저 확장 프로그램이나 네트워크가 jsDelivr·unpkg를 모두 차단하는지 확인해 주세요.');
   })();
   ffmpegLoadP.catch(() => { ffmpegLoadP = null; });
   return ffmpegLoadP;
