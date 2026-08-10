@@ -3729,6 +3729,34 @@
     };
   }
 
+  function preserveCropRectForTransform(previousState) {
+    if (!sourceImage?.naturalWidth) return;
+    const previousBounds = getTransformedBounds(sourceImage, previousState);
+    const nextBounds = getTransformedBounds(sourceImage, currentSnapshot());
+    const rect = normalizeCropRect(cropRect);
+    const previousWidth = rect.width * previousBounds.width;
+    const previousHeight = rect.height * previousBounds.height;
+    const scale = Math.min(1, nextBounds.width / previousWidth, nextBounds.height / previousHeight);
+    const width = previousWidth * scale;
+    const height = previousHeight * scale;
+    const centerX = clamp(
+      (rect.x + rect.width / 2) * nextBounds.width,
+      width / 2,
+      nextBounds.width - width / 2
+    );
+    const centerY = clamp(
+      (rect.y + rect.height / 2) * nextBounds.height,
+      height / 2,
+      nextBounds.height - height / 2
+    );
+    cropRect = normalizeCropRect({
+      x: (centerX - width / 2) / nextBounds.width,
+      y: (centerY - height / 2) / nextBounds.height,
+      width: width / nextBounds.width,
+      height: height / nextBounds.height
+    });
+  }
+
   function constrainCropTransition(startRect, targetRect, image = sourceImage, state = currentSnapshot()) {
     const start = normalizeCropRect(startRect);
     const target = normalizeCropRect(targetRect);
@@ -4030,8 +4058,9 @@
     return ((Number(value) + 180) % 360 + 360) % 360 - 180;
   }
 
-  function setStraightenValue(value) {
+  function setStraightenValue(value, previousState = currentSnapshot()) {
     straighten = Math.round(clamp(Number(value) || 0, -45, 45) * 10) / 10;
+    preserveCropRectForTransform(previousState);
     currentPreset = "custom";
     syncStraightenControls();
     persistActivePhoto();
@@ -4081,6 +4110,7 @@
     if (!rotationInteraction || event.pointerId !== rotationInteraction.pointerId) return;
     event.preventDefault();
     positionRotationCursor(event);
+    const previousState = currentSnapshot();
     const pointerAngle = Math.atan2(
       event.clientY - rotationInteraction.centerY,
       event.clientX - rotationInteraction.centerX
@@ -4094,15 +4124,15 @@
       const fromStartQuarter = normalizeSignedAngle(nextTotal - rotationInteraction.startRotation);
       if (Math.abs(fromStartQuarter) <= 45) {
         rotation = rotationInteraction.startRotation;
-        setStraightenValue(fromStartQuarter);
+        setStraightenValue(fromStartQuarter, previousState);
       } else {
         const snappedQuarter = Math.round(nextTotal / 90) * 90;
         rotation = ((snappedQuarter % 360) + 360) % 360;
-        setStraightenValue(normalizeSignedAngle(nextTotal - snappedQuarter));
+        setStraightenValue(normalizeSignedAngle(nextTotal - snappedQuarter), previousState);
       }
     } else {
       rotation = rotationInteraction.startRotation;
-      setStraightenValue(rotationInteraction.startStraighten + delta);
+      setStraightenValue(rotationInteraction.startStraighten + delta, previousState);
     }
 
     const appliedTotal = rotation + straighten;
@@ -4934,13 +4964,17 @@
   document.getElementById("uprightReset").addEventListener("click", () => applyUpright("reset"));
 
   document.getElementById("rotateLeft").addEventListener("click", () => {
+    const previousState = currentSnapshot();
     rotation = (rotation - 90 + 360) % 360;
+    preserveCropRectForTransform(previousState);
     scheduleRender();
     pushHistory();
   });
 
   document.getElementById("rotateRight").addEventListener("click", () => {
+    const previousState = currentSnapshot();
     rotation = (rotation + 90) % 360;
+    preserveCropRectForTransform(previousState);
     scheduleRender();
     pushHistory();
   });
