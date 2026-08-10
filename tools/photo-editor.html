@@ -3732,6 +3732,9 @@
   function constrainCropTransition(startRect, targetRect, image = sourceImage, state = currentSnapshot()) {
     const start = normalizeCropRect(startRect);
     const target = normalizeCropRect(targetRect);
+    // A preserved crop can temporarily extend past the rotated image. Let the
+    // next crop gesture update it until it returns inside the image bounds.
+    if (!isCropRectInsideImage(start, image, state)) return target;
     if (isCropRectInsideImage(target, image, state)) return target;
     let low = 0;
     let high = 1;
