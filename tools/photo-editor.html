@@ -601,6 +601,10 @@
     transition: none;
   }
 
+  .editor-shell.crop-mode .canvas-frame {
+    overflow: visible;
+  }
+
   #previewCanvas {
     max-width: 100%;
     max-height: 500px;
@@ -656,7 +660,7 @@
 
   .rotation-hit-zone {
     position: absolute;
-    z-index: 5;
+    z-index: 2;
     display: none;
     border: 0;
     background: transparent;
@@ -664,36 +668,36 @@
     touch-action: none;
   }
 
-  .editor-shell.crop-mode .rotation-hit-zone {
+  .crop-overlay.visible .rotation-hit-zone {
     display: block;
   }
 
   .rotation-hit-zone.left {
-    top: 42px;
-    bottom: 42px;
-    left: 0;
-    width: 34px;
+    top: 16px;
+    bottom: 16px;
+    left: -40px;
+    width: 24px;
   }
 
   .rotation-hit-zone.right {
-    top: 42px;
-    right: 0;
-    bottom: 42px;
-    width: 34px;
+    top: 16px;
+    right: -40px;
+    bottom: 16px;
+    width: 24px;
   }
 
   .rotation-hit-zone.top {
-    top: 0;
-    right: 42px;
-    left: 42px;
-    height: 34px;
+    top: -40px;
+    right: 16px;
+    left: 16px;
+    height: 24px;
   }
 
   .rotation-hit-zone.bottom {
-    right: 42px;
-    bottom: 0;
-    left: 42px;
-    height: 34px;
+    right: 16px;
+    bottom: -40px;
+    left: 16px;
+    height: 24px;
   }
 
   .rotation-hit-zone::after {
@@ -883,37 +887,58 @@
 
   .crop-handle {
     position: absolute;
-    z-index: 1;
-    width: 12px;
-    height: 12px;
+    z-index: 4;
+    width: 16px;
+    height: 16px;
     border: 2px solid white;
     background: #25221e;
     border-radius: 50%;
+    touch-action: none;
   }
 
   .crop-handle[data-crop-handle="nw"] {
-    top: -1px;
-    left: -1px;
+    top: -8px;
+    left: -8px;
     cursor: nwse-resize;
   }
 
   .crop-handle[data-crop-handle="ne"] {
-    top: -1px;
-    right: -1px;
+    top: -8px;
+    right: -8px;
     cursor: nesw-resize;
   }
 
   .crop-handle[data-crop-handle="sw"] {
-    bottom: -1px;
-    left: -1px;
+    bottom: -8px;
+    left: -8px;
     cursor: nesw-resize;
   }
 
   .crop-handle[data-crop-handle="se"] {
-    right: -1px;
-    bottom: -1px;
+    right: -8px;
+    bottom: -8px;
     cursor: nwse-resize;
   }
+
+  .crop-handle[data-crop-handle="n"],
+  .crop-handle[data-crop-handle="s"] {
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: ns-resize;
+  }
+
+  .crop-handle[data-crop-handle="n"] { top: -8px; }
+  .crop-handle[data-crop-handle="s"] { bottom: -8px; }
+
+  .crop-handle[data-crop-handle="e"],
+  .crop-handle[data-crop-handle="w"] {
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: ew-resize;
+  }
+
+  .crop-handle[data-crop-handle="e"] { right: -8px; }
+  .crop-handle[data-crop-handle="w"] { left: -8px; }
 
   .before-label {
     position: absolute;
@@ -2591,11 +2616,15 @@
               <span class="crop-handle" data-crop-handle="ne" aria-hidden="true"></span>
               <span class="crop-handle" data-crop-handle="sw" aria-hidden="true"></span>
               <span class="crop-handle" data-crop-handle="se" aria-hidden="true"></span>
+              <span class="crop-handle" data-crop-handle="n" aria-hidden="true"></span>
+              <span class="crop-handle" data-crop-handle="e" aria-hidden="true"></span>
+              <span class="crop-handle" data-crop-handle="s" aria-hidden="true"></span>
+              <span class="crop-handle" data-crop-handle="w" aria-hidden="true"></span>
+              <button class="rotation-hit-zone left" type="button" data-rotation-zone="left" aria-label="자르기 영역 왼쪽에서 드래그하여 미세 회전"></button>
+              <button class="rotation-hit-zone right" type="button" data-rotation-zone="right" aria-label="자르기 영역 오른쪽에서 드래그하여 미세 회전"></button>
+              <button class="rotation-hit-zone top" type="button" data-rotation-zone="top" aria-label="자르기 영역 위쪽에서 드래그하여 미세 회전"></button>
+              <button class="rotation-hit-zone bottom" type="button" data-rotation-zone="bottom" aria-label="자르기 영역 아래쪽에서 드래그하여 미세 회전"></button>
             </div>
-            <button class="rotation-hit-zone left" type="button" data-rotation-zone="left" aria-label="사진 왼쪽에서 드래그하여 미세 회전"></button>
-            <button class="rotation-hit-zone right" type="button" data-rotation-zone="right" aria-label="사진 오른쪽에서 드래그하여 미세 회전"></button>
-            <button class="rotation-hit-zone top" type="button" data-rotation-zone="top" aria-label="사진 위쪽에서 드래그하여 미세 회전"></button>
-            <button class="rotation-hit-zone bottom" type="button" data-rotation-zone="bottom" aria-label="사진 아래쪽에서 드래그하여 미세 회전"></button>
             <span class="straighten-guide" id="straightenGuide" aria-hidden="true"></span>
             <span class="before-label" id="beforeLabel">편집 전</span>
             <span class="rotation-cursor" id="rotationCursor" aria-hidden="true">↻</span>
@@ -2634,7 +2663,8 @@
         <div class="crop-controls" id="cropControls">
           <div class="section-title"><span>자르기 및 회전</span></div>
           <div class="ratio-buttons" id="ratioButtons">
-            <button class="active" type="button" data-ratio="original">원본</button>
+            <button class="active" type="button" data-ratio="free">자유</button>
+            <button type="button" data-ratio="original">원본</button>
             <button type="button" data-ratio="1:1">1 : 1</button>
             <button type="button" data-ratio="4:5">4 : 5</button>
             <button type="button" data-ratio="16:9">16 : 9</button>
@@ -2836,10 +2866,10 @@
           <h3>원하는 비율과 각도로 맞추기</h3>
           <p>상단 자르기 또는 Tab 키로 화면을 전환합니다. 프레임과 사진 위치를 조절해 원하는 구도를 만든 뒤 회전과 맞춤을 적용합니다.</p>
           <ul class="help-feature-list">
-            <li><strong>비율:</strong> 원본·1:1·4:5·16:9 중 선택하고 자르기 영역의 모서리를 드래그해 크기를 바꿉니다.</li>
-            <li><strong>위치:</strong> 사진 또는 자르기 영역 안쪽을 드래그해 남길 부분을 이동합니다.</li>
+            <li><strong>비율:</strong> 기본값은 자유입니다. 자유에서는 변을 드래그해 한 축만, 모서리를 드래그해 가로와 세로를 각각 조절합니다. 원본·1:1·4:5·16:9는 선택한 비율을 유지합니다.</li>
+            <li><strong>위치·회전:</strong> 자르기 영역 안쪽을 드래그해 남길 부분을 이동하고, 격자 네 변을 따라 배치된 회전 영역을 드래그해 미세 회전합니다.</li>
             <li><strong>회전·반전:</strong> 90° 회전과 좌우·상하 반전을 버튼으로 적용합니다.</li>
-            <li><strong>미세 회전:</strong> 사진의 네 가장자리에서 드래그하며, Shift를 누르면 45° 단위로 맞춰집니다.</li>
+            <li><strong>미세 회전:</strong> Shift를 누르면 45° 단위로 맞춰집니다.</li>
             <li><strong>자동 맞춤:</strong> 자동·수평·수직으로 선을 분석하거나 가이드선을 직접 긋고, 재설정으로 맞춤을 해제합니다.</li>
           </ul>
         </div>
@@ -2965,7 +2995,7 @@
 
   let sourceImage = null;
   let adjustments = { ...neutral };
-  let cropRatio = "original";
+  let cropRatio = "free";
   let cropRect = { x: 0, y: 0, width: 1, height: 1 };
   let rotation = 0;
   let straighten = 0;
@@ -3073,7 +3103,7 @@
   function cloneSnapshot(snapshot) {
     return {
       adjustments: { ...neutral, ...(snapshot?.adjustments || {}) },
-      cropRatio: snapshot?.cropRatio || "original",
+      cropRatio: snapshot?.cropRatio || "free",
       cropRect: normalizeCropRect(snapshot?.cropRect),
       rotation: Number(snapshot?.rotation) || 0,
       straighten: clamp(Number(snapshot?.straighten) || 0, -45, 45),
@@ -3402,7 +3432,7 @@
       selectionAnchorId = null;
       sourceImage = null;
       adjustments = { ...neutral };
-      cropRatio = "original";
+      cropRatio = "free";
       cropRect = { x: 0, y: 0, width: 1, height: 1 };
       rotation = 0;
       straighten = 0;
@@ -3446,7 +3476,6 @@
       document.getElementById("flipVertical"),
       straightenAngleInput,
       ...uprightButtons,
-      ...modeTabs,
       ...ratioButtons,
       ...sliderInputs,
       ...getPresetButtons()
@@ -3605,6 +3634,7 @@
 
   function getRatioValue(image, ratio = cropRatio) {
     if (!image?.naturalWidth) return 1;
+    if (ratio === "free") return null;
     if (ratio === "original") return image.naturalWidth / image.naturalHeight;
     const [width, height] = ratio.split(":").map(Number);
     return width / height;
@@ -3626,6 +3656,7 @@
   }
 
   function getTargetCropRatio(image, ratio = cropRatio, state = currentSnapshot()) {
+    if (ratio === "free") return null;
     if (ratio !== "original") return getRatioValue(image, ratio);
     const normalizedRotation = ((Number(state.rotation || 0) % 360) + 360) % 360;
     return normalizedRotation === 90 || normalizedRotation === 270
@@ -3657,6 +3688,7 @@
 
   function createCropRectForRatio(image, ratio, state = currentSnapshot()) {
     if (!image?.naturalWidth) return { x: 0, y: 0, width: 1, height: 1 };
+    if (ratio === "free") return { x: 0, y: 0, width: 1, height: 1 };
     const bounds = getTransformedBounds(image, state);
     const targetRatio = getTargetCropRatio(image, ratio, state);
     let low = 0;
@@ -3720,11 +3752,6 @@
       }
     }
     return result;
-  }
-
-  function reframeCropForRotation() {
-    if (!sourceImage?.naturalWidth) return;
-    cropRect = createCropRectForRatio(sourceImage, cropRatio, currentSnapshot());
   }
 
   function buildFilter(values) {
@@ -3826,6 +3853,84 @@
   }
 
   function resizeDisplayCrop(startRect, pointer, handle, canvasBounds) {
+    const minimumWidth = Math.min(0.2, 42 / Math.max(canvasBounds.width, 1));
+    const minimumHeight = Math.min(0.2, 42 / Math.max(canvasBounds.height, 1));
+
+    if (cropRatio === "free") {
+      const right = startRect.x + startRect.width;
+      const bottom = startRect.y + startRect.height;
+      if (handle === "n") {
+        const y = clamp(pointer.y, 0, bottom - minimumHeight);
+        return normalizeCropRect({ x: startRect.x, y, width: startRect.width, height: bottom - y });
+      }
+      if (handle === "s") {
+        const height = clamp(pointer.y - startRect.y, minimumHeight, 1 - startRect.y);
+        return normalizeCropRect({ x: startRect.x, y: startRect.y, width: startRect.width, height });
+      }
+      if (handle === "w") {
+        const x = clamp(pointer.x, 0, right - minimumWidth);
+        return normalizeCropRect({ x, y: startRect.y, width: right - x, height: startRect.height });
+      }
+      if (handle === "e") {
+        const width = clamp(pointer.x - startRect.x, minimumWidth, 1 - startRect.x);
+        return normalizeCropRect({ x: startRect.x, y: startRect.y, width, height: startRect.height });
+      }
+      const freeAnchors = {
+        nw: { x: right, y: bottom, signX: -1, signY: -1 },
+        ne: { x: startRect.x, y: bottom, signX: 1, signY: -1 },
+        sw: { x: right, y: startRect.y, signX: -1, signY: 1 },
+        se: { x: startRect.x, y: startRect.y, signX: 1, signY: 1 }
+      };
+      const anchor = freeAnchors[handle] || freeAnchors.se;
+      const width = clamp(Math.abs(pointer.x - anchor.x), minimumWidth, anchor.signX > 0 ? 1 - anchor.x : anchor.x);
+      const height = clamp(Math.abs(pointer.y - anchor.y), minimumHeight, anchor.signY > 0 ? 1 - anchor.y : anchor.y);
+      return normalizeCropRect({
+        x: anchor.signX > 0 ? anchor.x : anchor.x - width,
+        y: anchor.signY > 0 ? anchor.y : anchor.y - height,
+        width,
+        height
+      });
+    }
+
+    const normalizedRatio = getTargetCropRatio(sourceImage, cropRatio, currentSnapshot())
+      * canvasBounds.height / canvasBounds.width;
+    const centerX = startRect.x + startRect.width / 2;
+    const centerY = startRect.y + startRect.height / 2;
+
+    if (handle === "n" || handle === "s") {
+      const fixedEdge = handle === "n" ? startRect.y + startRect.height : startRect.y;
+      const rawHeight = Math.abs(pointer.y - fixedEdge);
+      const maxHeight = Math.min(
+        handle === "n" ? fixedEdge : 1 - fixedEdge,
+        (2 * Math.min(centerX, 1 - centerX)) / normalizedRatio
+      );
+      const height = clamp(rawHeight, minimumWidth / normalizedRatio, maxHeight);
+      const width = height * normalizedRatio;
+      return normalizeCropRect({
+        x: centerX - width / 2,
+        y: handle === "n" ? fixedEdge - height : fixedEdge,
+        width,
+        height
+      });
+    }
+
+    if (handle === "w" || handle === "e") {
+      const fixedEdge = handle === "w" ? startRect.x + startRect.width : startRect.x;
+      const rawWidth = Math.abs(pointer.x - fixedEdge);
+      const maxWidth = Math.min(
+        handle === "w" ? fixedEdge : 1 - fixedEdge,
+        2 * Math.min(centerY, 1 - centerY) * normalizedRatio
+      );
+      const width = clamp(rawWidth, minimumWidth, maxWidth);
+      const height = width / normalizedRatio;
+      return normalizeCropRect({
+        x: handle === "w" ? fixedEdge - width : fixedEdge,
+        y: centerY - height / 2,
+        width,
+        height
+      });
+    }
+
     const anchors = {
       nw: { x: startRect.x + startRect.width, y: startRect.y + startRect.height, signX: -1, signY: -1 },
       ne: { x: startRect.x, y: startRect.y + startRect.height, signX: 1, signY: -1 },
@@ -3833,9 +3938,6 @@
       se: { x: startRect.x, y: startRect.y, signX: 1, signY: 1 }
     };
     const anchor = anchors[handle] || anchors.se;
-    const pixelRatio = getTargetCropRatio(sourceImage, cropRatio, currentSnapshot());
-    const normalizedRatio = pixelRatio * canvasBounds.height / canvasBounds.width;
-    const minimumWidth = Math.min(0.2, 42 / Math.max(canvasBounds.width, 1));
     const maximumWidth = anchor.signX > 0 ? 1 - anchor.x : anchor.x;
     const maximumHeight = anchor.signY > 0 ? 1 - anchor.y : anchor.y;
     const rawWidth = Math.abs(pointer.x - anchor.x);
@@ -3861,7 +3963,13 @@
   }
 
   function beginCropInteraction(event) {
-    if (currentMode !== "crop" || guideMode || !getActivePhoto() || event.button !== 0) return;
+    if (
+      currentMode !== "crop"
+      || guideMode
+      || !getActivePhoto()
+      || event.button !== 0
+      || event.target.closest("[data-rotation-zone]")
+    ) return;
     event.preventDefault();
     const canvasBounds = previewCanvas.getBoundingClientRect();
     const handle = event.target.closest("[data-crop-handle]")?.dataset.cropHandle || "move";
@@ -3919,9 +4027,8 @@
     return ((Number(value) + 180) % 360 + 360) % 360 - 180;
   }
 
-  function setStraightenValue(value, options = {}) {
+  function setStraightenValue(value) {
     straighten = Math.round(clamp(Number(value) || 0, -45, 45) * 10) / 10;
-    if (options.reframe !== false) reframeCropForRotation();
     currentPreset = "custom";
     syncStraightenControls();
     persistActivePhoto();
@@ -3948,9 +4055,9 @@
     if (currentMode !== "crop" || guideMode || !getActivePhoto() || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
-    const frameBounds = canvasFrame.getBoundingClientRect();
-    const centerX = frameBounds.left + frameBounds.width / 2;
-    const centerY = frameBounds.top + frameBounds.height / 2;
+    const overlayBounds = cropOverlay.getBoundingClientRect();
+    const centerX = overlayBounds.left + overlayBounds.width / 2;
+    const centerY = overlayBounds.top + overlayBounds.height / 2;
     rotationInteraction = {
       pointerId: event.pointerId,
       target: event.currentTarget,
@@ -4825,14 +4932,12 @@
 
   document.getElementById("rotateLeft").addEventListener("click", () => {
     rotation = (rotation - 90 + 360) % 360;
-    reframeCropForRotation();
     scheduleRender();
     pushHistory();
   });
 
   document.getElementById("rotateRight").addEventListener("click", () => {
     rotation = (rotation + 90) % 360;
-    reframeCropForRotation();
     scheduleRender();
     pushHistory();
   });
@@ -4979,7 +5084,7 @@
       exportPhotos(getSelectedTargetPhotos());
       return;
     }
-    if (!modifier && !event.altKey && event.key === "Tab" && getActivePhoto()) {
+    if (!modifier && !event.altKey && event.key === "Tab") {
       event.preventDefault();
       setMode(currentMode === "edit" ? "crop" : "edit");
       return;
