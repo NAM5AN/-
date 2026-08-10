@@ -2677,7 +2677,7 @@
           </div>
           <label class="straighten-angle-control">
             <span>각도</span>
-            <input id="straightenAngle" type="range" min="-45" max="45" step="0.1" value="0" aria-label="미세 회전 각도" />
+            <input id="straightenAngle" type="range" min="-180" max="180" step="0.1" value="0" aria-label="미세 회전 각도" />
             <output id="straightenAngleOutput">0.0°</output>
           </label>
           <div class="upright-controls">
@@ -3106,7 +3106,7 @@
       cropRatio: snapshot?.cropRatio || "free",
       cropRect: normalizeCropRect(snapshot?.cropRect),
       rotation: Number(snapshot?.rotation) || 0,
-      straighten: clamp(Number(snapshot?.straighten) || 0, -45, 45),
+      straighten: normalizeSignedAngle(snapshot?.straighten),
       flipX: snapshot?.flipX === -1 ? -1 : 1,
       flipY: snapshot?.flipY === -1 ? -1 : 1,
       currentPreset: snapshot?.currentPreset || "original"
@@ -3161,7 +3161,7 @@
     cropRatio = snapshot.cropRatio;
     cropRect = { ...snapshot.cropRect };
     rotation = snapshot.rotation;
-    straighten = snapshot.straighten;
+    straighten = normalizeSignedAngle(snapshot.straighten);
     flipX = snapshot.flipX;
     flipY = snapshot.flipY;
     currentPreset = snapshot.currentPreset;
@@ -4055,11 +4055,13 @@
   }
 
   function normalizeSignedAngle(value) {
-    return ((Number(value) + 180) % 360 + 360) % 360 - 180;
+    const angle = Number(value);
+    if (!Number.isFinite(angle)) return 0;
+    return ((angle + 180) % 360 + 360) % 360 - 180;
   }
 
   function setStraightenValue(value, previousState = currentSnapshot()) {
-    straighten = Math.round(clamp(Number(value) || 0, -45, 45) * 10) / 10;
+    straighten = normalizeSignedAngle(Math.round((Number(value) || 0) * 10) / 10);
     preserveCropRectForTransform(previousState);
     currentPreset = "custom";
     syncStraightenControls();
