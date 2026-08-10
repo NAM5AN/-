@@ -1359,6 +1359,19 @@
     font-size: 9px;
   }
 
+  .current-crop-ratio {
+    min-width: 0;
+    margin-left: 8px;
+    overflow: hidden;
+    color: #827b72;
+    font-family: var(--font-body);
+    font-size: 9px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .slider-row {
     height: 28px;
     display: grid;
@@ -1934,6 +1947,10 @@
 
   .section-title {
     color: var(--ink);
+  }
+
+  .current-crop-ratio {
+    color: var(--ink-faint);
   }
 
   .section-title button {
@@ -2661,7 +2678,7 @@
         </div>
 
         <div class="crop-controls" id="cropControls">
-          <div class="section-title"><span>자르기 및 회전</span></div>
+          <div class="section-title"><span>자르기 및 회전</span><output class="current-crop-ratio" id="currentCropRatio" aria-live="polite">—</output></div>
           <div class="ratio-buttons" id="ratioButtons">
             <button class="active" type="button" data-ratio="free">자유</button>
             <button type="button" data-ratio="original">원본</button>
@@ -2969,6 +2986,7 @@
   const undoButton = document.getElementById("undoButton");
   const redoButton = document.getElementById("redoButton");
   const dimensions = document.getElementById("dimensions");
+  const currentCropRatio = document.getElementById("currentCropRatio");
   const fileName = document.getElementById("fileName");
   const fileMeta = document.getElementById("fileMeta");
   const cropControls = document.getElementById("cropControls");
@@ -3487,6 +3505,7 @@
       fileName.textContent = "사진 없음";
       fileMeta.textContent = "사진을 추가해 편집을 시작하세요";
       dimensions.textContent = "— × — px";
+      currentCropRatio.textContent = "—";
       previewCanvas.width = 1;
       previewCanvas.height = 1;
       uploadPreview.width = 1;
@@ -3861,12 +3880,34 @@
     }
   }
 
+  function formatCurrentCropRatio(width, height) {
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return "—";
+    const ratio = width / height;
+    const commonRatios = [
+      [1, 1], [4, 5], [5, 4], [3, 2], [2, 3],
+      [4, 3], [3, 4], [16, 9], [9, 16]
+    ];
+    const matchedRatio = commonRatios.find(([horizontal, vertical]) => {
+      const commonRatio = horizontal / vertical;
+      return Math.abs(ratio - commonRatio) / commonRatio <= 0.012;
+    });
+    if (matchedRatio) return `현재 ${matchedRatio[0]} : ${matchedRatio[1]}`;
+    const formatDecimal = (value) => value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+    return ratio >= 1
+      ? `현재 ${formatDecimal(ratio)} : 1`
+      : `현재 1 : ${formatDecimal(1 / ratio)}`;
+  }
+
   function updateOutputDimensions() {
-    if (!sourceImage?.naturalWidth) return;
+    if (!sourceImage?.naturalWidth) {
+      currentCropRatio.textContent = "—";
+      return;
+    }
     const crop = getCropRect(sourceImage, cropRect, currentSnapshot());
     const width = Math.round(crop.width);
     const height = Math.round(crop.height);
     dimensions.textContent = `${width.toLocaleString()} × ${height.toLocaleString()} px`;
+    currentCropRatio.textContent = formatCurrentCropRatio(crop.width, crop.height);
   }
 
   function updateCropOverlay() {
