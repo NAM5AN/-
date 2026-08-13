@@ -2681,6 +2681,17 @@
       }, 150);
     });
 
+    // ===== 마이페이지 이동 (헤더 사용자 영역 클릭) =====
+    const userInfoEl = document.getElementById('userInfo');
+    if (userInfoEl) {
+      userInfoEl.style.cursor = 'pointer';
+      userInfoEl.title = '마이페이지';
+      userInfoEl.addEventListener('click', () => {
+        if (isGuestMode) return;   // 게스트 모드에선 userInfo 자체가 숨겨져 있음 (안전장치)
+        location.href = '/mypage.html';
+      });
+    }
+
     // ===== 설정 모달 =====
     const settingsBg = document.getElementById('settingsBg');
 
@@ -2782,7 +2793,8 @@
       return;
     }
     const name = getUserDisplayName(user);
-    if (nameEl) nameEl.textContent = name;
+    // 헤더에는 닉네임 대신 '마이페이지' 표기 (아바타 첫 글자는 유지)
+    if (nameEl) nameEl.textContent = '마이페이지';
     if (avatarEl) avatarEl.textContent = emailToInitial(user.email || name);
   }
 
