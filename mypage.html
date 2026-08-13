@@ -2230,6 +2230,9 @@
       wb.created = new Date();
 
       // ── 완료목록 (원본 · 다른 시트가 이 시트를 수식으로 참조) ──
+      // 요약 시트를 가장 먼저 만들어 첫 번째 탭이 되게 함 (내용은 아래에서 채움)
+      const sum = wb.addWorksheet('요약', { views: [{ showGridLines: false }] });
+
       const ws = wb.addWorksheet('완료목록', { views: [{ state: 'frozen', ySplit: 1 }] });
       xlsHeader(ws, [
         { header: '완료일', key: 'at', width: 12 },
@@ -2260,18 +2263,30 @@
         row.getCell('at').numFmt = 'yyyy-mm-dd';
         row.getCell('value').numFmt = '#,##0';
 
-        // 금액 미입력 행 강조 (여기에 숫자를 입력하면 모든 집계가 자동 반영됨)
-        if (r.provided_value == null) {
-          row.getCell('value').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.warn } };
-          row.getCell('value').border = {
-            top: { style: 'thin', color: { argb: XLS.terra } },
-            left: { style: 'thin', color: { argb: XLS.terra } },
-            bottom: { style: 'thin', color: { argb: XLS.terra } },
-            right: { style: 'thin', color: { argb: XLS.terra } }
-          };
-        }
+        // 미입력 강조는 아래 조건부 서식으로 처리 (값을 채우면 자동으로 사라짐)
       });
       ws.autoFilter = { from: 'A1', to: 'I1' };
+
+      // 제공 금액이 비어 있는 셀만 노란색 — 사용자가 값을 입력하면 즉시 해제됨
+      if (done.length) {
+        ws.addConditionalFormatting({
+          ref: 'I2:I' + (done.length + 1),
+          rules: [{
+            type: 'expression',
+            formulae: ['ISBLANK($I2)'],
+            priority: 1,
+            style: {
+              fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: XLS.warn } },
+              border: {
+                top: { style: 'thin', color: { argb: XLS.terra } },
+                left: { style: 'thin', color: { argb: XLS.terra } },
+                bottom: { style: 'thin', color: { argb: XLS.terra } },
+                right: { style: 'thin', color: { argb: XLS.terra } }
+              }
+            }
+          }]
+        });
+      }
 
       // 수식이 참조할 범위 (행을 더 추가해도 잡히도록 여유분 포함)
       const END = done.length + 1000;
@@ -2312,7 +2327,6 @@
       ws2.autoFilter = { from: 'A1', to: 'J1' };
 
       // ── 요약 ──
-      const sum = wb.addWorksheet('요약', { views: [{ showGridLines: false }] });
       sum.getColumn(1).width = 3;   // 여백
       sum.getColumn(2).width = 19;  // 라벨 / 연도
       sum.getColumn(3).width = 15;  // 값 / 건수
@@ -2603,9 +2617,6 @@
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLS.soft } };
           });
         });
-
-      // 시트 순서: 요약을 맨 앞으로
-      wb.worksheets.sort((a, b) => (a.name === '요약' ? -1 : b.name === '요약' ? 1 : 0));
 
       const buf = await wb.xlsx.writeBuffer();
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
