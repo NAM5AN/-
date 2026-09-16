@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>체험단 매니저 · 관리자</title>
+<style>
+  :root {
+    --bg: #F5EFE6;
+    --paper: #FBF7F0;
+    --card: #FFFFFF;
+    --ink: #2A2522;
+    --ink-soft: #6B6055;
+    --ink-faint: #9C9183;
+    --line: #E7DECF;
+    --terra: #C2542B;
+    --terra-soft: #E89977;
+    --sage: #5A7C5C;
+    --mustard: #C29D2C;
+    --rose: #D87B7B;
+    --font: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', sans-serif;
+    --mono: ui-monospace, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 18px 60px; }
+
+  /* ── 로그인 ── */
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .login-card {
+    width: 100%;
+    max-width: 380px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 32px 28px;
+    box-shadow: 0 12px 40px rgba(42, 37, 34, 0.08);
+    text-align: center;
+  }
+  .login-emoji { font-size: 34px; }
+  .login-title { font-size: 20px; font-weight: 800; margin: 10px 0 4px; }
+  .login-sub { font-size: 13px; color: var(--ink-soft); margin-bottom: 22px; }
+  .login-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-family: var(--font);
+    font-size: 14px;
+    background: var(--paper);
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .login-input:focus { outline: none; border-color: var(--terra); }
+  .btn {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--terra);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+  }
+  .btn:hover { background: #A8431F; }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .login-error {
+    color: var(--rose);
+    font-size: 12.5px;
+    margin-top: 12px;
+    min-height: 16px;
+  }
+
+  /* ── 헤더 ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .topbar h1 { font-size: 22px; font-weight: 800; margin: 0; }
+  .topbar-meta { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
+  .topbar-actions { display: flex; gap: 8px; }
+  .btn-sm {
+    width: auto;
+    padding: 9px 14px;
+    font-size: 13px;
+    border-radius: 9px;
+  }
+  .btn-ghost { background: var(--card); color: var(--ink-soft); border: 1px solid var(--line); }
+  .btn-ghost:hover { background: var(--paper); }
+
+  /* ── 요약 카드 ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 18px;
+  }
+  .stat-label { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+  .stat-value { font-size: 30px; font-weight: 800; margin-top: 6px; letter-spacing: -0.5px; }
+  .stat-card.accent .stat-value { color: var(--terra); }
+  .stat-card.sage .stat-value { color: var(--sage); }
+  .stat-card.mustard .stat-value { color: var(--mustard); }
+
+  /* ── 테이블 ── */
+  /* ── 통계 그래프 ── */
+  .stats-section { margin-bottom: 24px; }
+  .stats-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .stats-head h2 { font-size: 16px; font-weight: 800; margin: 0; }
+  .period-toggle {
+    display: inline-flex;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .period-toggle button {
+    padding: 7px 16px;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .period-toggle button:hover { color: var(--ink); }
+  .period-toggle button.on { background: var(--terra); color: #fff; }
+  .chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 12px;
+  }
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .chart-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
+  .chart-sub { font-size: 12px; font-weight: 500; color: var(--ink-faint); margin-left: 6px; }
+  .chart-box { position: relative; height: 260px; }
+
+  .table-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .table-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .table-head h2 { font-size: 15px; font-weight: 700; margin: 0; }
+  .table-search {
+    padding: 7px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 13px;
+    background: var(--paper);
+    color: var(--ink);
+    width: 200px;
+    max-width: 45vw;
+  }
+  .table-search:focus { outline: none; border-color: var(--terra); }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { padding: 11px 14px; text-align: left; white-space: nowrap; }
+  th {
+    background: var(--paper);
+    color: var(--ink-soft);
+    font-weight: 700;
+    font-size: 12.5px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+  }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th .arrow { color: var(--terra); font-size: 11px; }
+  tbody tr { border-bottom: 1px solid var(--line); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--paper); }
+  tbody tr.user-row { cursor: pointer; }
+
+  /* ── 사용자 상세 모달 ── */
+  .detail-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(42, 37, 34, .45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+  }
+  .detail-bg.active { display: flex; }
+  .detail-modal {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    max-height: 80vh;
+    background: var(--card);
+    border-radius: 16px;
+    padding: 22px 22px 18px;
+    box-shadow: 0 20px 60px rgba(42, 37, 34, .25);
+    display: flex;
+    flex-direction: column;
+  }
+  .detail-close {
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 30px; height: 30px;
+    border: none;
+    background: var(--paper);
+    border-radius: 8px;
+    color: var(--ink-soft);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .detail-close:hover { background: var(--line); color: var(--ink); }
+  .detail-title { margin: 0 28px 2px 0; font-size: 17px; font-weight: 800; }
+  .detail-sub { font-size: 12px; color: var(--ink-faint); margin-bottom: 14px; }
+  .detail-body { overflow-y: auto; }
+  .d-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .d-item:last-child { border-bottom: none; }
+  .d-status {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .d-status.active { background: rgba(194,84,43,.10); color: var(--terra); }
+  .d-status.done { background: rgba(90,124,92,.12); color: var(--sage); }
+  .d-main { flex: 1; min-width: 0; }
+  .d-store { font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .d-meta { font-size: 11.5px; color: var(--ink-faint); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .d-date { flex-shrink: 0; font-size: 11.5px; color: var(--ink-faint); font-family: var(--mono); white-space: nowrap; }
+  td.user-cell { max-width: 280px; }
+  .u-name { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+  .u-sub { font-size: 11.5px; color: var(--ink-faint); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; }
+  td.muted, .date { color: var(--ink-faint); font-family: var(--mono); font-size: 12px; }
+  .ago-recent { color: var(--sage); font-weight: 700; font-family: var(--font); }
+  .ago-mid { color: var(--ink-soft); font-family: var(--font); }
+  .ago-stale { color: var(--ink-faint); font-family: var(--font); }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .pill-active { background: rgba(194,84,43,.10); color: var(--terra); }
+  .pill-done { background: rgba(90,124,92,.12); color: var(--sage); }
+  .pill-premium { background: rgba(194,157,44,.15); color: #8a6f15; }
+  .pill-zero { color: var(--ink-faint); }
+
+  .empty, .loading {
+    padding: 40px 18px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 14px;
+  }
+  .spinner {
+    width: 26px; height: 26px;
+    border: 3px solid var(--line);
+    border-top-color: var(--terra);
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+  .banner {
+    background: rgba(216,123,123,.10);
+    border: 1px solid rgba(216,123,123,.35);
+    color: #9c4a4a;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+</style>
+<!-- 통계 그래프용 (Chart.js) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ── 로그인 화면 ── -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-emoji">🔐</div>
+    <div class="login-title">관리자 페이지</div>
+    <div class="login-sub">체험단 매니저 사용 현황</div>
+    <input type="password" id="tokenInput" class="login-input" placeholder="관리자 토큰 입력" autocomplete="off">
+    <button class="btn" id="loginBtn">확인</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ── 대시보드 ── -->
+<div class="wrap hidden" id="dashboard">
+  <div class="topbar">
+    <div>
+      <h1>📊 체험단 매니저 현황</h1>
+      <div class="topbar-meta" id="updatedMeta">불러오는 중...</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-sm btn-ghost" id="refreshBtn">↻ 새로고침</button>
+      <button class="btn btn-sm btn-ghost" id="logoutBtn">잠그기</button>
+    </div>
+  </div>
+
+  <div id="errorBanner" class="banner hidden"></div>
+
+  <div class="cards" id="cards"></div>
+
+  <!-- ── 통계 그래프 ── -->
+  <div class="stats-section">
+    <div class="stats-head">
+      <h2>📈 통계</h2>
+      <div class="period-toggle" id="periodToggle">
+        <button data-gran="week">주간</button>
+        <button data-gran="month" class="on">월간</button>
+        <button data-gran="year">연간</button>
+      </div>
+    </div>
+    <div id="chartUnavailable" class="banner hidden">
+      그래프 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침 해주세요.
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">사용자 증가 <span class="chart-sub">신규 가입 · 누적</span></div>
+        <div class="chart-box"><canvas id="chartGrowth"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">캠페인 활동 <span class="chart-sub">등록 · 완료</span></div>
+        <div class="chart-box"><canvas id="chartActivity"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-head">
+      <h2>사용자 목록</h2>
+      <input type="text" id="searchInput" class="table-search" placeholder="닉네임·이메일 검색...">
+    </div>
+    <div class="table-scroll">
+      <div class="loading" id="tableLoading">
+        <div class="spinner"></div>
+        데이터를 불러오는 중...
+      </div>
+      <table id="userTable" class="hidden">
+        <thead>
+          <tr>
+            <th data-sort="name">사용자</th>
+            <th data-sort="active" class="num">진행 중</th>
+            <th data-sort="completed" class="num">완료</th>
+            <th data-sort="total" class="num">합계</th>
+            <th data-sort="lastActiveAt">최근 진행중 등록</th>
+            <th data-sort="lastCompletedAt">최근 완료</th>
+            <th data-sort="createdAt">가입일</th>
+            <th data-sort="lastSignIn">최근 접속</th>
+            <th data-sort="premium">플랜</th>
+          </tr>
+        </thead>
+        <tbody id="userTbody"></tbody>
+      </table>
+      <div class="empty hidden" id="tableEmpty">사용자가 없어요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 사용자 상세 모달 (체험단 목록) ── -->
+<div class="detail-bg" id="detailBg">
+  <div class="detail-modal">
+    <button class="detail-close" id="detailClose">✕</button>
+    <h3 class="detail-title" id="detailTitle">체험단 목록</h3>
+    <div class="detail-sub" id="detailSub"></div>
+    <div class="detail-body" id="detailBody">
+      <div class="loading"><div class="spinner"></div>불러오는 중...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── 설정 (공개 키 — 노출돼도 안전) ──
+  var SUPABASE_URL = 'https://wvwoqqfizgbhvdzlqscc.supabase.co';
+  var PUBLISHABLE_KEY = 'sb_publishable_iLtSrF52sRfzalwcR4Nt-w_dJiU2q16';
+  var FN_URL = SUPABASE_URL + '/functions/v1/admin-stats';
+  var TOKEN_KEY = 'cdm_admin_token';
+
+  var state = { users: [], summary: null, series: { entryCreated: [], entryCompleted: [] }, gran: 'month', sortKey: 'total', sortDir: 'desc', filter: '' };
+  var charts = { growth: null, activity: null };
+
+  // ── DOM ──
+  var $ = function (id) { return document.getElementById(id); };
+
+  function getToken() {
+    try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
+  }
+  function setToken(t) {
+    try { sessionStorage.setItem(TOKEN_KEY, t); } catch (e) {}
+  }
+  function clearToken() {
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+  }
+
+  // ── 데이터 불러오기 ──
+  async function fetchStats(token, payload) {
+    var res = await fetch(FN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': PUBLISHABLE_KEY,
+        'Authorization': 'Bearer ' + PUBLISHABLE_KEY,
+        'x-admin-token': token
+      },
+      body: JSON.stringify(payload || {})
+    });
+    var data = null;
+    try { data = await res.json(); } catch (e) {}
+    if (!res.ok) {
+      var msg = (data && data.error) ? data.error : ('요청 실패 (' + res.status + ')');
+      var err = new Error(msg);
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  // ── 화면 전환 ──
+  function showLogin() {
+    $('loginScreen').classList.remove('hidden');
+    $('dashboard').classList.add('hidden');
+  }
+  function showDashboard() {
+    $('loginScreen').classList.add('hidden');
+    $('dashboard').classList.remove('hidden');
+  }
+
+  // ── 로그인 시도 ──
+  async function tryLogin() {
+    var token = $('tokenInput').value.trim();
+    if (!token) { $('loginError').textContent = '토큰을 입력해주세요.'; return; }
+    $('loginBtn').disabled = true;
+    $('loginError').textContent = '';
+    try {
+      var data = await fetchStats(token);
+      setToken(token);
+      render(data);
+      showDashboard();
+    } catch (e) {
+      if (e.status === 401) $('loginError').textContent = '토큰이 올바르지 않아요.';
+      else $('loginError').textContent = '오류: ' + e.message;
+    } finally {
+      $('loginBtn').disabled = false;
+    }
+  }
+
+  // ── 새로고침 ──
+  async function refresh() {
+    var token = getToken();
+    if (!token) { showLogin(); return; }
+    $('tableLoading').classList.remove('hidden');
+    $('userTable').classList.add('hidden');
+    $('tableEmpty').classList.add('hidden');
+    $('errorBanner').classList.add('hidden');
+    $('updatedMeta').textContent = '불러오는 중...';
+    try {
+      var data = await fetchStats(token);
+      render(data);
+    } catch (e) {
+      if (e.status === 401) { clearToken(); showLogin(); return; }
+      $('errorBanner').textContent = '데이터를 불러오지 못했어요: ' + e.message;
+      $('errorBanner').classList.remove('hidden');
+      $('tableLoading').classList.add('hidden');
+    }
+  }
+
+  // ── 렌더 ──
+  function render(data) {
+    state.summary = data.summary || {};
+    state.users = data.users || [];
+    state.series = data.series || { entryCreated: [], entryCompleted: [] };
+
+    // 함수 버전 진단: 새 필드(series)가 응답에 없으면 옛 함수임
+    if (!data.series) {
+      $('errorBanner').innerHTML = '⚠️ <strong>Edge Function이 옛 버전이에요.</strong> ' +
+        'Supabase에서 <b>admin-stats</b> 함수를 새 <b>admin-stats.ts</b> 코드로 다시 배포(Deploy)하면 ' +
+        '최신 통계(그래프·최근 활동 날짜)가 채워져요. (재배포 후 이 페이지 새로고침)';
+      $('errorBanner').classList.remove('hidden');
+    } else {
+      $('errorBanner').classList.add('hidden');
+    }
+
+    renderCards();
+    renderCharts();
+    renderTable();
+    var when = data.generatedAt ? new Date(data.generatedAt) : new Date();
+    $('updatedMeta').textContent = '마지막 업데이트 · ' + fmtDateTime(when);
+  }
+
+  // ── 통계 그래프 ──
+  // 날짜를 기간 시작(주=월요일 / 월=1일 / 년=1월1일)으로 정규화
+  function bucketStart(d, gran) {
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (gran === 'year') return new Date(x.getFullYear(), 0, 1);
+    if (gran === 'month') return new Date(x.getFullYear(), x.getMonth(), 1);
+    var day = x.getDay(); // 0=일
+    var diff = (day === 0 ? -6 : 1 - day); // 월요일까지
+    x.setDate(x.getDate() + diff);
+    return x;
+  }
+  function bucketKey(start, gran) {
+    if (gran === 'year') return '' + start.getFullYear();
+    if (gran === 'month') return start.getFullYear() + '-' + pad(start.getMonth() + 1);
+    return start.getFullYear() + '-' + pad(start.getMonth() + 1) + '-' + pad(start.getDate());
+  }
+  function bucketLabel(start, gran) {
+    if (gran === 'year') return '' + start.getFullYear();
+    if (gran === 'month') return start.getFullYear() + '.' + pad(start.getMonth() + 1);
+    return (start.getMonth() + 1) + '/' + start.getDate();
+  }
+  function bucketStep(d, gran) {
+    if (gran === 'year') d.setFullYear(d.getFullYear() + 1);
+    else if (gran === 'month') d.setMonth(d.getMonth() + 1);
+    else d.setDate(d.getDate() + 7);
+  }
+  // 데이터의 가장 이른 날짜부터 오늘까지 연속된 기간 버킷 생성
+  function makeBuckets(gran, allDates) {
+    var minT = null;
+    for (var i = 0; i < allDates.length; i++) {
+      var t = new Date(allDates[i]).getTime();
+      if (!isNaN(t) && (minT === null || t < minT)) minT = t;
+    }
+    if (minT === null) return { keys: [], labels: [] };
+    var cur = bucketStart(new Date(minT), gran);
+    var end = bucketStart(new Date(), gran);
+    var keys = [], labels = [], guard = 0;
+    while (cur.getTime() <= end.getTime() && guard < 3000) {
+      keys.push(bucketKey(cur, gran));
+      labels.push(bucketLabel(cur, gran));
+      bucketStep(cur, gran);
+      guard++;
+    }
+    if (keys.length > 60) { keys = keys.slice(-60); labels = labels.slice(-60); } // 최근 60개만
+    return { keys: keys, labels: labels };
+  }
+  function countInBuckets(dates, keys, gran) {
+    var idx = {};
+    for (var i = 0; i < keys.length; i++) idx[keys[i]] = i;
+    var out = keys.map(function () { return 0; });
+    for (var j = 0; j < dates.length; j++) {
+      var d = new Date(dates[j]);
+      if (isNaN(d)) continue;
+      var k = bucketKey(bucketStart(d, gran), gran);
+      if (k in idx) out[idx[k]]++;
+    }
+    return out;
+  }
+  function runningSum(arr) {
+    var s = 0;
+    return arr.map(function (v) { s += v; return s; });
+  }
+
+  function renderCharts() {
+    if (typeof Chart === 'undefined') {
+      $('chartUnavailable').classList.remove('hidden');
+      return;
+    }
+    $('chartUnavailable').classList.add('hidden');
+
+    var gran = state.gran;
+    var signupDates = state.users.map(function (u) { return u.createdAt; }).filter(Boolean);
+    var created = (state.series && state.series.entryCreated) || [];
+    var completed = (state.series && state.series.entryCompleted) || [];
+
+    // 공통 x축 (모든 데이터 최소 날짜 기준)
+    var b = makeBuckets(gran, signupDates.concat(created, completed));
+
+    var signupCounts = countInBuckets(signupDates, b.keys, gran);
+    var cumulative = runningSum(signupCounts);
+    var createdCounts = countInBuckets(created, b.keys, gran);
+    var completedCounts = countInBuckets(completed, b.keys, gran);
+
+    var terra = '#C2542B', ink = '#6B6055', terraSoft = '#E89977', sage = '#5A7C5C';
+    var commonOpts = {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { font: { family: 'Pretendard', size: 12 }, color: ink, boxWidth: 12 } },
+        tooltip: { titleFont: { family: 'Pretendard' }, bodyFont: { family: 'Pretendard' } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'Pretendard', size: 11 }, color: '#9C9183', maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } }
+      }
+    };
+
+    // 차트 A: 사용자 증가 (막대 신규가입 + 선 누적)
+    if (charts.growth) charts.growth.destroy();
+    charts.growth = new Chart(document.getElementById('chartGrowth'), {
+      data: {
+        labels: b.labels,
+        datasets: [
+          { type: 'bar', label: '신규 가입', data: signupCounts, backgroundColor: terra, borderRadius: 4, yAxisID: 'y', order: 2 },
+          { type: 'line', label: '누적 사용자', data: cumulative, borderColor: ink, backgroundColor: ink, tension: 0.3, pointRadius: 2, borderWidth: 2, yAxisID: 'y1', order: 1 }
+        ]
+      },
+      options: Object.assign({}, commonOpts, {
+        scales: {
+          x: commonOpts.scales.x,
+          y: { beginAtZero: true, position: 'left', ticks: { precision: 0, font: { family: 'Pretendard', size: 11 }, color: terra }, grid: { color: '#EFE8DC' } },
+          y1: { beginAtZero: true, position: 'right', ticks: { precision: 0, font: { family: 'Pretendard', size: 11 }, color: ink }, grid: { drawOnChartArea: false } }
+        }
+      })
+    });
+
+    // 차트 B: 캠페인 활동 (등록 / 완료)
+    if (charts.activity) charts.activity.destroy();
+    charts.activity = new Chart(document.getElementById('chartActivity'), {
+      type: 'bar',
+      data: {
+        labels: b.labels,
+        datasets: [
+          { label: '등록', data: createdCounts, backgroundColor: terraSoft, borderRadius: 4 },
+          { label: '완료', data: completedCounts, backgroundColor: sage, borderRadius: 4 }
+        ]
+      },
+      options: Object.assign({}, commonOpts, {
+        scales: {
+          x: commonOpts.scales.x,
+          y: { beginAtZero: true, ticks: { precision: 0, font: { family: 'Pretendard', size: 11 }, color: '#9C9183' }, grid: { color: '#EFE8DC' } }
+        }
+      })
+    });
+  }
+
+  function renderCards() {
+    var s = state.summary;
+    var cards = [
+      { label: '총 사용자', value: s.totalUsers || 0, cls: '' },
+      { label: '진행 중', value: s.totalActive || 0, cls: 'accent' },
+      { label: '완료', value: s.totalCompleted || 0, cls: 'sage' },
+      { label: '총 저장 캠페인', value: s.totalEntries || 0, cls: '' },
+      { label: '프리미엄', value: s.premiumCount || 0, cls: 'mustard' }
+    ];
+    $('cards').innerHTML = cards.map(function (c) {
+      return '<div class="stat-card ' + c.cls + '">' +
+        '<div class="stat-label">' + c.label + '</div>' +
+        '<div class="stat-value">' + numfmt(c.value) + '</div></div>';
+    }).join('');
+  }
+
+  function renderTable() {
+    $('tableLoading').classList.add('hidden');
+    var rows = state.users.slice();
+
+    // 검색 필터
+    if (state.filter) {
+      var f = state.filter.toLowerCase();
+      rows = rows.filter(function (u) {
+        return ((u.name || '').toLowerCase().indexOf(f) !== -1) ||
+               ((u.email || '').toLowerCase().indexOf(f) !== -1);
+      });
+    }
+
+    // 정렬
+    var key = state.sortKey, dir = state.sortDir === 'asc' ? 1 : -1;
+    rows.sort(function (a, b) {
+      var av = sortVal(a, key), bv = sortVal(b, key);
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+
+    if (rows.length === 0) {
+      $('userTable').classList.add('hidden');
+      $('tableEmpty').classList.remove('hidden');
+      updateSortArrows();
+      return;
+    }
+    $('tableEmpty').classList.add('hidden');
+    $('userTable').classList.remove('hidden');
+
+    $('userTbody').innerHTML = rows.map(function (u) {
+      var total = (u.active || 0) + (u.completed || 0);
+      return '<tr class="user-row" data-uid="' + esc(u.id) + '" data-uname="' + esc(u.name || u.email || '(이름 없음)') + '" title="클릭하면 체험단 목록이 보여요">' +
+        '<td class="user-cell">' + userCell(u) + '</td>' +
+        '<td class="num">' + pill(u.active, 'pill-active') + '</td>' +
+        '<td class="num">' + pill(u.completed, 'pill-done') + '</td>' +
+        '<td class="num"><strong>' + total + '</strong></td>' +
+        '<td class="date" title="' + fmtDate(u.lastActiveAt) + '">' + fmtAgo(u.lastActiveAt) + '</td>' +
+        '<td class="date" title="' + fmtDate(u.lastCompletedAt) + '">' + fmtAgo(u.lastCompletedAt) + '</td>' +
+        '<td class="date">' + fmtDate(u.createdAt) + '</td>' +
+        '<td class="date">' + fmtDate(u.lastSignIn) + '</td>' +
+        '<td>' + (u.premium ? '<span class="pill pill-premium">💎 프리미엄</span>' : '<span class="muted">무료</span>') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    updateSortArrows();
+  }
+
+  function sortVal(u, key) {
+    if (key === 'total') return (u.active || 0) + (u.completed || 0);
+    if (key === 'active') return u.active || 0;
+    if (key === 'completed') return u.completed || 0;
+    if (key === 'premium') return u.premium ? 1 : 0;
+    if (key === 'name') return (u.name || u.email || '').toLowerCase();
+    if (key === 'email') return (u.email || '').toLowerCase();
+    if (key === 'createdAt') return u.createdAt ? new Date(u.createdAt).getTime() : 0;
+    if (key === 'lastSignIn') return u.lastSignIn ? new Date(u.lastSignIn).getTime() : 0;
+    if (key === 'lastActiveAt') return u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : 0;
+    if (key === 'lastCompletedAt') return u.lastCompletedAt ? new Date(u.lastCompletedAt).getTime() : 0;
+    return 0;
+  }
+
+  function updateSortArrows() {
+    var ths = document.querySelectorAll('#userTable th[data-sort]');
+    for (var i = 0; i < ths.length; i++) {
+      var th = ths[i];
+      var base = th.textContent.replace(/[▲▼]\s*$/, '').trim();
+      if (th.getAttribute('data-sort') === state.sortKey) {
+        th.innerHTML = base + ' <span class="arrow">' + (state.sortDir === 'asc' ? '▲' : '▼') + '</span>';
+      } else {
+        th.textContent = base;
+      }
+    }
+  }
+
+  // ── 포맷 유틸 ──
+  function providerLabel(p) {
+    if (p === 'kakao') return '카카오';
+    if (p === 'google') return '구글';
+    if (p === 'email') return '이메일';
+    if (!p) return '';
+    return p;
+  }
+  function userCell(u) {
+    var name = (u.name || '').trim();
+    var sub;
+    if (u.email && u.email.indexOf('@') !== -1) {
+      sub = esc(u.email); // 이메일 있으면 이메일 표시
+    } else {
+      var pl = providerLabel(u.provider);
+      sub = pl ? (esc(pl) + ' 로그인') : '이메일 없음';
+    }
+    var primary = name ? esc(name) : (u.email && u.email.indexOf('@') !== -1 ? esc(u.email.split('@')[0]) : '(이름 없음)');
+    return '<div class="u-name">' + primary + '</div>' +
+           '<div class="u-sub">' + sub + '</div>';
+  }
+  function pill(n, cls) {
+    n = n || 0;
+    if (n === 0) return '<span class="pill pill-zero">0</span>';
+    return '<span class="pill ' + cls + '">' + n + '</span>';
+  }
+  function numfmt(n) { return (n || 0).toLocaleString('ko-KR'); }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmtDate(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    if (isNaN(d)) return '-';
+    return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate());
+  }
+  // 상대 시간 ("오늘", "3일 전", "2개월 전", "활동 없음")
+  function fmtAgo(iso) {
+    if (!iso) return '<span class="muted">활동 없음</span>';
+    var d = new Date(iso);
+    if (isNaN(d)) return '<span class="muted">-</span>';
+    var days = Math.floor((Date.now() - d.getTime()) / 86400000);
+    var label;
+    if (days <= 0) label = '오늘';
+    else if (days === 1) label = '어제';
+    else if (days < 30) label = days + '일 전';
+    else if (days < 365) label = Math.floor(days / 30) + '개월 전';
+    else label = Math.floor(days / 365) + '년 전';
+    // 14일 이내면 강조(최근 활동), 90일 넘으면 흐리게(오래됨)
+    var cls = days <= 14 ? 'ago-recent' : (days > 90 ? 'ago-stale' : 'ago-mid');
+    return '<span class="' + cls + '">' + label + '</span>';
+  }
+  function fmtDateTime(d) {
+    return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate()) +
+      ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── 이벤트 ──
+  $('loginBtn').addEventListener('click', tryLogin);
+  $('tokenInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') tryLogin();
+  });
+  $('refreshBtn').addEventListener('click', refresh);
+  $('logoutBtn').addEventListener('click', function () {
+    clearToken();
+    $('tokenInput').value = '';
+    showLogin();
+  });
+  $('searchInput').addEventListener('input', function (e) {
+    state.filter = e.target.value;
+    renderTable();
+  });
+  // 기간 선택 (주간/월간/연간)
+  document.querySelectorAll('#periodToggle button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var g = btn.getAttribute('data-gran');
+      if (!g || g === state.gran) return;
+      state.gran = g;
+      document.querySelectorAll('#periodToggle button').forEach(function (b) {
+        b.classList.toggle('on', b.getAttribute('data-gran') === g);
+      });
+      renderCharts();
+    });
+  });
+  document.querySelectorAll('#userTable th[data-sort]').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var key = th.getAttribute('data-sort');
+      if (state.sortKey === key) {
+        state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        state.sortKey = key;
+        // 숫자/날짜는 큰 값 먼저, 이메일은 가나다 먼저
+        state.sortDir = (key === 'email' || key === 'name') ? 'asc' : 'desc';
+      }
+      renderTable();
+    });
+  });
+
+  // ── 사용자 상세 모달 (행 클릭 → 체험단 목록) ──
+  function openDetail(uid, uname) {
+    $('detailTitle').textContent = uname + ' 님의 체험단';
+    $('detailSub').textContent = '';
+    $('detailBody').innerHTML = '<div class="loading"><div class="spinner"></div>불러오는 중...</div>';
+    $('detailBg').classList.add('active');
+
+    fetchStats(getToken(), { userId: uid }).then(function (data) {
+      var list = (data && data.entries) || [];
+      if (!list.length) {
+        $('detailBody').innerHTML = '<div class="empty">저장된 체험단이 없어요.</div>';
+        $('detailSub').textContent = '총 0건';
+        return;
+      }
+      var act = list.filter(function (e) { return !e.completed; }).length;
+      $('detailSub').textContent = '총 ' + list.length + '건 · 진행 중 ' + act + ' · 완료 ' + (list.length - act) +
+        (list.length >= 200 ? ' (최근 200건까지 표시)' : '');
+      $('detailBody').innerHTML = list.map(function (e) {
+        var meta = [e.region, e.category].filter(Boolean).join(' · ');
+        var dateBit = e.completed
+          ? ('완료 ' + fmtDate(e.completedAt || e.createdAt))
+          : (e.deadline ? ('마감 ' + fmtDate(e.deadline)) : ('등록 ' + fmtDate(e.createdAt)));
+        return '<div class="d-item">' +
+          '<span class="d-status ' + (e.completed ? 'done' : 'active') + '">' + (e.completed ? '완료' : '진행 중') + '</span>' +
+          '<div class="d-main">' +
+            '<div class="d-store">' + esc(e.storeName) + '</div>' +
+            (meta ? '<div class="d-meta">' + esc(meta) + '</div>' : '') +
+          '</div>' +
+          '<span class="d-date">' + dateBit + '</span>' +
+          '</div>';
+      }).join('');
+    }).catch(function (e) {
+      if (e.status === 401) { closeDetail(); clearToken(); showLogin(); return; }
+      $('detailBody').innerHTML = '<div class="empty">불러오지 못했어요: ' + esc(e.message) + '</div>';
+    });
+  }
+  function closeDetail() {
+    $('detailBg').classList.remove('active');
+  }
+  // 행 클릭 (이벤트 위임)
+  $('userTbody').addEventListener('click', function (e) {
+    var tr = e.target.closest('tr.user-row');
+    if (!tr) return;
+    openDetail(tr.getAttribute('data-uid'), tr.getAttribute('data-uname'));
+  });
+  $('detailClose').addEventListener('click', closeDetail);
+  $('detailBg').addEventListener('click', function (e) {
+    if (e.target.id === 'detailBg') closeDetail();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && $('detailBg').classList.contains('active')) closeDetail();
+  });
+
+  // ── 시작: 저장된 토큰 있으면 자동 로드 ──
+  (function init() {
+    var token = getToken();
+    if (token) {
+      showDashboard();
+      refresh();
+    } else {
+      showLogin();
+      $('tokenInput').focus();
+    }
+  })();
+})();
+</script>
+</body>
+</html>
