@@ -436,6 +436,26 @@ let codecQueueRunning = false;
 let codecActiveJob = null;
 const codecQueue = [];
 
+// 자동 편집 준비(sweep)는 "놀고 있는 CPU로 미리 변환해 두면 편집 버튼이 즉시 열린다"는
+// 데스크톱 전제 위에 있다. 모바일에는 그 유휴 CPU가 없다 — 단일 스레드 wasm 인코딩이
+// UI를 붙잡고 발열 스로틀링까지 부르기 때문에, 사용자가 열지도 않은 영상 때문에
+// 기기 전체가 느려진다. 그래서 모바일·데이터 절약 모드에서는 sweep을 끈다.
+// 끄더라도 loadVideoSource의 온디맨드 변환 경로는 그대로 동작하므로,
+// 사용자가 실제로 연 영상은 예전과 똑같이 변환된다.
+const IS_MOBILE_LIKE = (() => {
+  const ua = navigator.userAgent || '';
+  // UA 문자열을 먼저 본다. userAgentData.mobile 은 안드로이드 태블릿에서 false 라서,
+  // 그걸 먼저 보고 early return 하면 태블릿이 데스크톱으로 잘못 분류된다.
+  if(/Android|iPhone|iPod|iPad|Mobile|Silk|Kindle|BlackBerry|Opera Mini|IEMobile/i.test(ua)) return true;
+  // iPadOS 13+ 는 데스크톱 Safari로 위장하므로 터치 포인트 수로 가른다.
+  if(/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1) return true;
+  // UA 를 감춘 브라우저 대비 — 양성 신호로만 쓴다(음성 판정에는 쓰지 않는다).
+  try{ if(navigator.userAgentData?.mobile === true) return true; }catch(_){}
+  return false;
+})();
+const SAVE_DATA = (() => { try{ return !!navigator.connection?.saveData; }catch(_){ return false; } })();
+const SWEEP_ENABLED = !IS_MOBILE_LIKE && !SAVE_DATA;
+
 /* ---------- 라이브러리 지연 로딩 ---------- */
 async function loadLibs(){
   if(libs) return libs;
@@ -706,9 +726,13 @@ function codecIdleStatus(item){
   }
   return ['대기 · 시작 버튼을 누르세요',''];
 }
+// 자동 준비가 꺼진 환경에서는 아직 손대지 않은 영상까지 분모에 넣으면
+// "편집 준비 1/5"가 영원히 멈춰 있는 것처럼 보인다 — 실제로 처리에 들어간 것만 센다.
+const CODEC_ENGAGED = ['checking','needs-transcode','queued','transcoding','ready','native','error'];
 function codecSummary(){
   if(!codecFallbackMode) return '';
-  const vids=items.filter(i=>i.kind==='video');
+  const vids=items.filter(i=>i.kind==='video'
+    && (SWEEP_ENABLED || i.transcoded || CODEC_ENGAGED.includes(i.codecState)));
   if(!vids.length) return '';
   const done=vids.filter(i=>i.codecState==='native' || i.codecState==='ready' || !!i.transcoded).length;
   const failed=vids.filter(i=>i.codecState==='error').length;
@@ -1183,7 +1207,9 @@ function probeNativeVideo(item){
 function activateCodecFallbackMode(){
   if(!codecFallbackMode){
     codecFallbackMode=true;
-    console.log('[codec] 브라우저 기본 디코딩 실패 감지 — 나머지 영상 자동 편집 준비 시작');
+    console.log(SWEEP_ENABLED
+      ? '[codec] 브라우저 기본 디코딩 실패 감지 — 나머지 영상 자동 편집 준비 시작'
+      : `[codec] 브라우저 기본 디코딩 실패 감지 — 자동 편집 준비는 건너뜀 (mobile=${IS_MOBILE_LIKE}, saveData=${SAVE_DATA}), 연 영상만 변환`);
   }
   codecSweepRequested=true;
   syncUI();
@@ -1192,6 +1218,8 @@ function activateCodecFallbackMode(){
 
 function scheduleCodecSweep(){
   if(!codecFallbackMode){ return; }
+  // 모바일·데이터 절약 모드: 미리 변환하지 않고, 사용자가 연 영상만 그때그때 변환한다.
+  if(!SWEEP_ENABLED){ return; }
   codecSweepRequested=true;
   if(codecSweepP) return;
   codecSweepP=(async()=>{
