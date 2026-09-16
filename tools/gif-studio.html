@@ -1358,7 +1358,7 @@ function tryLoadVideo(fileOrBlob){
 }
 
 async function loadVideoSource(item, allowTranscode=true){
-  let loadErr = null; // 네이티브 로드가 왜 실패했는지 — 폴백 모드를 켤지 판단하는 근거
+
   // 1) 파일 자체를 읽을 수 있는지 먼저 확인 (클라우드 전용·이동·삭제된 파일 감지)
   try{ await item.file.slice(0, 1).arrayBuffer(); }
   catch(_){ throw new Error('파일을 읽을 수 없어요. USB·외장 드라이브에 있거나, 클라우드 전용 파일(OneDrive 등)이거나, 이동·삭제됐을 수 있어요 — 파일을 기기 내부(바탕화면·다운로드 등)로 복사한 뒤 다시 올려 주세요.'); }
@@ -1381,7 +1381,10 @@ async function loadVideoSource(item, allowTranscode=true){
       setCodecState(item, 'native');
       return src;
     }catch(e){
-      loadErr=e;
+      // 근거가 약한 실패(타임아웃 등)였는지 item 에 남긴다. 지역 변수로 두면
+      // codecState 가 이미 needs-transcode 인 다음 호출에서 이 catch 를 건너뛰어
+      // 판단 근거가 사라진다.
+      item.codecSoftFail = !isCodecEvidence(e);
       setCodecState(item, 'needs-transcode');
     }
   }
@@ -1391,10 +1394,11 @@ async function loadVideoSource(item, allowTranscode=true){
 
   // 4) 사용자가 실제 편집/변환을 시도한 영상은 우선 처리한다.
   const transcodeP=transcodeToH264(item, true);
-  // 나머지 영상까지 자동 준비하는 건 "이 브라우저가 이 코덱을 못 읽는다"가 확실할 때만이다.
-  // 단순 타임아웃으로 폴백 모드를 켜면, 멀쩡한 영상들까지 줄줄이 다시 인코딩된다.
-  if(isCodecEvidence(loadErr)) activateCodecFallbackMode();
-  else console.log('[codec] 이 영상만 변환 — 코덱 실패 근거 없음 (code=' + (loadErr?.code ?? 'none') + ')');
+  // 기본은 나머지 영상도 자동 준비(sweep)다 — 편집 중에 다음 영상이 미리 변환돼 있어야 한다.
+  // 단순 타임아웃이었던 것이 확실할 때만 보류한다. 멀쩡한 영상까지 줄줄이
+  // 다시 인코딩하는 것을 막기 위함이고, 그 판단은 item.codecSoftFail 에 남아 있다.
+  if(item.codecSoftFail) console.log('[codec] 이 영상만 변환 — 코덱 실패 근거가 타임아웃뿐');
+  else activateCodecFallbackMode();
   item.transcoded=await transcodeP;
   setCodecState(item, 'ready');
   return await tryLoadVideo(item.transcoded);
