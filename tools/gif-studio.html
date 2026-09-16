@@ -856,23 +856,69 @@ function fetchWithTimeout(url, options={}, timeoutMs=120000){
   return fetch(url, { ...options, signal:ctrl.signal }).finally(() => clearTimeout(timer));
 }
 
-async function fetchCoreAssetPair(source){
-  const common = { mode:'cors', credentials:'omit', cache:'force-cache' };
-  const [jsRes, wasmRes] = await Promise.all([
-    fetchWithTimeout(source.core, common),
-    fetchWithTimeout(source.wasm, common),
-  ]);
-  if(!jsRes.ok) throw new Error(`core JS HTTP ${jsRes.status}`);
-  if(!wasmRes.ok) throw new Error(`core WASM HTTP ${wasmRes.status}`);
+// 코어는 30MB가 넘는다. HTTP 캐시(cache:'force-cache')만으로는 브라우저가 공간을
+// 회수할 때 쉽게 날아가서, 그때마다 30MB를 다시 받게 된다. Cache Storage에 명시적으로
+// 보관해 두면 재방문 시 네트워크를 아예 타지 않는다.
+// 보관 범위는 "이 브라우저 + 이 사이트(origin)"다 — 기기에 설치되는 것이 아니라서
+// 다른 브라우저·시크릿 창·다른 기기에서는 다시 받는다.
+const FFMPEG_CACHE_NAME = `gif-studio-ffmpeg-${FFMPEG_CORE_VERSION}`;
 
-  const [jsText, wasmBytes] = await Promise.all([jsRes.text(), wasmRes.arrayBuffer()]);
+async function openCoreCache(){
+  // file:// 이나 비보안 컨텍스트, 사생활 보호 모드에서는 caches 가 없을 수 있다.
+  try{ return (typeof caches === 'undefined') ? null : await caches.open(FFMPEG_CACHE_NAME); }
+  catch(_){ return null; }
+}
+
+// 코어 버전을 올리면 과거 버전 캐시(30MB)가 그대로 남는다 — 함께 비운다.
+async function purgeStaleCoreCaches(){
+  try{
+    if(typeof caches === 'undefined' || !caches.keys) return;
+    for(const key of await caches.keys()){
+      if(key.startsWith('gif-studio-ffmpeg-') && key !== FFMPEG_CACHE_NAME) await caches.delete(key);
+    }
+  }catch(_){}
+}
+
+async function fetchCoreAssetPair(source, onStage){
+  const cache = await openCoreCache();
+  const common = { mode:'cors', credentials:'omit', cache:'force-cache' };
+
+  const take = async (url) => {
+    if(cache){
+      try{ const hit = await cache.match(url); if(hit) return { res:hit, cached:true }; }catch(_){}
+    }
+    const res = await fetchWithTimeout(url, common);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    return { res, cached:false };
+  };
+
+  const [js, wasm] = await Promise.all([ take(source.core), take(source.wasm) ]);
+  const fromCache = js.cached && wasm.cached;
+  try{ onStage?.(fromCache); }catch(_){}
+
+  // 본문을 읽으면 Response 가 소비되므로, 캐시에 넣을 사본을 미리 떠 둔다.
+  const jsCopy = js.cached ? null : js.res.clone();
+  const wasmCopy = wasm.cached ? null : wasm.res.clone();
+
+  const [jsText, wasmBytes] = await Promise.all([js.res.text(), wasm.res.arrayBuffer()]);
   // SPA의 404 대체 HTML을 200으로 돌려주는 서버까지 감지한다.
   if(!jsText.includes('createFFmpegCore')) throw new Error('core JS 내용이 올바르지 않음');
   if(wasmBytes.byteLength < 1024 * 1024) throw new Error('core WASM 파일이 너무 작거나 올바르지 않음');
 
+  // 검증을 통과한 응답만 보관한다. 깨진 응답을 캐시에 박아두면
+  // 그 브라우저에서는 계속 깨진 것을 꺼내 쓰게 되어 영구 고장이 된다.
+  if(cache){
+    try{
+      if(jsCopy) await cache.put(source.core, jsCopy);
+      if(wasmCopy) await cache.put(source.wasm, wasmCopy);
+      if(jsCopy || wasmCopy) purgeStaleCoreCaches();
+    }catch(_){ /* 용량 초과 등 — 보관은 실패해도 동작에는 지장 없다 */ }
+  }
+
   return {
     coreURL: URL.createObjectURL(new Blob([jsText], { type:'text/javascript' })),
     wasmURL: URL.createObjectURL(new Blob([wasmBytes], { type:'application/wasm' })),
+    fromCache,
   };
 }
 
@@ -1024,7 +1070,7 @@ self.onmessage = async ({data:{id,type,data}}) => {
 `;
 
 let ffmpegInst = null, ffmpegLoadP = null;
-async function loadFfmpeg(){
+async function loadFfmpeg(onStage){
   if(ffmpegInst) return ffmpegInst;
   if(ffmpegLoadP) return ffmpegLoadP;
   if(typeof WebAssembly !== 'object') throw new Error('이 브라우저는 WebAssembly를 지원하지 않습니다.');
@@ -1037,7 +1083,7 @@ async function loadFfmpeg(){
       let client = null;
       try{
         console.log('[ffmpeg] 코어 시도:', source.name, source.core);
-        urls = await fetchCoreAssetPair(source);
+        urls = await fetchCoreAssetPair(source, onStage);
         client = new EmbeddedFFmpegClient();
         client.on('log', ({message}) => console.log('[ffmpeg]', message));
         await client.load({coreURL:urls.coreURL, wasmURL:urls.wasmURL});
@@ -1093,12 +1139,22 @@ function transcodeToH264(item, priority=false){
   return item.transcodeP;
 }
 
+// 코덱 호환 변환본의 목적은 "브라우저가 디코딩할 수 있게" 만드는 것뿐이다.
+// 최종 GIF 는 어차피 '최대 너비'(기본 640px)로 다시 줄어들므로 원본 4K 를 유지할 이유가 없고,
+// 4K 를 그대로 인코딩하면 픽셀 수가 8배로 늘어 단일 스레드 wasm 에서는 수 분이 걸린다.
+// 크롭해서 확대하는 경우를 감안해 여유를 두고 긴 변 1920px 로 제한한다.
+const TRANSCODE_MAX_EDGE = 1920;
+
 async function performH264Transcode(item){
   setCodecState(item, 'transcoding');
-  setCodecStatus(item, '코덱 호환 변환 준비 중… (최초 1회 디코더를 불러와요)');
+  setCodecStatus(item, '코덱 호환 변환 준비 중…');
   setProgress(item, 0.02);
   let ff;
-  try{ ff = await loadFfmpeg(); }
+  try{
+    ff = await loadFfmpeg(fromCache => setCodecStatus(item, fromCache
+      ? '저장해 둔 디코더를 불러오는 중…'
+      : '디코더 내려받는 중… (최초 1회 약 31MB · 이 브라우저에 보관돼 다음부터는 안 받아요)'));
+  }
   catch(e){
     console.error('[ffmpeg load]', e);
     throw new Error('코덱 변환기를 불러오지 못했어요 — ' + (e?.message || e) + '. H.264 mp4로 변환해 올려도 돼요.');
@@ -1112,7 +1168,20 @@ async function performH264Transcode(item){
   setCodecStatus(item, '코덱 호환 변환 중… (HEVC 등 → H.264)');
   try{
     await ff.writeFile(inName, new Uint8Array(await item.file.arrayBuffer()));
-    await ff.exec(['-i', inName, '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-an', '-movflags', '+faststart', outName]);
+
+    const encArgs = ['-c:v','libx264','-preset','ultrafast','-pix_fmt','yuv420p','-an','-movflags','+faststart','-y'];
+    // min() 으로 감싸 축소만 하고 확대는 하지 않는다. 세로 영상도 같은 상자에 맞춰 줄어든다.
+    // force_divisible_by=2 는 yuv420p 가 요구하는 짝수 해상도를 보장한다.
+    const vf = `scale=w='min(iw,${TRANSCODE_MAX_EDGE})':h='min(ih,${TRANSCODE_MAX_EDGE})'`
+             + `:force_original_aspect_ratio=decrease:force_divisible_by=2`;
+    try{
+      await ff.exec(['-i', inName, '-vf', vf, ...encArgs, outName]);
+    }catch(scaleErr){
+      // 이 필터 문법을 받지 못하는 코어 빌드 대비 — 축소 없이 한 번 더 시도한다.
+      console.warn('[ffmpeg] 축소 필터 실패 — 원본 해상도로 재시도', scaleErr);
+      setCodecStatus(item, '코덱 호환 변환 중… (원본 해상도)');
+      await ff.exec(['-i', inName, ...encArgs, outName]);
+    }
     const data=await ff.readFile(outName);
     const bytes=data instanceof Uint8Array ? data : new Uint8Array(data);
     if(!bytes || bytes.length<1) throw new Error('빈 출력');
@@ -1194,7 +1263,14 @@ function probeNativeVideo(item){
       setCodecState(item, 'native');
       setCodecStatus(item, '브라우저에서 바로 사용 가능', 'ok');
       return true;
-    }catch(_){
+    }catch(e){
+      // 타임아웃처럼 근거가 약한 실패는 '못 읽는 코덱'으로 단정하지 않는다.
+      // unknown 으로 되돌려 두면 사용자가 그 영상을 실제로 열 때 다시 판단한다.
+      if(!isCodecEvidence(e)){
+        setCodecState(item, 'unknown');
+        setCodecStatus(item, '대기 · 시작 버튼을 누르세요');
+        return true; // 이번 순회에서는 변환 대상으로 삼지 않는다
+      }
       setCodecState(item, 'needs-transcode');
       return false;
     }finally{
@@ -1252,11 +1328,19 @@ function scheduleCodecSweep(){
   });
 }
 
+// 로드 실패가 "이 브라우저가 코덱을 못 읽는다"는 근거가 되는지 판별한다.
+// MEDIA_ERR_DECODE(3) 와 MEDIA_ERR_SRC_NOT_SUPPORTED(4) 만 코덱 근거로 인정한다.
+// 타임아웃은 큰 파일·느린 저장소에서도 나므로 근거가 못 된다 — 이걸 코덱 실패로
+// 취급하면 멀쩡한 H.264 영상을 굳이 다시 인코딩하게 된다.
+function isCodecEvidence(err){ return err && (err.code === 3 || err.code === 4); }
+
 // blob/File을 <video>로 로드 시도 (성공 시 src 객체 반환, 실패 시 reject)
 function tryLoadVideo(fileOrBlob){
   return new Promise((res, rej) => {
     const video = document.createElement('video');
-    video.muted=true; video.playsInline=true; video.preload='auto';
+    // 메타데이터만 있으면 판별과 썸네일에 충분하다. 'auto' 는 영상 전체를 버퍼링해
+    // 큰 파일 여러 개를 올렸을 때 메모리와 디코더를 불필요하게 잡아먹는다.
+    video.muted=true; video.playsInline=true; video.preload='metadata';
     const url = URL.createObjectURL(fileOrBlob);
     let settled=false;
     const fail = (code) => { if(settled) return; settled=true; URL.revokeObjectURL(url); const e=new Error('video load fail'); e.code=code; rej(e); };
@@ -1267,12 +1351,14 @@ function tryLoadVideo(fileOrBlob){
       res({ kind:'video', natW:W, natH:H, duration:video.duration||0, hasAlpha:false, gifFrames:null, video, url });
     };
     video.onerror = () => fail(video.error && video.error.code);
-    setTimeout(()=>fail('timeout'), 15000);
+    // 모바일 저장소·대용량 파일은 15초를 넘길 수 있어 여유를 둔다.
+    setTimeout(()=>fail('timeout'), 30000);
     video.src = url;
   });
 }
 
 async function loadVideoSource(item, allowTranscode=true){
+  let loadErr = null; // 네이티브 로드가 왜 실패했는지 — 폴백 모드를 켤지 판단하는 근거
   // 1) 파일 자체를 읽을 수 있는지 먼저 확인 (클라우드 전용·이동·삭제된 파일 감지)
   try{ await item.file.slice(0, 1).arrayBuffer(); }
   catch(_){ throw new Error('파일을 읽을 수 없어요. USB·외장 드라이브에 있거나, 클라우드 전용 파일(OneDrive 등)이거나, 이동·삭제됐을 수 있어요 — 파일을 기기 내부(바탕화면·다운로드 등)로 복사한 뒤 다시 올려 주세요.'); }
@@ -1294,7 +1380,8 @@ async function loadVideoSource(item, allowTranscode=true){
       const src=await tryLoadVideo(item.file);
       setCodecState(item, 'native');
       return src;
-    }catch(_){
+    }catch(e){
+      loadErr=e;
       setCodecState(item, 'needs-transcode');
     }
   }
@@ -1302,10 +1389,12 @@ async function loadVideoSource(item, allowTranscode=true){
   // 썸네일처럼 가벼운 호출에서는 자동 변환을 시작하지 않는다.
   if(!allowTranscode) throw new Error('이 브라우저가 이 동영상 코덱을 지원하지 않을 수 있어요 (HEVC 등).');
 
-  // 4) 사용자가 실제 편집/변환을 시도한 영상은 우선 처리하고,
-  //    첫 실패가 감지된 이때부터 나머지 영상도 자동으로 순차 준비한다.
+  // 4) 사용자가 실제 편집/변환을 시도한 영상은 우선 처리한다.
   const transcodeP=transcodeToH264(item, true);
-  activateCodecFallbackMode();
+  // 나머지 영상까지 자동 준비하는 건 "이 브라우저가 이 코덱을 못 읽는다"가 확실할 때만이다.
+  // 단순 타임아웃으로 폴백 모드를 켜면, 멀쩡한 영상들까지 줄줄이 다시 인코딩된다.
+  if(isCodecEvidence(loadErr)) activateCodecFallbackMode();
+  else console.log('[codec] 이 영상만 변환 — 코덱 실패 근거 없음 (code=' + (loadErr?.code ?? 'none') + ')');
   item.transcoded=await transcodeP;
   setCodecState(item, 'ready');
   return await tryLoadVideo(item.transcoded);
